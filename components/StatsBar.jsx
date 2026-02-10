@@ -24,9 +24,11 @@ const styles = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
+    flexWrap: 'wrap',
     padding: '10px 16px',
     background: '#111',
     borderBottom: '1px solid #222',
+    gap: 8,
   },
   left: {
     display: 'flex',

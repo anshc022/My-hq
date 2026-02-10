@@ -993,11 +993,23 @@ export default function OfficeCanvas({ agents }) {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    canvas.width = 900;
-    canvas.height = 480;
+
+    const resize = () => {
+      const parent = canvas.parentElement;
+      const w = parent ? parent.clientWidth : 900;
+      const h = Math.round(w * (480 / 900));
+      canvas.width = Math.max(w, 280);
+      canvas.height = Math.max(h, 150);
+    };
+    resize();
+
+    const ro = new ResizeObserver(resize);
+    if (canvas.parentElement) ro.observe(canvas.parentElement);
+
     animRef.current = requestAnimationFrame(draw);
     return () => {
       if (animRef.current) cancelAnimationFrame(animRef.current);
+      ro.disconnect();
     };
   }, [draw]);
 
@@ -1007,7 +1019,6 @@ export default function OfficeCanvas({ agents }) {
       style={{
         width: '100%',
         height: 'auto',
-        aspectRatio: '900/480',
         borderRadius: 8,
         border: '1px solid #1a1a2e',
         display: 'block',

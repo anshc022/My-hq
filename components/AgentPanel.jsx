@@ -41,8 +41,6 @@ const styles = {
     borderRadius: 8,
     padding: 10,
     border: '1px solid #333',
-    width: 180,
-    flexShrink: 0,
     boxSizing: 'border-box',
     overflow: 'hidden',
   },

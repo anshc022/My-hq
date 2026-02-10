@@ -35,7 +35,7 @@ const styles = {
     padding: 12,
     border: '1px solid #333',
     flex: 1,
-    minWidth: 280,
+    minWidth: 0,
   },
   title: {
     color: '#888',
@@ -47,6 +47,7 @@ const styles = {
   list: {
     maxHeight: 350,
     overflowY: 'auto',
+    overflowX: 'hidden',
   },
   empty: {
     color: '#555',

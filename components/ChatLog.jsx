@@ -37,7 +37,7 @@ const styles = {
     padding: 12,
     border: '1px solid #333',
     flex: 1,
-    minWidth: 280,
+    minWidth: 0,
   },
   title: {
     color: '#888',

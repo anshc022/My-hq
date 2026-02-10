@@ -54,11 +54,15 @@ export default function Home() {
       <StatsBar agents={agents} events={events} />
 
       <div className="hq-main">
-        <AgentPanel agents={agents} />
+        <div className="hq-sidebar-left">
+          <AgentPanel agents={agents} />
+        </div>
         <div className="hq-center">
           <OfficeCanvas agents={agents} />
         </div>
-        <MissionBoard />
+        <div className="hq-sidebar-right">
+          <MissionBoard />
+        </div>
       </div>
 
       <div className="hq-bottom">

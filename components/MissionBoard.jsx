@@ -100,8 +100,6 @@ const styles = {
     borderRadius: 8,
     padding: 10,
     border: '1px solid #333',
-    width: 200,
-    flexShrink: 0,
     boxSizing: 'border-box',
   },
   title: {
