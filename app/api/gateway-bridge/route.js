@@ -263,7 +263,7 @@ async function processGatewayMessage(msg) {
       });
       // Only update Pulse status — never touch other agents
       await supabase.from('ops_agents').update({
-        status: isConnected ? 'idle' : 'idle',
+        status: isConnected ? 'monitoring' : 'idle',
         current_task: isConnected ? 'Monitoring gateway' : null,
         last_active_at: new Date().toISOString(),
       }).eq('name', 'pulse');
