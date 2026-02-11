@@ -10,7 +10,7 @@ const AGENT_MAP = {
   main: 'echo', echo: 'echo',
   scout: 'pixel', quill: 'dash',
   sage: 'stack', sentinel: 'probe',
-  xalt: 'ship',
+  xalt: 'ship', pulse: 'pulse',
 };
 
 // ─── Each agent has their own work room (so they spread out on the canvas) ───
@@ -20,8 +20,7 @@ const AGENT_WORK_ROOM = {
   dash:  'research',  // Dash Frontend → code lab
   stack: 'board',     // Stack Backend → sprint board
   probe: 'board',     // Probe QA → sprint board
-  ship:  'research',  // Ship DevOps → code lab
-};
+  ship:  'research',  // Ship DevOps → code lab  pulse: 'board',     // Pulse Node Health → sprint board};
 
 const AGENT_TALK_ROOM = {
   echo:  'meeting',   // leads standup
