@@ -1193,17 +1193,17 @@ function drawNodeIndicator(ctx, cw, ch, frame, connected) {
   const nx = cw * 0.78;
   const ny = ch * 0.88;
 
-  // ── Connection line from node to PULSE agent (follows Pulse wherever it wanders) ──
+  // ── Connection line from node to PULSE agent (follows pulse wherever it is) ──
   if (connected) {
-    const pulsePos = agentAnimPos['pulse'] || DESK_POSITIONS['pulse'];
+    const pulsePos = agentAnimPos['pulse'];
     if (pulsePos) {
       ctx.save();
       ctx.setLineDash([3, 5]);
       ctx.lineDashOffset = -frame * 0.4;
       ctx.lineWidth = 1.5;
 
-      const ax = pulsePos.x * cw;
-      const ay = pulsePos.y * ch;
+      const ax = pulsePos.x;
+      const ay = pulsePos.y;
       const agentColor = '#00FF88';
 
       // Curved line from laptop to Pulse desk
