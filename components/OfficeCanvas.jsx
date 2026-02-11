@@ -367,20 +367,21 @@ function drawAgent(ctx, x, y, name, agentData, frame) {
   const status = agentData?.status || 'idle';
   const vis = STATUS_VISUALS[status] || STATUS_VISUALS.idle;
   const SPRITE_H = 20 * P; // total sprite height in canvas px
+  const S = P / 3; // scale factor relative to desktop (1.0 on desktop, 0.67 on mobile)
 
   // Smooth gentle bob
-  const bob = status === 'sleeping' ? 0 : Math.sin(frame * 0.03) * 1.5;
+  const bob = status === 'sleeping' ? 0 : Math.sin(frame * 0.03) * 1.5 * S;
   const ay = y + bob;
 
   // ── Glow behind sprite ──
   const pulse = 0.6 + Math.sin(frame * 0.06) * 0.4;
   ctx.save();
   ctx.shadowColor = vis.glow;
-  ctx.shadowBlur = status === 'idle' || status === 'sleeping' ? 6 : 18 * pulse;
+  ctx.shadowBlur = (status === 'idle' || status === 'sleeping' ? 4 : 14 * pulse) * S;
   ctx.globalAlpha = status === 'idle' ? 0.25 : 0.6;
   ctx.fillStyle = vis.glow;
   ctx.beginPath();
-  ctx.ellipse(x, ay + 2, 14, SPRITE_H / 2 + 2, 0, 0, Math.PI * 2);
+  ctx.ellipse(x, ay + 2, 12 * S, SPRITE_H / 2 + 2, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 
@@ -392,32 +393,34 @@ function drawAgent(ctx, x, y, name, agentData, frame) {
   ctx.globalAlpha = 0.3;
   ctx.fillStyle = '#000';
   ctx.beginPath();
-  ctx.ellipse(x, ay + SPRITE_H / 2 + 2, 12, 3, 0, 0, Math.PI * 2);
+  ctx.ellipse(x, ay + SPRITE_H / 2 + 2, 10 * S, 2.5 * S, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 
   // ── Status dot (bottom-right of sprite) ──
+  const dotR = 3 * S;
   ctx.beginPath();
-  ctx.arc(x + 12, ay + SPRITE_H / 2 - 4, 4, 0, Math.PI * 2);
+  ctx.arc(x + 10 * S, ay + SPRITE_H / 2 - 3 * S, dotR, 0, Math.PI * 2);
   ctx.fillStyle = vis.glow;
   ctx.fill();
   ctx.strokeStyle = '#0d0d1a';
-  ctx.lineWidth = 1.5;
+  ctx.lineWidth = 1 * S;
   ctx.stroke();
 
   // ── Name tag (colored pill below) ──
   const label = config.label;
-  ctx.font = 'bold 10px monospace';
+  const nameFs = Math.max(7, Math.round(10 * S));
+  ctx.font = `bold ${nameFs}px monospace`;
   const lw = ctx.measureText(label).width;
-  const pillW = lw + 10;
-  const pillH = 15;
+  const pillW = lw + 8 * S;
+  const pillH = Math.round(13 * S);
   const pillX = x - pillW / 2;
-  const pillY = ay + SPRITE_H / 2 + 6;
+  const pillY = ay + SPRITE_H / 2 + 4 * S;
 
   ctx.fillStyle = config.color;
   ctx.globalAlpha = 0.85;
   ctx.beginPath();
-  ctx.roundRect(pillX, pillY, pillW, pillH, 4);
+  ctx.roundRect(pillX, pillY, pillW, pillH, 3 * S);
   ctx.fill();
   ctx.globalAlpha = 1;
 
@@ -428,29 +431,30 @@ function drawAgent(ctx, x, y, name, agentData, frame) {
 
   // ── Role tag (smaller, below name pill) ──
   const role = config.role;
-  ctx.font = '8px monospace';
+  const roleFs = Math.max(6, Math.round(8 * S));
+  ctx.font = `${roleFs}px monospace`;
   const rw = ctx.measureText(role).width;
-  const rolePillW = rw + 8;
-  const rolePillH = 12;
+  const rolePillW = rw + 6 * S;
+  const rolePillH = Math.round(10 * S);
   const rolePillX = x - rolePillW / 2;
-  const rolePillY = pillY + pillH + 2;
+  const rolePillY = pillY + pillH + 2 * S;
 
   ctx.fillStyle = 'rgba(0,0,0,0.55)';
   ctx.globalAlpha = 0.9;
   ctx.beginPath();
-  ctx.roundRect(rolePillX, rolePillY, rolePillW, rolePillH, 3);
+  ctx.roundRect(rolePillX, rolePillY, rolePillW, rolePillH, 2 * S);
   ctx.fill();
   ctx.globalAlpha = 1;
 
   ctx.strokeStyle = config.color;
-  ctx.lineWidth = 0.8;
+  ctx.lineWidth = 0.6 * S;
   ctx.stroke();
 
   ctx.fillStyle = config.color;
   ctx.globalAlpha = 0.9;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.font = '8px monospace';
+  ctx.font = `${roleFs}px monospace`;
   ctx.fillText(role, x, rolePillY + rolePillH / 2);
   ctx.globalAlpha = 1;
 
@@ -1467,7 +1471,7 @@ export default function OfficeCanvas({ agents, nodeConnected }) {
     const cw = canvas.width;
     const ch = canvas.height;
     // Scale pixel art based on canvas size: 3x on desktop, 2x on small
-    P = cw >= 700 ? 3 : 2;
+    P = cw >= 700 ? 3 : 1.5;
     frameRef.current++;
     const frame = frameRef.current;
     const currentAgents = agentsRef.current;
@@ -1536,8 +1540,8 @@ export default function OfficeCanvas({ agents, nodeConnected }) {
     const resize = () => {
       const parent = canvas.parentElement;
       const w = parent ? parent.clientWidth : 900;
-      // Taller aspect ratio for more room: 0.62 on desktop, 0.55 on mobile
-      const ratio = w >= 700 ? 0.62 : 0.55;
+      // Taller aspect ratio for more room: 0.62 on desktop, 0.75 on mobile
+      const ratio = w >= 700 ? 0.62 : 0.75;
       const h = Math.round(w * ratio);
       canvas.width = Math.max(w, 280);
       canvas.height = Math.max(h, 150);
