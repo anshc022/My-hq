@@ -75,6 +75,24 @@ function isAgentBusy(agentData) {
 }
 
 function getTargetPos(name, agentData, cw, ch) {
+  // Pulse always wanders freely, even when busy/connected
+  if (name === 'pulse') {
+    if (!wanderTargets[name]) pickWanderTarget(name);
+    const wt = wanderTargets[name];
+    const cur = agentAnimPos[name];
+    if (cur) {
+      const dx = (cur.x / cw) - wt.x;
+      const dy = (cur.y / ch) - wt.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < WANDER_ARRIVE_DIST) {
+        if (!wanderCooldown[name]) wanderCooldown[name] = 0;
+        wanderCooldown[name]--;
+        if (wanderCooldown[name] <= 0) pickWanderTarget(name);
+      }
+    }
+    return { x: wanderTargets[name].x * cw, y: wanderTargets[name].y * ch };
+  }
+
   // If agent is busy → go to desk
   if (isAgentBusy(agentData)) {
     // Clear wander state so they pick a fresh target when idle again
