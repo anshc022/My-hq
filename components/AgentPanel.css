@@ -20,6 +20,27 @@
   background: rgba(255,255,255,0.02);
   display: flex;
   flex-direction: column;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+@keyframes border-pulse {
+  0% {
+    border-color: rgba(74, 222, 128, 0.4);
+    box-shadow: 0 0 2px rgba(74, 222, 128, 0.1);
+  }
+  50% {
+    border-color: rgba(74, 222, 128, 1);
+    box-shadow: 0 0 8px rgba(74, 222, 128, 0.4);
+  }
+  100% {
+    border-color: rgba(74, 222, 128, 0.4);
+    box-shadow: 0 0 2px rgba(74, 222, 128, 0.1);
+  }
+}
+
+.agent-card.working-glow {
+  animation: border-pulse 2s infinite ease-in-out;
+  border-color: rgba(74, 222, 128, 0.8);
 }
 
 .agent-card-header {
@@ -73,6 +94,10 @@
     padding: 8px;
     background: #1a1a1a;
   }
+  
+  /* Ensure glow works on mobile by overriding specific mobile border if needed, 
+     though the class usually wins due to specificity or order. 
+     The animation updates border-color so it should be fine. */
 
   .agent-card-header {
     margin-bottom: 4px;

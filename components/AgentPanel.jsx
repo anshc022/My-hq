@@ -14,8 +14,9 @@ export default function AgentPanel({ agents }) {
       <div className="agent-list">
         {(agents || []).map(a => {
           const config = AGENTS[a.name] || {};
+          const isWorking = ['working', 'busy'].includes(a.status?.toLowerCase());
           return (
-            <div key={a.name} className="agent-card">
+            <div key={a.name} className={`agent-card ${isWorking ? 'working-glow' : ''}`}>
               <div className="agent-card-header">
                 <span style={{ ...styles.dot, backgroundColor: config.color }}></span>
                 <span style={styles.icon}>{config.icon}</span>
