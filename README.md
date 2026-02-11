@@ -3,7 +3,6 @@
 ## Features
 ### 📱 New Responsive Agent Card Layout
 We have significantly enhanced the mobile experience with a brand-new **Agent Card layout**. This responsive design ensures that agent details, status indicators, and control options are perfectly optimized for smaller screens, providing a seamless management experience on the go.
-
 ### 🚀 High Performance
 - **Powered by Next.js**: Utilizes server-side rendering and static site generation for lightning-fast page loads.
 - **Optimized Fonts**: Integrated with `next/font` for automatic font optimization and layout stability.
