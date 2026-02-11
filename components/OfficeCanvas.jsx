@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useCallback } from 'react';
-import { AGENTS, ROOMS, DESK_POSITIONS, ROOM_POSITIONS, STATUS_VISUALS } from '@/lib/agents';
+import { AGENTS, ROOMS, DESK_POSITIONS, ROOM_POSITIONS, STATUS_VISUALS, UNIFIED_BOX } from '@/lib/agents';
 
 // ─── Smooth position interpolation store ───
 const agentAnimPos = {};
@@ -14,8 +14,8 @@ const WANDER_ARRIVE_DIST = 0.02; // close enough = pick new target
 
 // All rooms as rectangles agents can wander into (percentage coordinates)
 const WANDER_ZONES = [
-  { x: 0.05, y: 0.08, w: 0.52, h: 0.86 }, // workspace
-  { x: 0.65, y: 0.08, w: 0.30, h: 0.86 }, // cabin
+  { x: 0.04, y: 0.08, w: 0.53, h: 0.86 }, // workspace
+  { x: 0.61, y: 0.08, w: 0.35, h: 0.86 }, // cabin
 ];
 
 function pickWanderTarget(name) {
@@ -628,162 +628,161 @@ function drawConnections(ctx, agents, cw, ch, frame) {
 
 // ─── Room zones (polished with themed interiors) ───
 function drawRooms(ctx, cw, ch, frame) {
-  Object.entries(ROOMS).forEach(([key, room], ri) => {
-    const rx = room.x * cw + 2, ry = room.y * ch + 2;
-    const rw = room.w * cw - 4, rh = room.h * ch - 4;
-    const accent = room.accent || room.border;
+  // ── Draw ONE unified box for the entire space ──
+  const bx = UNIFIED_BOX.x * cw + 2, by = UNIFIED_BOX.y * ch + 2;
+  const bw = UNIFIED_BOX.w * cw - 4, bh = UNIFIED_BOX.h * ch - 4;
+  const divX = UNIFIED_BOX.dividerX * cw;
 
-    // ── Room background — multi-stop gradient ──
-    const grad = ctx.createLinearGradient(rx, ry, rx + rw * 0.3, ry + rh);
-    grad.addColorStop(0, room.bg);
-    grad.addColorStop(0.6, 'rgba(8,8,16,0.55)');
-    grad.addColorStop(1, 'rgba(4,4,10,0.7)');
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.roundRect(rx, ry, rw, rh, 10);
-    ctx.fill();
+  // Unified background gradient
+  const bgGrad = ctx.createLinearGradient(bx, by, bx + bw * 0.3, by + bh);
+  bgGrad.addColorStop(0, 'rgba(12,14,35,0.55)');
+  bgGrad.addColorStop(0.55, 'rgba(8,8,16,0.5)');
+  bgGrad.addColorStop(1, 'rgba(20,14,10,0.5)');
+  ctx.fillStyle = bgGrad;
+  ctx.beginPath();
+  ctx.roundRect(bx, by, bw, bh, 10);
+  ctx.fill();
 
-    // ── Inner floor pattern (isometric grid for depth) ──
-    ctx.save();
+  // Isometric floor grid
+  ctx.save();
+  ctx.beginPath();
+  ctx.roundRect(bx, by, bw, bh, 10);
+  ctx.clip();
+  ctx.strokeStyle = 'rgba(255,255,255,0.015)';
+  ctx.lineWidth = 0.5;
+  const gridSize = 24;
+  for (let gx = 0; gx < bw + bh; gx += gridSize) {
     ctx.beginPath();
-    ctx.roundRect(rx, ry, rw, rh, 10);
-    ctx.clip();
-    ctx.strokeStyle = 'rgba(255,255,255,0.015)';
-    ctx.lineWidth = 0.5;
-    const gridSize = 24;
-    for (let gx = 0; gx < rw + rh; gx += gridSize) {
-      ctx.beginPath();
-      ctx.moveTo(rx + gx, ry);
-      ctx.lineTo(rx + gx - rh * 0.5, ry + rh);
-      ctx.stroke();
-    }
-    for (let gy = 0; gy < rh; gy += gridSize) {
-      ctx.beginPath();
-      ctx.moveTo(rx, ry + gy);
-      ctx.lineTo(rx + rw, ry + gy);
-      ctx.stroke();
-    }
-    ctx.restore();
-
-    // ── Ambient glow in room center ──
-    const glowR = Math.min(rw, rh) * 0.5;
-    const ar = parseInt(accent.slice(1, 3), 16) || 0;
-    const ag = parseInt(accent.slice(3, 5), 16) || 0;
-    const ab = parseInt(accent.slice(5, 7), 16) || 0;
-    const centerGlow = ctx.createRadialGradient(
-      rx + rw / 2, ry + rh / 2, 0,
-      rx + rw / 2, ry + rh / 2, glowR
-    );
-    centerGlow.addColorStop(0, `rgba(${ar},${ag},${ab},0.06)`);
-    centerGlow.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = centerGlow;
-    ctx.beginPath();
-    ctx.roundRect(rx, ry, rw, rh, 10);
-    ctx.fill();
-
-    // ── Animated double-border ──
-    const glowPulse = 0.35 + Math.sin(frame * 0.018 + ri * 1.5) * 0.2;
-    // Outer border glow
-    ctx.save();
-    ctx.shadowColor = accent;
-    ctx.shadowBlur = 10;
-    ctx.globalAlpha = glowPulse * 0.5;
-    ctx.strokeStyle = accent;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.roundRect(rx - 1, ry - 1, rw + 2, rh + 2, 11);
+    ctx.moveTo(bx + gx, by);
+    ctx.lineTo(bx + gx - bh * 0.5, by + bh);
     ctx.stroke();
-    ctx.restore();
-    // Inner border
-    ctx.save();
-    ctx.globalAlpha = glowPulse;
-    ctx.strokeStyle = room.border;
-    ctx.lineWidth = 1.5;
+  }
+  for (let gy = 0; gy < bh; gy += gridSize) {
     ctx.beginPath();
-    ctx.roundRect(rx, ry, rw, rh, 10);
+    ctx.moveTo(bx, by + gy);
+    ctx.lineTo(bx + bw, by + gy);
     ctx.stroke();
-    ctx.restore();
+  }
+  ctx.restore();
 
-    // ── Corner brackets (techy L shapes) ──
-    ctx.strokeStyle = accent;
-    ctx.globalAlpha = 0.6;
-    ctx.lineWidth = 2;
-    const cLen = 14;
-    // Top-left
-    ctx.beginPath();
-    ctx.moveTo(rx + cLen, ry); ctx.lineTo(rx, ry); ctx.lineTo(rx, ry + cLen);
-    ctx.stroke();
-    // Top-right
-    ctx.beginPath();
-    ctx.moveTo(rx + rw - cLen, ry); ctx.lineTo(rx + rw, ry); ctx.lineTo(rx + rw, ry + cLen);
-    ctx.stroke();
-    // Bottom-left
-    ctx.beginPath();
-    ctx.moveTo(rx + cLen, ry + rh); ctx.lineTo(rx, ry + rh); ctx.lineTo(rx, ry + rh - cLen);
-    ctx.stroke();
-    // Bottom-right
-    ctx.beginPath();
-    ctx.moveTo(rx + rw - cLen, ry + rh); ctx.lineTo(rx + rw, ry + rh); ctx.lineTo(rx + rw, ry + rh - cLen);
-    ctx.stroke();
-    ctx.globalAlpha = 1;
+  // Subtle left half ambient glow (workspace blue)
+  const glowR = Math.min(bw, bh) * 0.45;
+  const cwGlow = ctx.createRadialGradient(bx + bw * 0.28, by + bh * 0.5, 0, bx + bw * 0.28, by + bh * 0.5, glowR);
+  cwGlow.addColorStop(0, 'rgba(74,106,255,0.05)');
+  cwGlow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = cwGlow;
+  ctx.beginPath();
+  ctx.roundRect(bx, by, bw, bh, 10);
+  ctx.fill();
 
-    // ── Header bar with icon + label ──
-    const hdrH = 22;
-    const hdrGrad = ctx.createLinearGradient(rx, ry, rx + rw * 0.5, ry);
-    hdrGrad.addColorStop(0, `rgba(${ar},${ag},${ab},0.18)`);
-    hdrGrad.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = hdrGrad;
-    ctx.beginPath();
-    ctx.roundRect(rx + 1, ry + 1, rw - 2, hdrH, [9, 9, 0, 0]);
-    ctx.fill();
+  // Subtle right half ambient glow (cabin warm)
+  const ccGlow = ctx.createRadialGradient(bx + bw * 0.78, by + bh * 0.5, 0, bx + bw * 0.78, by + bh * 0.5, glowR * 0.8);
+  ccGlow.addColorStop(0, 'rgba(212,145,90,0.05)');
+  ccGlow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = ccGlow;
+  ctx.beginPath();
+  ctx.roundRect(bx, by, bw, bh, 10);
+  ctx.fill();
 
-    // Header divider line
-    ctx.strokeStyle = `rgba(${ar},${ag},${ab},0.2)`;
-    ctx.lineWidth = 0.5;
-    ctx.beginPath();
-    ctx.moveTo(rx + 8, ry + hdrH);
-    ctx.lineTo(rx + rw - 8, ry + hdrH);
-    ctx.stroke();
+  // ── Single outer border with glow ──
+  const glowPulse = 0.35 + Math.sin(frame * 0.018) * 0.15;
+  ctx.save();
+  ctx.shadowColor = '#4a6aff';
+  ctx.shadowBlur = 8;
+  ctx.globalAlpha = glowPulse * 0.4;
+  ctx.strokeStyle = '#4a6aff';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.roundRect(bx - 1, by - 1, bw + 2, bh + 2, 11);
+  ctx.stroke();
+  ctx.restore();
+  ctx.save();
+  ctx.globalAlpha = glowPulse;
+  ctx.strokeStyle = '#3344aa';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.roundRect(bx, by, bw, bh, 10);
+  ctx.stroke();
+  ctx.restore();
 
-    // Room icon
-    const icon = room.icon || '';
-    ctx.font = '13px sans-serif';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(icon, rx + 8, ry + hdrH / 2 + 1);
+  // ── Corner brackets on the unified box ──
+  ctx.strokeStyle = '#4a6aff';
+  ctx.globalAlpha = 0.5;
+  ctx.lineWidth = 2;
+  const cLen = 14;
+  ctx.beginPath(); ctx.moveTo(bx + cLen, by); ctx.lineTo(bx, by); ctx.lineTo(bx, by + cLen); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(bx + bw - cLen, by); ctx.lineTo(bx + bw, by); ctx.lineTo(bx + bw, by + cLen); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(bx + cLen, by + bh); ctx.lineTo(bx, by + bh); ctx.lineTo(bx, by + bh - cLen); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(bx + bw - cLen, by + bh); ctx.lineTo(bx + bw, by + bh); ctx.lineTo(bx + bw, by + bh - cLen); ctx.stroke();
+  ctx.globalAlpha = 1;
 
-    // Room label
-    ctx.font = 'bold 9px monospace';
-    ctx.fillStyle = accent;
-    ctx.globalAlpha = 0.7;
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(room.label, rx + 24, ry + hdrH / 2 + 1);
-    ctx.globalAlpha = 1;
+  // ── Thin dividing line between workspace and cabin ──
+  const divGrad = ctx.createLinearGradient(divX, by, divX, by + bh);
+  divGrad.addColorStop(0, 'rgba(255,255,255,0)');
+  divGrad.addColorStop(0.08, 'rgba(255,255,255,0.06)');
+  divGrad.addColorStop(0.5, 'rgba(255,255,255,0.10)');
+  divGrad.addColorStop(0.92, 'rgba(255,255,255,0.06)');
+  divGrad.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = divGrad;
+  ctx.fillRect(divX - 0.5, by + 10, 1, bh - 20);
 
-    // ── Scanning line effect (horizontal) ──
-    const scanLine = ry + hdrH + ((frame * 0.3 + ri * 60) % (rh - hdrH));
-    ctx.fillStyle = `rgba(${ar},${ag},${ab},0.03)`;
-    ctx.fillRect(rx + 4, scanLine, rw - 8, 1);
+  // ── Header strip across full width ──
+  const hdrH = 22;
+  const hdrGrad = ctx.createLinearGradient(bx, by, bx + bw, by);
+  hdrGrad.addColorStop(0, 'rgba(74,106,255,0.14)');
+  hdrGrad.addColorStop(0.55, 'rgba(40,40,60,0.05)');
+  hdrGrad.addColorStop(1, 'rgba(212,145,90,0.12)');
+  ctx.fillStyle = hdrGrad;
+  ctx.beginPath();
+  ctx.roundRect(bx + 1, by + 1, bw - 2, hdrH, [9, 9, 0, 0]);
+  ctx.fill();
 
-    // ── Bottom status bar ──
-    const barW = rw - 20;
-    const barX = rx + 10;
-    const barY = ry + rh - 6;
-    // Track
-    ctx.fillStyle = 'rgba(255,255,255,0.04)';
-    ctx.beginPath();
-    ctx.roundRect(barX, barY, barW, 2, 1);
-    ctx.fill();
-    // Animated fill
-    const fillW = barW * (0.3 + Math.sin(frame * 0.01 + ri * 2) * 0.2);
-    ctx.fillStyle = `rgba(${ar},${ag},${ab},0.25)`;
-    ctx.beginPath();
-    ctx.roundRect(barX, barY, fillW, 2, 1);
-    ctx.fill();
+  // Header divider line
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+  ctx.lineWidth = 0.5;
+  ctx.beginPath();
+  ctx.moveTo(bx + 8, by + hdrH);
+  ctx.lineTo(bx + bw - 8, by + hdrH);
+  ctx.stroke();
 
-    // ── Room-specific interior decorations ──
-    drawRoomInterior(ctx, key, rx, ry + hdrH + 4, rw, rh - hdrH - 12, cw, ch, frame);
+  // Left label (workspace)
+  ctx.font = '13px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('💻', bx + 8, by + hdrH / 2 + 1);
+  ctx.font = 'bold 9px monospace';
+  ctx.fillStyle = '#4a6aff';
+  ctx.globalAlpha = 0.7;
+  ctx.fillText('WORKSPACE', bx + 24, by + hdrH / 2 + 1);
+  ctx.globalAlpha = 1;
+
+  // Right label (cabin) — after divider
+  ctx.font = '13px sans-serif';
+  ctx.fillText('🏠', divX + 8, by + hdrH / 2 + 1);
+  ctx.font = 'bold 9px monospace';
+  ctx.fillStyle = '#d4915a';
+  ctx.globalAlpha = 0.7;
+  ctx.fillText('CABIN', divX + 24, by + hdrH / 2 + 1);
+  ctx.globalAlpha = 1;
+
+  // ── Scanning line ──
+  const scanLine = by + hdrH + ((frame * 0.3) % (bh - hdrH));
+  ctx.fillStyle = 'rgba(74,106,255,0.025)';
+  ctx.fillRect(bx + 4, scanLine, bw - 8, 1);
+
+  // ── Bottom status bar ──
+  const barW = bw - 20, barX = bx + 10, barY = by + bh - 6;
+  ctx.fillStyle = 'rgba(255,255,255,0.04)';
+  ctx.beginPath(); ctx.roundRect(barX, barY, barW, 2, 1); ctx.fill();
+  const fillW = barW * (0.3 + Math.sin(frame * 0.01) * 0.2);
+  ctx.fillStyle = 'rgba(74,106,255,0.2)';
+  ctx.beginPath(); ctx.roundRect(barX, barY, fillW, 2, 1); ctx.fill();
+
+  // ── Room-specific interior decorations ──
+  Object.entries(ROOMS).forEach(([key, room]) => {
+    const rx = room.x * cw + 2, ry2 = by + hdrH + 4;
+    const rw = room.w * cw - 4, rh2 = bh - hdrH - 12;
+    drawRoomInterior(ctx, key, rx, ry2, rw, rh2, cw, ch, frame);
   });
 }
 
@@ -1098,35 +1097,9 @@ function drawPlant(ctx, x, y) {
   ctx.globalAlpha = 1;
 }
 
-// ─── Floor accent lines — single vertical corridor between rooms ───
+// ─── Floor accent — divider is already drawn in drawRooms, this is a no-op ───
 function drawFloorAccents(ctx, cw, ch, frame) {
-  // Vertical corridor between workspace and cabin
-  const vX = cw * 0.61;
-  const vGrad = ctx.createLinearGradient(vX, 0, vX, ch);
-  vGrad.addColorStop(0, 'rgba(0,188,212,0)');
-  vGrad.addColorStop(0.1, 'rgba(0,188,212,0.08)');
-  vGrad.addColorStop(0.5, 'rgba(0,188,212,0.12)');
-  vGrad.addColorStop(0.9, 'rgba(0,188,212,0.08)');
-  vGrad.addColorStop(1, 'rgba(0,188,212,0)');
-  ctx.fillStyle = vGrad;
-  ctx.fillRect(vX - 1, 0, 2, ch);
-
-  // Doorway markers
-  const doorY1 = ch * 0.30, doorY2 = ch * 0.70;
-  ctx.fillStyle = 'rgba(0,188,212,0.15)';
-  ctx.beginPath(); ctx.arc(vX, doorY1, 4, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.arc(vX, doorY2, 4, 0, Math.PI * 2); ctx.fill();
-
-  // Moving dots along corridor
-  for (let d = 0; d < 2; d++) {
-    const dp = ((frame * 0.004 + d * 0.5) % 1);
-    ctx.fillStyle = '#00bcd4';
-    ctx.globalAlpha = 0.3 + Math.sin(dp * Math.PI) * 0.3;
-    ctx.beginPath();
-    ctx.arc(vX, dp * ch, 2.5, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.globalAlpha = 1;
+  // Divider line is rendered inside drawRooms as part of the unified box.
 }
 
 // ─── Ambient floating particles ───
