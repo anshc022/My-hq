@@ -446,34 +446,7 @@ function drawAgent(ctx, x, y, name, agentData, frame) {
   ctx.textBaseline = 'middle';
   ctx.fillText(label, x, pillY + pillH / 2);
 
-  // ── Role tag (smaller, below name pill) ──
-  const role = config.role;
-  const roleFs = Math.max(6, Math.round(8 * S));
-  ctx.font = `${roleFs}px monospace`;
-  const rw = ctx.measureText(role).width;
-  const rolePillW = rw + 6 * S;
-  const rolePillH = Math.round(10 * S);
-  const rolePillX = x - rolePillW / 2;
-  const rolePillY = pillY + pillH + 2 * S;
 
-  ctx.fillStyle = 'rgba(0,0,0,0.55)';
-  ctx.globalAlpha = 0.9;
-  ctx.beginPath();
-  ctx.roundRect(rolePillX, rolePillY, rolePillW, rolePillH, 2 * S);
-  ctx.fill();
-  ctx.globalAlpha = 1;
-
-  ctx.strokeStyle = config.color;
-  ctx.lineWidth = 0.6 * S;
-  ctx.stroke();
-
-  ctx.fillStyle = config.color;
-  ctx.globalAlpha = 0.9;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.font = `${roleFs}px monospace`;
-  ctx.fillText(role, x, rolePillY + rolePillH / 2);
-  ctx.globalAlpha = 1;
 
   // ── Speech bubble ──
   if (agentData?.current_task && status !== 'idle' && status !== 'sleeping') {
@@ -1081,98 +1054,103 @@ function drawRoomInterior(ctx, roomKey, rx, ry, rw, rh, cw, ch, frame) {
 }
 
 // ─── Furniture (desks in workspace + cabin decorations) ───
-function drawFurniture(ctx, cw, ch, frame) {
+function drawFurniture(ctx, cw, ch, frame, P) {
+  const S = (P || 3) / 3;
   // ── Individual desks with monitors (skip pulse — it uses the node laptop) ──
   Object.entries(DESK_POSITIONS).forEach(([name, dp]) => {
-    if (name === 'pulse') return; // pulse has no desk, only the node indicator laptop
+    if (name === 'pulse') return;
     const dx = dp.x * cw, dy = dp.y * ch;
     const config = AGENTS[name];
     if (!config) return;
 
     // Desk surface
-    const deskGrad = ctx.createLinearGradient(dx - 24, dy + 6, dx + 24, dy + 6);
+    const dw = 24 * S, dh = 6 * S;
+    const deskGrad = ctx.createLinearGradient(dx - dw, dy + dh, dx + dw, dy + dh);
     deskGrad.addColorStop(0, '#2a2a48');
     deskGrad.addColorStop(0.5, '#323252');
     deskGrad.addColorStop(1, '#2a2a48');
     ctx.fillStyle = deskGrad;
     ctx.beginPath();
-    ctx.roundRect(dx - 24, dy + 6, 48, 12, 3);
+    ctx.roundRect(dx - dw, dy + dh, dw * 2, 12 * S, 3 * S);
     ctx.fill();
     ctx.fillStyle = 'rgba(255,255,255,0.05)';
-    ctx.fillRect(dx - 22, dy + 6, 44, 1);
+    ctx.fillRect(dx - dw + 2 * S, dy + dh, dw * 2 - 4 * S, 1);
 
     // Desk legs
     ctx.fillStyle = '#1e1e38';
-    ctx.fillRect(dx - 20, dy + 18, 3, 6);
-    ctx.fillRect(dx + 17, dy + 18, 3, 6);
+    ctx.fillRect(dx - 20 * S, dy + 18 * S, 3 * S, 6 * S);
+    ctx.fillRect(dx + 17 * S, dy + 18 * S, 3 * S, 6 * S);
 
     // Monitor frame
+    const mw = 16 * S, mh = 24 * S;
     ctx.fillStyle = '#111128';
     ctx.beginPath();
-    ctx.roundRect(dx - 16, dy - 24, 32, 24, 4);
+    ctx.roundRect(dx - mw, dy - mh, mw * 2, mh, 4 * S);
     ctx.fill();
 
     // Screen content
-    const screenGrad = ctx.createLinearGradient(dx - 13, dy - 21, dx - 13, dy - 4);
+    const sx = dx - 13 * S, sy = dy - 21 * S, sw = 26 * S, sh = 17 * S;
+    const screenGrad = ctx.createLinearGradient(sx, sy, sx, sy + sh);
     screenGrad.addColorStop(0, darken(config.color, 80));
     screenGrad.addColorStop(1, 'rgba(0,0,0,0.9)');
     ctx.fillStyle = screenGrad;
-    ctx.fillRect(dx - 13, dy - 21, 26, 17);
+    ctx.fillRect(sx, sy, sw, sh);
 
     // Screen text lines
     ctx.globalAlpha = 0.3;
     ctx.fillStyle = config.color;
     for (let li = 0; li < 4; li++) {
-      const lw = 8 + (((name.charCodeAt(0) * 7 + li * 13) % 12));
-      ctx.fillRect(dx - 10, dy - 19 + li * 4, lw, 1.5);
+      const lw = (8 + (((name.charCodeAt(0) * 7 + li * 13) % 12))) * S;
+      ctx.fillRect(dx - 10 * S, dy - 19 * S + li * 4 * S, lw, 1.5 * S);
     }
     ctx.globalAlpha = 1;
 
     // Scan line
-    const scanY = dy - 21 + ((frame * 0.5 + Object.keys(AGENTS).indexOf(name) * 30) % 17);
+    const scanY = sy + ((frame * 0.5 + Object.keys(AGENTS).indexOf(name) * 30) % (sh));
     ctx.fillStyle = 'rgba(255,255,255,0.04)';
-    ctx.fillRect(dx - 13, scanY, 26, 2);
+    ctx.fillRect(sx, scanY, sw, 2 * S);
 
     // Monitor glow
     ctx.strokeStyle = config.color;
     ctx.globalAlpha = 0.2;
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 1 * S;
     ctx.beginPath();
-    ctx.roundRect(dx - 16, dy - 24, 32, 24, 4);
+    ctx.roundRect(dx - mw, dy - mh, mw * 2, mh, 4 * S);
     ctx.stroke();
     ctx.globalAlpha = 1;
 
     // Monitor stand
     ctx.fillStyle = '#2a2a48';
-    ctx.fillRect(dx - 2, dy, 4, 6);
-    ctx.fillRect(dx - 5, dy + 4, 10, 2);
+    ctx.fillRect(dx - 2 * S, dy, 4 * S, 6 * S);
+    ctx.fillRect(dx - 5 * S, dy + 4 * S, 10 * S, 2 * S);
 
     // Power LED
     ctx.fillStyle = config.color;
     ctx.globalAlpha = 0.6 + Math.sin(frame * 0.04) * 0.3;
     ctx.beginPath();
-    ctx.arc(dx + 13, dy - 3, 1.5, 0, Math.PI * 2);
+    ctx.arc(dx + 13 * S, dy - 3 * S, 1.5 * S, 0, Math.PI * 2);
     ctx.fill();
     ctx.globalAlpha = 1;
 
     // Chair
     ctx.fillStyle = '#1a1a30';
     ctx.beginPath();
-    ctx.ellipse(dx, dy + 28, 10, 6, 0, 0, Math.PI * 2);
+    ctx.ellipse(dx, dy + 28 * S, 10 * S, 6 * S, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = '#222240';
     ctx.beginPath();
-    ctx.roundRect(dx - 8, dy + 18, 16, 8, 3);
+    ctx.roundRect(dx - 8 * S, dy + 18 * S, 16 * S, 8 * S, 3 * S);
     ctx.fill();
     ctx.fillStyle = 'rgba(255,255,255,0.03)';
-    ctx.fillRect(dx - 6, dy + 19, 12, 2);
+    ctx.fillRect(dx - 6 * S, dy + 19 * S, 12 * S, 2 * S);
 
     // Agent name label under desk
-    ctx.font = 'bold 7px monospace';
+    const deskLblFs = Math.max(5, Math.round(7 * S));
+    ctx.font = `bold ${deskLblFs}px monospace`;
     ctx.fillStyle = config.color;
     ctx.globalAlpha = 0.25;
     ctx.textAlign = 'center';
-    ctx.fillText(config.label, dx, dy + 40);
+    ctx.fillText(config.label, dx, dy + 40 * S);
     ctx.globalAlpha = 1;
   });
 
@@ -1534,7 +1512,7 @@ export default function OfficeCanvas({ agents, nodeConnected }) {
     drawWatermark(ctx, cw, ch);
     drawFloorAccents(ctx, cw, ch, frame);
     drawRooms(ctx, cw, ch, frame);
-    drawFurniture(ctx, cw, ch, frame);
+    drawFurniture(ctx, cw, ch, frame, P);
     drawParticles(ctx, cw, ch, frame);
 
     // Connection lines (before agents so lines go behind)
