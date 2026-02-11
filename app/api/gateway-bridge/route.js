@@ -47,48 +47,105 @@ function extractAgent(payload) {
   return null;
 }
 
-// ─── Delegation detection — when Echo EXPLICITLY delegates, mark sub-agents ───
-// Only triggers on clear delegation language like "@pixel handle the UI" or
-// "I'm sending this to Dash". Simple mentions like "Pixel is our designer" are ignored.
+// ─── Delegation detection — detect when Echo does work on behalf of sub-agents ───
+// Three detection signals:
+// 1. User messages mentioning agent names ("tell ship to push code", "@ship")
+// 2. Echo's response mentioning agents with action context ("shipped X to repo")
+// 3. Echo using tools associated with a specific agent (exec + git → Ship)
 
-// Track which sub-agents are working from a delegation
 const activeDelegations = new Map(); // agentName → { startedAt, task }
 
-// Strict delegation patterns: agent name + explicit delegation verb nearby
-const DELEGATION_VERBS = /(?:delegat|assign|send(?:ing)?\s+(?:this\s+)?to|task(?:ing)?|hand(?:ing)?\s+(?:this\s+)?(?:off\s+)?to|asking|forwarding\s+to|passing\s+to|routing\s+to)/i;
 const AGENT_NAMES_RE = /\b(pixel|dash|stack|probe|ship)\b/gi;
+
+// Signal 1: Detect delegation from user messages
+const USER_CMD_RE = /(?:tell|ask|have|get|let)\s+(pixel|dash|stack|probe|ship)\s+/i;
+const USER_MENTION_RE = /(?:@|hey\s+|yo\s+)(pixel|dash|stack|probe|ship)\b/i;
+const USER_COMMA_RE = /\b(pixel|dash|stack|probe|ship)\s*,/i;
+
+async function detectUserDelegation(text) {
+  if (!text) return;
+  const lower = text.toLowerCase();
+
+  // "tell/ask/have/get/let ship to ..."
+  let m = lower.match(USER_CMD_RE);
+  if (!m) m = lower.match(USER_MENTION_RE); // "@ship" or "hey ship"
+  if (!m) m = lower.match(USER_COMMA_RE);   // "ship, push the code"
+  if (!m) return;
+
+  const agentName = m[1].toLowerCase();
+  const task = text.slice(0, 80);
+  await markDelegation(agentName, task);
+}
+
+// Signal 2: Detect delegation from Echo's response (broadened patterns)
+const DELEGATION_VERBS = /(?:delegat|assign|send(?:ing)?\s+(?:this\s+)?to|task(?:ing)?|hand(?:ing)?\s+(?:this\s+)?(?:off\s+)?to|asking|forwarding\s+to|passing\s+to|routing\s+to)/i;
+// Agent + action completed
+const AGENT_ACTION_RE = /\b(pixel|dash|stack|probe|ship)\s+(?:pushed|committed|deployed|shipped|created|added|built|handled|fixed|updated|designed|tested|scanned|checked|wrote|coded|is\s+(?:working|pushing|deploying|building|handling)|will\s+(?:push|deploy|build|handle|create|add|fix|update))\b/i;
+// "Shipped X to repo" / 🚢 pattern
+const SHIPPED_RE = /shipped?\s+[`\w].{0,60}(?:to\s+(?:the\s+)?(?:repo|repository|github|server|production|staging|branch)|🚢)/i;
+// "I'll have ship handle" / "let me get ship to"
+const ECHO_DELEGATE_RE = /(?:i'?ll|let\s+me)\s+(?:have|get|ask)\s+(pixel|dash|stack|probe|ship)/i;
 
 async function detectDelegation(text) {
   if (!text) return;
-  // Must contain explicit delegation language — not just a mention
-  if (!DELEGATION_VERBS.test(text)) return;
 
   const matches = [...new Set((text.match(AGENT_NAMES_RE) || []).map(n => n.toLowerCase()))];
+
+  // Check all delegation signals
+  const hasStrictVerb = DELEGATION_VERBS.test(text);
+  const hasAgentAction = AGENT_ACTION_RE.test(text);
+  const hasShippedPattern = SHIPPED_RE.test(text);
+  const hasEchoDelegate = ECHO_DELEGATE_RE.test(text);
+
+  // "Shipped to repo" pattern — always attribute to Ship even if "ship" isn't in matches
+  if (hasShippedPattern && !matches.includes('ship')) {
+    matches.push('ship');
+  }
+
   if (matches.length === 0) return;
+  if (!hasStrictVerb && !hasAgentAction && !hasShippedPattern && !hasEchoDelegate) return;
 
   for (const name of matches) {
-    const agentName = name; // pixel, dash, stack, probe, ship are already display names
     const taskMatch = text.match(new RegExp(`${name}[^.!?]{0,80}`, 'i'));
     const task = taskMatch ? taskMatch[0].trim().slice(0, 80) : 'Delegated task';
-
-    activeDelegations.set(agentName, { startedAt: Date.now(), task });
-
-    await supabase.from('ops_agents').update({
-      status: 'working',
-      current_task: task,
-      current_room: getWorkRoom(agentName),
-      last_active_at: new Date().toISOString(),
-    }).eq('name', agentName);
-
-    await supabase.from('ops_events').insert({
-      agent: agentName,
-      event_type: 'task',
-      title: `Working: ${task.slice(0, 60)}`,
-    });
+    await markDelegation(name, task);
   }
 }
 
-// When a subagent run finishes, mark delegated agents as done
+// Signal 3: Detect from tool calls — exec with git commands → Ship
+async function detectToolDelegation(toolName, toolData) {
+  if (!toolName) return;
+  const name = toolName.toLowerCase();
+  if (name === 'exec' || name === 'bash' || name === 'shell' || name === 'run_command') {
+    const cmd = typeof toolData === 'string' ? toolData :
+      (toolData?.command || toolData?.cmd || toolData?.input || JSON.stringify(toolData || ''));
+    if (/\bgit\s+(push|commit|add|merge)\b/i.test(cmd) || /\b(deploy|npm\s+publish)\b/i.test(cmd)) {
+      await markDelegation('ship', `Deploying: ${cmd.slice(0, 60)}`);
+    }
+  }
+}
+
+// Mark an agent as working via delegation
+async function markDelegation(agentName, task) {
+  if (activeDelegations.has(agentName)) return; // already working
+
+  activeDelegations.set(agentName, { startedAt: Date.now(), task });
+
+  await supabase.from('ops_agents').update({
+    status: 'working',
+    current_task: task || 'Delegated task',
+    current_room: getWorkRoom(agentName),
+    last_active_at: new Date().toISOString(),
+  }).eq('name', agentName);
+
+  await supabase.from('ops_events').insert({
+    agent: agentName,
+    event_type: 'task',
+    title: `Working: ${(task || '').slice(0, 60)}`,
+  });
+}
+
+// When a run finishes, mark delegated agents as done
 async function finishDelegations() {
   for (const [agentName, info] of activeDelegations.entries()) {
     await supabase.from('ops_agents').update({
@@ -107,6 +164,20 @@ async function finishDelegations() {
   activeDelegations.clear();
 }
 
+// Safety cleanup: mark stale delegations as idle (handles serverless cold starts)
+async function cleanupStaleDelegations() {
+  const now = Date.now();
+  for (const [agentName, info] of activeDelegations.entries()) {
+    if (now - info.startedAt > 180_000) { // 3 minutes max
+      await supabase.from('ops_agents').update({
+        status: 'idle', current_task: null, current_room: 'desk',
+        last_active_at: new Date().toISOString(),
+      }).eq('name', agentName);
+      activeDelegations.delete(agentName);
+    }
+  }
+}
+
 // ─── Track active runs (per agent, per request) ───
 const activeRuns = new Map(); // runId → { agent, text, startedAt, toolCalls, chatLogged, recovered }
 
@@ -118,6 +189,8 @@ function startWatchdog() {
   if (watchdogInterval) return;
   watchdogInterval = setInterval(async () => {
     const now = Date.now();
+    // Clean up stale delegations (handles serverless cold start edge cases)
+    await cleanupStaleDelegations();
     for (const [runId, run] of activeRuns.entries()) {
       if (run.recovered) continue;
       const age = now - run.startedAt;
@@ -333,8 +406,8 @@ async function processGatewayMessage(msg) {
         title: `Completed${run?.toolCalls.length ? ` (${run.toolCalls.length} tools used)` : ''}`,
       });
 
-      // If this is a subagent ending, mark delegated agents as completed too
-      if (isSubagent) {
+      // Finish any active delegations when Echo's run ends
+      if (activeDelegations.size > 0) {
         await finishDelegations();
       }
 
@@ -365,6 +438,17 @@ async function processGatewayMessage(msg) {
       // Detect delegation in Echo's response
       if (agent === 'echo') {
         await detectDelegation(text);
+
+        // If delegated agents exist, update them to 'talking' as well
+        for (const [delegatedAgent] of activeDelegations) {
+          const agentPreview = text.length > 60 ? text.slice(0, 60) + '...' : text;
+          await supabase.from('ops_agents').update({
+            status: 'talking',
+            current_task: `${delegatedAgent}: "${agentPreview}"`,
+            current_room: getTalkRoom(delegatedAgent),
+            last_active_at: new Date().toISOString(),
+          }).eq('name', delegatedAgent);
+        }
       }
 
       return { type: 'assistant_stream', agent };
@@ -391,6 +475,11 @@ async function processGatewayMessage(msg) {
         event_type: 'task',
         title: `Tool: ${toolName}`,
       });
+
+      // Detect tool-based delegation (e.g., exec + git → Ship)
+      if (agent === 'echo') {
+        await detectToolDelegation(toolName, payload.data?.arguments || payload.data?.input || payload.data);
+      }
 
       return { type: 'tool_call', agent, tool: toolName };
     }
@@ -422,6 +511,9 @@ async function processGatewayMessage(msg) {
           title: `${roomCmd.agents.join(', ')} → ${roomCmd.room}`,
         });
       }
+
+      // Check for user-initiated delegation ("tell ship to X", "@ship", etc.)
+      await detectUserDelegation(text);
 
       // Check for team dispatch commands (log it — EC2 bridge handles actual dispatch)
       const dispatch = detectTeamDispatch(text);
