@@ -628,63 +628,95 @@ function drawConnections(ctx, agents, cw, ch, frame) {
   ctx.restore();
 }
 
-// ─── Room zones (polished with icons, gradients, glow) ───
-const ROOM_ICONS = {
-  desk:     '💻',
-  meeting:  '🗣️',
-  research: '🧪',
-  social:   '💬',
-  break:    '☕',
-  board:    '📋',
-};
-
+// ─── Room zones (polished with themed interiors) ───
 function drawRooms(ctx, cw, ch, frame) {
-  Object.entries(ROOMS).forEach(([key, room]) => {
+  Object.entries(ROOMS).forEach(([key, room], ri) => {
     const rx = room.x * cw + 2, ry = room.y * ch + 2;
     const rw = room.w * cw - 4, rh = room.h * ch - 4;
+    const accent = room.accent || room.border;
 
-    // ── Room background gradient ──
-    const grad = ctx.createLinearGradient(rx, ry, rx, ry + rh);
+    // ── Room background — multi-stop gradient ──
+    const grad = ctx.createLinearGradient(rx, ry, rx + rw * 0.3, ry + rh);
     grad.addColorStop(0, room.bg);
-    grad.addColorStop(1, 'rgba(8,8,18,0.6)');
+    grad.addColorStop(0.6, 'rgba(8,8,16,0.55)');
+    grad.addColorStop(1, 'rgba(4,4,10,0.7)');
     ctx.fillStyle = grad;
     ctx.beginPath();
-    ctx.roundRect(rx, ry, rw, rh, 8);
+    ctx.roundRect(rx, ry, rw, rh, 10);
     ctx.fill();
 
-    // ── Inner subtle pattern (diagonal lines) ──
+    // ── Inner floor pattern (isometric grid for depth) ──
     ctx.save();
     ctx.beginPath();
-    ctx.roundRect(rx, ry, rw, rh, 8);
+    ctx.roundRect(rx, ry, rw, rh, 10);
     ctx.clip();
-    ctx.strokeStyle = 'rgba(255,255,255,0.012)';
-    ctx.lineWidth = 1;
-    for (let d = -rh; d < rw + rh; d += 16) {
+    ctx.strokeStyle = 'rgba(255,255,255,0.015)';
+    ctx.lineWidth = 0.5;
+    const gridSize = 24;
+    for (let gx = 0; gx < rw + rh; gx += gridSize) {
       ctx.beginPath();
-      ctx.moveTo(rx + d, ry);
-      ctx.lineTo(rx + d - rh, ry + rh);
+      ctx.moveTo(rx + gx, ry);
+      ctx.lineTo(rx + gx - rh * 0.5, ry + rh);
+      ctx.stroke();
+    }
+    for (let gy = 0; gy < rh; gy += gridSize) {
+      ctx.beginPath();
+      ctx.moveTo(rx, ry + gy);
+      ctx.lineTo(rx + rw, ry + gy);
       ctx.stroke();
     }
     ctx.restore();
 
-    // ── Animated border glow ──
-    const glowPulse = 0.4 + Math.sin(frame * 0.02 + Object.keys(ROOMS).indexOf(key) * 1.2) * 0.2;
+    // ── Ambient glow in room center ──
+    const glowR = Math.min(rw, rh) * 0.5;
+    const centerGlow = ctx.createRadialGradient(
+      rx + rw / 2, ry + rh / 2, 0,
+      rx + rw / 2, ry + rh / 2, glowR
+    );
+    centerGlow.addColorStop(0, accent.replace(')', ',0.04)').replace('rgb(', 'rgba(').replace('#', ''));
+    // Use hex to rgba for accent
+    const ar = parseInt(accent.slice(1, 3), 16) || 0;
+    const ag = parseInt(accent.slice(3, 5), 16) || 0;
+    const ab = parseInt(accent.slice(5, 7), 16) || 0;
+    const centerGlow2 = ctx.createRadialGradient(
+      rx + rw / 2, ry + rh / 2, 0,
+      rx + rw / 2, ry + rh / 2, glowR
+    );
+    centerGlow2.addColorStop(0, `rgba(${ar},${ag},${ab},0.06)`);
+    centerGlow2.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = centerGlow2;
+    ctx.beginPath();
+    ctx.roundRect(rx, ry, rw, rh, 10);
+    ctx.fill();
+
+    // ── Animated double-border ──
+    const glowPulse = 0.35 + Math.sin(frame * 0.018 + ri * 1.5) * 0.2;
+    // Outer border glow
     ctx.save();
-    ctx.shadowColor = room.border;
-    ctx.shadowBlur = 6;
+    ctx.shadowColor = accent;
+    ctx.shadowBlur = 10;
+    ctx.globalAlpha = glowPulse * 0.5;
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(rx - 1, ry - 1, rw + 2, rh + 2, 11);
+    ctx.stroke();
+    ctx.restore();
+    // Inner border
+    ctx.save();
     ctx.globalAlpha = glowPulse;
     ctx.strokeStyle = room.border;
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.roundRect(rx, ry, rw, rh, 8);
+    ctx.roundRect(rx, ry, rw, rh, 10);
     ctx.stroke();
     ctx.restore();
 
-    // ── Corner accents (small L shapes) ──
-    ctx.strokeStyle = room.border;
-    ctx.globalAlpha = 0.5;
-    ctx.lineWidth = 1.5;
-    const cLen = 10;
+    // ── Corner brackets (techy L shapes) ──
+    ctx.strokeStyle = accent;
+    ctx.globalAlpha = 0.6;
+    ctx.lineWidth = 2;
+    const cLen = 14;
     // Top-left
     ctx.beginPath();
     ctx.moveTo(rx + cLen, ry); ctx.lineTo(rx, ry); ctx.lineTo(rx, ry + cLen);
@@ -703,26 +735,289 @@ function drawRooms(ctx, cw, ch, frame) {
     ctx.stroke();
     ctx.globalAlpha = 1;
 
-    // ── Room icon (top-left) ──
-    const icon = ROOM_ICONS[key] || '';
-    ctx.font = '11px sans-serif';
+    // ── Header bar with icon + label ──
+    const hdrH = 22;
+    const hdrGrad = ctx.createLinearGradient(rx, ry, rx + rw * 0.5, ry);
+    hdrGrad.addColorStop(0, `rgba(${ar},${ag},${ab},0.18)`);
+    hdrGrad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = hdrGrad;
+    ctx.beginPath();
+    ctx.roundRect(rx + 1, ry + 1, rw - 2, hdrH, [9, 9, 0, 0]);
+    ctx.fill();
+
+    // Header divider line
+    ctx.strokeStyle = `rgba(${ar},${ag},${ab},0.2)`;
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    ctx.moveTo(rx + 8, ry + hdrH);
+    ctx.lineTo(rx + rw - 8, ry + hdrH);
+    ctx.stroke();
+
+    // Room icon
+    const icon = room.icon || '';
+    ctx.font = '13px sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText(icon, rx + 7, ry + 15);
+    ctx.fillText(icon, rx + 8, ry + hdrH / 2 + 1);
 
-    // ── Room label (top, next to icon) ──
-    ctx.font = 'bold 8px monospace';
-    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    // Room label
+    ctx.font = 'bold 9px monospace';
+    ctx.fillStyle = accent;
+    ctx.globalAlpha = 0.7;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText(room.label, rx + 22, ry + 15);
-
-    // ── Bottom status line ──
-    ctx.fillStyle = room.border;
-    ctx.globalAlpha = 0.3;
-    ctx.fillRect(rx + 8, ry + rh - 3, rw - 16, 1);
+    ctx.fillText(room.label, rx + 24, ry + hdrH / 2 + 1);
     ctx.globalAlpha = 1;
+
+    // ── Scanning line effect (horizontal) ──
+    const scanLine = ry + hdrH + ((frame * 0.3 + ri * 60) % (rh - hdrH));
+    ctx.fillStyle = `rgba(${ar},${ag},${ab},0.03)`;
+    ctx.fillRect(rx + 4, scanLine, rw - 8, 1);
+
+    // ── Bottom status bar ──
+    const barW = rw - 20;
+    const barX = rx + 10;
+    const barY = ry + rh - 6;
+    // Track
+    ctx.fillStyle = 'rgba(255,255,255,0.04)';
+    ctx.beginPath();
+    ctx.roundRect(barX, barY, barW, 2, 1);
+    ctx.fill();
+    // Animated fill
+    const fillW = barW * (0.3 + Math.sin(frame * 0.01 + ri * 2) * 0.2);
+    ctx.fillStyle = `rgba(${ar},${ag},${ab},0.25)`;
+    ctx.beginPath();
+    ctx.roundRect(barX, barY, fillW, 2, 1);
+    ctx.fill();
+
+    // ── Room-specific interior decorations ──
+    drawRoomInterior(ctx, key, rx, ry + hdrH + 4, rw, rh - hdrH - 12, cw, ch, frame);
   });
+}
+
+// ── Per-room interior decorations ──
+function drawRoomInterior(ctx, roomKey, rx, ry, rw, rh, cw, ch, frame) {
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(rx, ry, rw, rh);
+  ctx.clip();
+
+  if (roomKey === 'desk') {
+    // Ceiling lights (row of small circles)
+    for (let i = 0; i < 4; i++) {
+      const lx = rx + rw * 0.15 + i * rw * 0.22;
+      const ly = ry + 6;
+      ctx.fillStyle = `rgba(74, 106, 255, ${0.08 + Math.sin(frame * 0.02 + i) * 0.04})`;
+      ctx.beginPath();
+      ctx.arc(lx, ly, 12, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(200,210,255,0.15)';
+      ctx.beginPath();
+      ctx.arc(lx, ly, 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // Server rack on right wall
+    const srx = rx + rw - 36, sry = ry + 20;
+    ctx.fillStyle = 'rgba(15,15,30,0.6)';
+    ctx.beginPath();
+    ctx.roundRect(srx, sry, 26, 50, 3);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(74,106,255,0.2)';
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+    for (let i = 0; i < 5; i++) {
+      ctx.fillStyle = i % 2 === 0 ? 'rgba(74,106,255,0.15)' : 'rgba(40,40,80,0.3)';
+      ctx.fillRect(srx + 3, sry + 4 + i * 9, 20, 7);
+      // Blinking LEDs
+      const blink = Math.sin(frame * 0.05 + i * 1.3) > 0;
+      ctx.fillStyle = blink ? '#4a6aff' : '#333';
+      ctx.beginPath();
+      ctx.arc(srx + 21, sry + 7 + i * 9, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  if (roomKey === 'meeting') {
+    // Microphone icon in center
+    const mx = rx + rw * 0.5, my = ry + rh * 0.4;
+    ctx.fillStyle = 'rgba(0,221,196,0.06)';
+    ctx.beginPath();
+    ctx.arc(mx, my, 30, 0, Math.PI * 2);
+    ctx.fill();
+    // Signal rings
+    for (let i = 0; i < 3; i++) {
+      const ringR = 14 + i * 10;
+      const ringAlpha = 0.08 - i * 0.02 + Math.sin(frame * 0.03 + i) * 0.03;
+      ctx.strokeStyle = `rgba(0,221,196,${Math.max(0, ringAlpha)})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(mx, my, ringR, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    // Timer display
+    const timerX = rx + rw - 40, timerY = ry + 12;
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.beginPath();
+    ctx.roundRect(timerX, timerY, 30, 14, 3);
+    ctx.fill();
+    const mins = Math.floor((frame * 0.01) % 60);
+    const secs = Math.floor((frame * 0.6) % 60);
+    ctx.font = '8px monospace';
+    ctx.fillStyle = '#00ddc4';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`, timerX + 15, timerY + 9);
+    // Chairs around meeting area
+    for (let i = 0; i < 5; i++) {
+      const angle = (i / 5) * Math.PI * 2 - Math.PI / 2;
+      const cx = mx + Math.cos(angle) * 42;
+      const cy = my + Math.sin(angle) * 24;
+      ctx.fillStyle = 'rgba(0,221,196,0.06)';
+      ctx.beginPath();
+      ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  if (roomKey === 'research') {
+    // Flask/beaker decorations
+    const fx = rx + 16, fy = ry + rh * 0.3;
+    // Beaker
+    ctx.strokeStyle = 'rgba(180,74,255,0.2)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(fx, fy); ctx.lineTo(fx - 4, fy + 16); ctx.lineTo(fx + 10, fy + 16); ctx.lineTo(fx + 6, fy);
+    ctx.stroke();
+    // Bubbling liquid
+    const bubblePhase = (frame * 0.04) % 6;
+    ctx.fillStyle = 'rgba(180,74,255,0.15)';
+    ctx.fillRect(fx - 3, fy + 8, 12, 8);
+    if (bubblePhase < 3) {
+      ctx.beginPath();
+      ctx.arc(fx + 2, fy + 7 - bubblePhase, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // DNA helix
+    const dnx = rx + rw - 24, dny = ry + 14;
+    ctx.strokeStyle = 'rgba(180,74,255,0.15)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 40; i++) {
+      const t = i * 0.15 + frame * 0.02;
+      const x1 = dnx + Math.sin(t) * 6;
+      const x2 = dnx - Math.sin(t) * 6;
+      const yy = dny + i * 1.5;
+      if (yy > ry + rh - 4) break;
+      ctx.globalAlpha = 0.3;
+      ctx.fillStyle = '#b44aff';
+      ctx.beginPath();
+      ctx.arc(x1, yy, 1, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#7a2aaa';
+      ctx.beginPath();
+      ctx.arc(x2, yy, 1, 0, Math.PI * 2);
+      ctx.fill();
+      if (i % 4 === 0) {
+        ctx.strokeStyle = 'rgba(180,74,255,0.08)';
+        ctx.beginPath();
+        ctx.moveTo(x1, yy); ctx.lineTo(x2, yy);
+        ctx.stroke();
+      }
+    }
+    ctx.globalAlpha = 1;
+
+    // Terminal screen
+    const tx = rx + rw * 0.35, ty = ry + 10;
+    ctx.fillStyle = 'rgba(10,5,20,0.5)';
+    ctx.beginPath();
+    ctx.roundRect(tx, ty, 50, 30, 3);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(180,74,255,0.15)';
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+    // Terminal text
+    ctx.font = '6px monospace';
+    ctx.fillStyle = '#b44aff';
+    ctx.globalAlpha = 0.4;
+    ctx.textAlign = 'left';
+    const lines = ['$ npm run dev', '> building...', '✓ compiled', '> listening'];
+    lines.forEach((line, i) => {
+      const showLine = ((frame * 0.02 + i * 4) % 20) > 2;
+      if (showLine) ctx.fillText(line, tx + 3, ty + 7 + i * 6);
+    });
+    ctx.globalAlpha = 1;
+  }
+
+  if (roomKey === 'board') {
+    // Kanban board with columns
+    const bx = rx + 10, by = ry + 8;
+    const colW = (rw - 30) / 3;
+    const colLabels = ['TODO', 'IN PROG', 'DONE'];
+    const colColors = ['#ff6b6b', '#ffaa33', '#4ade80'];
+
+    for (let ci = 0; ci < 3; ci++) {
+      const cx = bx + ci * (colW + 5);
+      // Column bg
+      ctx.fillStyle = 'rgba(0,0,0,0.2)';
+      ctx.beginPath();
+      ctx.roundRect(cx, by, colW, rh - 18, 4);
+      ctx.fill();
+      // Column header
+      ctx.fillStyle = colColors[ci];
+      ctx.globalAlpha = 0.15;
+      ctx.beginPath();
+      ctx.roundRect(cx, by, colW, 12, [4, 4, 0, 0]);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      // Column label
+      ctx.font = 'bold 6px monospace';
+      ctx.fillStyle = colColors[ci];
+      ctx.globalAlpha = 0.6;
+      ctx.textAlign = 'center';
+      ctx.fillText(colLabels[ci], cx + colW / 2, by + 8);
+      ctx.globalAlpha = 1;
+      // Task cards
+      const cardCount = ci === 0 ? 3 : ci === 1 ? 2 : 4;
+      for (let ti = 0; ti < cardCount; ti++) {
+        const cy = by + 16 + ti * 12;
+        if (cy + 8 > by + rh - 18) break;
+        ctx.fillStyle = 'rgba(255,255,255,0.04)';
+        ctx.beginPath();
+        ctx.roundRect(cx + 3, cy, colW - 6, 9, 2);
+        ctx.fill();
+        // Card accent dot
+        ctx.fillStyle = colColors[ci];
+        ctx.globalAlpha = 0.4;
+        ctx.beginPath();
+        ctx.arc(cx + 6, cy + 4.5, 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        // Card line
+        const lineW = 8 + ((ci * 7 + ti * 11) % 15);
+        ctx.fillStyle = 'rgba(255,255,255,0.06)';
+        ctx.fillRect(cx + 11, cy + 3, lineW, 2);
+      }
+    }
+
+    // Progress bar at bottom
+    const pbx = rx + 10, pby = ry + rh - 8, pbw = rw - 20;
+    ctx.fillStyle = 'rgba(255,255,255,0.04)';
+    ctx.beginPath();
+    ctx.roundRect(pbx, pby, pbw, 4, 2);
+    ctx.fill();
+    const progress = 0.6 + Math.sin(frame * 0.005) * 0.1;
+    ctx.fillStyle = 'rgba(255,170,51,0.3)';
+    ctx.beginPath();
+    ctx.roundRect(pbx, pby, pbw * progress, 4, 2);
+    ctx.fill();
+    ctx.font = '6px monospace';
+    ctx.fillStyle = '#ffaa33';
+    ctx.globalAlpha = 0.5;
+    ctx.textAlign = 'right';
+    ctx.fillText(`${Math.round(progress * 100)}%`, pbx + pbw, pby - 1);
+    ctx.globalAlpha = 1;
+  }
+
+  ctx.restore();
 }
 
 // ─── Furniture (detailed desks, monitors, decorations) ───
@@ -1008,36 +1303,70 @@ function drawPlant(ctx, x, y) {
 
 // ─── Floor accent lines & glowing separators ───
 function drawFloorAccents(ctx, cw, ch, frame) {
-  // ── Glowing separator lines ──
-  // Horizontal separator at 57%
-  const hGrad = ctx.createLinearGradient(0, ch * 0.57, cw * 0.58, ch * 0.57);
+  // ── Corridor glow between rooms ──
+  // Horizontal corridor between top and bottom rooms
+  const hY = ch * 0.58;
+  const hGrad = ctx.createLinearGradient(0, hY, cw, hY);
   hGrad.addColorStop(0, 'rgba(0,188,212,0)');
-  hGrad.addColorStop(0.3, 'rgba(0,188,212,0.08)');
-  hGrad.addColorStop(0.7, 'rgba(0,188,212,0.08)');
+  hGrad.addColorStop(0.1, 'rgba(0,188,212,0.06)');
+  hGrad.addColorStop(0.5, 'rgba(0,188,212,0.1)');
+  hGrad.addColorStop(0.9, 'rgba(0,188,212,0.06)');
   hGrad.addColorStop(1, 'rgba(0,188,212,0)');
   ctx.fillStyle = hGrad;
-  ctx.fillRect(0, ch * 0.57 - 0.5, cw * 0.58, 1);
+  ctx.fillRect(0, hY - 1, cw, 2);
 
-  // Vertical separator at 58%
-  const vGrad = ctx.createLinearGradient(cw * 0.58, 0, cw * 0.58, ch);
+  // Vertical corridor between left and right rooms
+  const vX = cw * 0.58;
+  const vGrad = ctx.createLinearGradient(vX, 0, vX, ch);
   vGrad.addColorStop(0, 'rgba(0,188,212,0)');
-  vGrad.addColorStop(0.2, 'rgba(0,188,212,0.06)');
-  vGrad.addColorStop(0.8, 'rgba(0,188,212,0.06)');
+  vGrad.addColorStop(0.1, 'rgba(0,188,212,0.06)');
+  vGrad.addColorStop(0.5, 'rgba(0,188,212,0.1)');
+  vGrad.addColorStop(0.9, 'rgba(0,188,212,0.06)');
   vGrad.addColorStop(1, 'rgba(0,188,212,0)');
   ctx.fillStyle = vGrad;
-  ctx.fillRect(cw * 0.58 - 0.5, 0, 1, ch);
+  ctx.fillRect(vX - 1, 0, 2, ch);
 
-  // ── Moving dot on separators ──
-  const dotPos = (frame * 0.003) % 1;
+  // ── Intersection glow ──
+  ctx.fillStyle = 'rgba(0,188,212,0.08)';
+  ctx.beginPath();
+  ctx.arc(vX, hY, 6, 0, Math.PI * 2);
+  ctx.fill();
+
+  // ── Moving dots along corridors ──
+  const dotSpeed = frame * 0.004;
   ctx.fillStyle = '#00bcd4';
-  ctx.globalAlpha = 0.4;
-  ctx.beginPath();
-  ctx.arc(dotPos * cw * 0.58, ch * 0.57, 2, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.arc(cw * 0.58, dotPos * ch, 2, 0, Math.PI * 2);
-  ctx.fill();
+  // Horizontal dots (2 moving opposite)
+  for (let d = 0; d < 2; d++) {
+    const dp = ((dotSpeed + d * 0.5) % 1);
+    ctx.globalAlpha = 0.35 + Math.sin(dp * Math.PI) * 0.3;
+    ctx.beginPath();
+    ctx.arc(dp * cw, hY, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // Vertical dots
+  for (let d = 0; d < 2; d++) {
+    const dp = ((dotSpeed * 0.8 + d * 0.5) % 1);
+    ctx.globalAlpha = 0.35 + Math.sin(dp * Math.PI) * 0.3;
+    ctx.beginPath();
+    ctx.arc(vX, dp * ch, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
   ctx.globalAlpha = 1;
+
+  // ── Pathway markers along corridors ──
+  ctx.fillStyle = 'rgba(0,188,212,0.04)';
+  for (let i = 0; i < 12; i++) {
+    const mx = i * cw / 12 + cw / 24;
+    ctx.beginPath();
+    ctx.arc(mx, hY, 1, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  for (let i = 0; i < 8; i++) {
+    const my = i * ch / 8 + ch / 16;
+    ctx.beginPath();
+    ctx.arc(vX, my, 1, 0, Math.PI * 2);
+    ctx.fill();
+  }
 }
 
 // ─── Ambient floating particles ───
@@ -1072,11 +1401,16 @@ function drawParticles(ctx, cw, ch, frame) {
 // ─── HQ title watermark ───
 function drawWatermark(ctx, cw, ch) {
   ctx.save();
-  ctx.font = 'bold 48px monospace';
+  // Large centered watermark
+  ctx.font = 'bold 56px monospace';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillStyle = 'rgba(255,255,255,0.012)';
-  ctx.fillText('DEV HQ', cw / 2, ch / 2);
+  ctx.fillStyle = 'rgba(255,255,255,0.008)';
+  ctx.fillText('OPENCLAW HQ', cw / 2, ch / 2);
+  // Subtitle
+  ctx.font = '14px monospace';
+  ctx.fillStyle = 'rgba(255,255,255,0.015)';
+  ctx.fillText('MULTI-AGENT OPERATIONS CENTER', cw / 2, ch / 2 + 28);
   ctx.restore();
 }
 
@@ -1324,18 +1658,34 @@ export default function OfficeCanvas({ agents, nodeConnected }) {
     const currentNodeConnected = nodeConnectedRef.current;
 
     // Background with radial vignette
-    const bgGrad = ctx.createRadialGradient(cw / 2, ch / 2, 100, cw / 2, ch / 2, cw * 0.7);
-    bgGrad.addColorStop(0, '#101020');
-    bgGrad.addColorStop(1, '#080810');
+    const bgGrad = ctx.createRadialGradient(cw / 2, ch / 2, 80, cw / 2, ch / 2, cw * 0.75);
+    bgGrad.addColorStop(0, '#0e1025');
+    bgGrad.addColorStop(0.7, '#090a18');
+    bgGrad.addColorStop(1, '#050510');
     ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, cw, ch);
 
-    // Subtle dot grid (instead of lines)
-    ctx.fillStyle = 'rgba(255,255,255,0.03)';
-    for (let gx = 14; gx < cw; gx += 28) {
-      for (let gy = 14; gy < ch; gy += 28) {
+    // Subtle cross-hatch grid
+    ctx.strokeStyle = 'rgba(255,255,255,0.018)';
+    ctx.lineWidth = 0.5;
+    for (let gx = 0; gx < cw; gx += 30) {
+      ctx.beginPath();
+      ctx.moveTo(gx, 0);
+      ctx.lineTo(gx, ch);
+      ctx.stroke();
+    }
+    for (let gy = 0; gy < ch; gy += 30) {
+      ctx.beginPath();
+      ctx.moveTo(0, gy);
+      ctx.lineTo(cw, gy);
+      ctx.stroke();
+    }
+    // Dot intersections
+    ctx.fillStyle = 'rgba(255,255,255,0.04)';
+    for (let gx = 0; gx < cw; gx += 30) {
+      for (let gy = 0; gy < ch; gy += 30) {
         ctx.beginPath();
-        ctx.arc(gx, gy, 0.5, 0, Math.PI * 2);
+        ctx.arc(gx, gy, 0.8, 0, Math.PI * 2);
         ctx.fill();
       }
     }
