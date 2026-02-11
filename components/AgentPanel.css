@@ -1,6 +1,11 @@
 
 .agent-list {
   display: flex;
+  flex-direction: column;
+}
+
+.agent-list {
+  display: flex;
   flex-direction: row;
   gap: 8px;
   overflow-x: auto;

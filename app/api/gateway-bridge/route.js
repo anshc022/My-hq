@@ -47,12 +47,13 @@ function extractAgent(payload) {
 }
 
 // ─── Delegation detection — when Echo delegates, mark sub-agents as working ───
+// These patterns detect when Echo mentions a sub-agent doing work
 const DELEGATION_PATTERNS = {
-  scout:    [/pixel/i, /ui\/ux/i, /design/i, /layout/i],
-  quill:    [/dash/i, /frontend/i, /html/i, /css/i, /react/i, /component/i],
-  sage:     [/stack/i, /backend/i, /api/i, /server/i, /database/i],
-  sentinel: [/probe/i, /qa/i, /bug/i, /test/i, /quality/i],
-  xalt:     [/ship/i, /devops/i, /deploy/i, /ci\/cd/i, /infra/i],
+  scout:    [/pixel/i],
+  quill:    [/dash/i],
+  sage:     [/stack/i],
+  sentinel: [/probe/i],
+  xalt:     [/ship/i],
 };
 
 // Track which sub-agents are working from a delegation
@@ -60,15 +61,19 @@ const activeDelegations = new Map(); // agentName → { startedAt, task }
 
 async function detectDelegation(text) {
   if (!text) return;
-  const delegationKeywords = /assign|delegat|send|dispatc|task.*to|asking|telling/i;
-  if (!delegationKeywords.test(text)) return;
+  
+  // More flexible detection: look for agent names + action words
+  // e.g., "Dash is coding", "Ship will push", "Pixel is working", "assigned Probe"
+  const actionWords = /is|will|can|should|assigned|sending|asking|delegat|task|work|coding|push|check|review|handle|implement|fix/i;
+  if (!actionWords.test(text)) return;
 
   for (const [agentId, patterns] of Object.entries(DELEGATION_PATTERNS)) {
     const agentName = AGENT_MAP[agentId] || agentId;
     if (patterns.some(p => p.test(text))) {
-      // Extract task description
-      const taskMatch = text.match(new RegExp(`(?:${patterns.map(p => p.source).join('|')}).*?[—–\\-:]\\s*(.{10,80})`, 'i'));
-      const task = taskMatch ? taskMatch[1].slice(0, 80) : 'Working on delegated task';
+      // Extract task: everything after the agent name, up to 80 chars
+      const agentNamePattern = patterns[0].source;
+      const taskMatch = text.match(new RegExp(`${agentNamePattern}[^.]*`, 'i'));
+      const task = taskMatch ? taskMatch[0].slice(0, 80) : 'Working on delegated task';
 
       activeDelegations.set(agentName, { startedAt: Date.now(), task });
 
@@ -82,7 +87,7 @@ async function detectDelegation(text) {
       await supabase.from('ops_events').insert({
         agent: agentName,
         event_type: 'task',
-        title: `Delegated by Echo: ${task.slice(0, 60)}`,
+        title: `Working: ${task.slice(0, 60)}`,
       });
     }
   }
