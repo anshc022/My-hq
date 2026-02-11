@@ -627,39 +627,43 @@ function drawBubble(ctx, x, y, text, borderColor, S) {
   ctx.fillText(t, x, by + bh / 2);
 }
 
-// ─── Animated dashed connection lines between talking/working agents ───
+// ─── Animated dashed connection lines: Echo → delegated agents only ───
 function drawConnections(ctx, agents, cw, ch, frame) {
   if (!agents || agents.length < 2) return;
-  const active = agents.filter(a =>
-    a.status === 'talking' || a.status === 'working' || a.status === 'researching'
+
+  // Only draw connections FROM Echo TO agents Echo is working with
+  const echo = agents.find(a => a.name === 'echo' && (a.status === 'talking' || a.status === 'working'));
+  if (!echo) return;
+
+  // Only connect to agents that are actively working/talking (not idle)
+  const delegates = agents.filter(a =>
+    a.name !== 'echo' && a.name !== 'pulse' &&
+    (a.status === 'talking' || a.status === 'working' || a.status === 'researching')
   );
-  if (active.length < 2) return;
+  if (delegates.length === 0) return;
+
+  const hubPos = getSmoothedPos(echo.name, echo, cw, ch);
 
   ctx.save();
   ctx.strokeStyle = '#00bcd4';
   ctx.lineWidth = 1.5;
   ctx.setLineDash([8, 5]);
-  ctx.lineDashOffset = -frame * 0.8; // animated dash flow
+  ctx.lineDashOffset = -frame * 0.8;
   ctx.globalAlpha = 0.55;
 
-  // Connect all active agents to the first one (hub, usually echo)
-  const hub = active[0];
-  const hubPos = getSmoothedPos(hub.name, hub, cw, ch);
-
-  for (let i = 1; i < active.length; i++) {
-    const other = active[i];
+  for (let i = 0; i < delegates.length; i++) {
+    const other = delegates[i];
     const op = getSmoothedPos(other.name, other, cw, ch);
 
     ctx.beginPath();
     ctx.moveTo(hubPos.x, hubPos.y);
-    // Smooth curve bowing downward
     const cpx = (hubPos.x + op.x) / 2;
     const cpy = Math.max(hubPos.y, op.y) + 50;
     ctx.quadraticCurveTo(cpx, cpy, op.x, op.y);
     ctx.stroke();
 
     // Small moving dot along the curve
-    const t = (frame * 0.008) % 1;
+    const t = (frame * 0.008 + i * 0.3) % 1;
     const dotX = (1 - t) * (1 - t) * hubPos.x + 2 * (1 - t) * t * cpx + t * t * op.x;
     const dotY = (1 - t) * (1 - t) * hubPos.y + 2 * (1 - t) * t * cpy + t * t * op.y;
     ctx.fillStyle = '#00e5ff';
@@ -668,23 +672,6 @@ function drawConnections(ctx, agents, cw, ch, frame) {
     ctx.arc(dotX, dotY, 3, 0, Math.PI * 2);
     ctx.fill();
     ctx.globalAlpha = 0.55;
-  }
-
-  // Also cross-connect active agents to each other (not just hub)
-  if (active.length >= 3) {
-    ctx.globalAlpha = 0.25;
-    for (let i = 1; i < active.length; i++) {
-      for (let j = i + 1; j < active.length; j++) {
-        const a = getSmoothedPos(active[i].name, active[i], cw, ch);
-        const b = getSmoothedPos(active[j].name, active[j], cw, ch);
-        ctx.beginPath();
-        ctx.moveTo(a.x, a.y);
-        const mx = (a.x + b.x) / 2;
-        const my = Math.max(a.y, b.y) + 35;
-        ctx.quadraticCurveTo(mx, my, b.x, b.y);
-        ctx.stroke();
-      }
-    }
   }
 
   ctx.restore();
