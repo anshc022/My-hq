@@ -20,7 +20,9 @@ const AGENT_WORK_ROOM = {
   dash:  'research',  // Dash Frontend → code lab
   stack: 'board',     // Stack Backend → sprint board
   probe: 'board',     // Probe QA → sprint board
-  ship:  'research',  // Ship DevOps → code lab  pulse: 'board',     // Pulse Node Health → sprint board};
+  ship:  'research',  // Ship DevOps → code lab
+  pulse: 'board',     // Pulse Node Health → sprint board
+};
 
 const AGENT_TALK_ROOM = {
   echo:  'meeting',   // leads standup
