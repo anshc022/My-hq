@@ -75,24 +75,6 @@ function isAgentBusy(agentData) {
 }
 
 function getTargetPos(name, agentData, cw, ch) {
-  // Pulse always wanders freely, even when busy/connected
-  if (name === 'pulse') {
-    if (!wanderTargets[name]) pickWanderTarget(name);
-    const wt = wanderTargets[name];
-    const cur = agentAnimPos[name];
-    if (cur) {
-      const dx = (cur.x / cw) - wt.x;
-      const dy = (cur.y / ch) - wt.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < WANDER_ARRIVE_DIST) {
-        if (!wanderCooldown[name]) wanderCooldown[name] = 0;
-        wanderCooldown[name]--;
-        if (wanderCooldown[name] <= 0) pickWanderTarget(name);
-      }
-    }
-    return { x: wanderTargets[name].x * cw, y: wanderTargets[name].y * ch };
-  }
-
   // If agent is busy → go to desk
   if (isAgentBusy(agentData)) {
     // Clear wander state so they pick a fresh target when idle again
@@ -1211,17 +1193,17 @@ function drawNodeIndicator(ctx, cw, ch, frame, connected) {
   const nx = cw * 0.78;
   const ny = ch * 0.88;
 
-  // ── Connection line from node to PULSE agent only (when online) ──
+  // ── Connection line from node to PULSE agent (follows Pulse wherever it wanders) ──
   if (connected) {
-    const pulseDp = DESK_POSITIONS['pulse'];
-    if (pulseDp) {
+    const pulsePos = agentAnimPos['pulse'] || DESK_POSITIONS['pulse'];
+    if (pulsePos) {
       ctx.save();
       ctx.setLineDash([3, 5]);
       ctx.lineDashOffset = -frame * 0.4;
       ctx.lineWidth = 1.5;
 
-      const ax = pulseDp.x * cw;
-      const ay = pulseDp.y * ch;
+      const ax = pulsePos.x * cw;
+      const ay = pulsePos.y * ch;
       const agentColor = '#00FF88';
 
       // Curved line from laptop to Pulse desk

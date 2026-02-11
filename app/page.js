@@ -64,38 +64,6 @@ export default function Home() {
     return () => clearInterval(iv);
   }, []);
 
-  // Random activity simulation for Pulse — keeps it alive even without real node events
-  useEffect(() => {
-    const PULSE_TASKS = [
-      'Scanning node latency', 'Checking heartbeat', 'Monitoring uptime',
-      'Running health check', 'Syncing node status', 'Analyzing logs',
-      'Pinging gateway', 'Verifying connections', 'Auditing metrics',
-      'Refreshing dashboard', 'Inspecting traffic', 'Polling endpoints',
-    ];
-    const PULSE_STATUSES = ['working', 'thinking', 'working', 'researching'];
-
-    const simulate = () => {
-      setAgents(prev => {
-        const pulse = prev.find(a => a.name === 'pulse');
-        if (!pulse) return prev;
-        const isIdle = pulse.status === 'idle' || pulse.status === 'sleeping';
-        if (isIdle && Math.random() < 0.4) {
-          // Start a random task
-          const task = PULSE_TASKS[Math.floor(Math.random() * PULSE_TASKS.length)];
-          const status = PULSE_STATUSES[Math.floor(Math.random() * PULSE_STATUSES.length)];
-          return prev.map(a => a.name === 'pulse' ? { ...a, status, current_task: task } : a);
-        } else if (!isIdle && Math.random() < 0.35) {
-          // Go back to idle
-          return prev.map(a => a.name === 'pulse' ? { ...a, status: 'idle', current_task: null } : a);
-        }
-        return prev;
-      });
-    };
-
-    const iv = setInterval(simulate, 6000 + Math.random() * 4000);
-    return () => clearInterval(iv);
-  }, []);
-
 
 
   return (
