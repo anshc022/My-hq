@@ -260,11 +260,19 @@ async function processGatewayMessage(msg) {
   try {
     // Handle bridge-level events (not from gateway)
     if (msg.type === 'node:connected' || msg.type === 'node:disconnected') {
-      await supabase.from('ops_events').insert({
-        agent: 'system',
-        event_type: 'system',
-        title: msg.type === 'node:connected' ? 'Bridge connected to gateway' : `Bridge disconnected (${msg.message || ''})`,
-      });
+      const isConnected = msg.type === 'node:connected';
+      await Promise.all([
+        supabase.from('ops_events').insert({
+          agent: 'pulse',
+          event_type: 'system',
+          title: isConnected ? 'Bridge connected to gateway' : `Bridge disconnected (${msg.message || ''})`,
+        }),
+        supabase.from('ops_agents').update({
+          status: isConnected ? 'working' : 'idle',
+          current_task: isConnected ? 'Gateway bridge online' : null,
+          last_active_at: new Date().toISOString(),
+        }).eq('name', 'pulse'),
+      ]);
       return { type: msg.type };
     }
 
