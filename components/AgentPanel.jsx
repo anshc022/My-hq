@@ -17,22 +17,27 @@ const pseudoRandom = (seed) => {
   };
 };
 
-const Sparkline = ({ active, color }) => {
+const Sparkline = ({ active, color, name }) => {
   const points = useMemo(() => {
-    // Generate a fixed path if not active, or random if active? 
-    // Actually, let's just make a cool static shape that looks like data
-    // If active, we could animate it, but CSS is cheaper.
+    // Generate a fixed path based on agent name (stable signature)
     const count = 20;
     const data = [];
-    const rand = pseudoRandom(Date.now()); // Changes on mount, but static for lifecycle unless updated
+    
+    // Simple string hash for seeding
+    let seed = 0;
+    for (let i = 0; i < (name || 'default').length; i++) {
+      seed = name.charCodeAt(i) + ((seed << 5) - seed);
+    }
+    
+    const rand = pseudoRandom(Math.abs(seed)); 
     let prev = 0.5;
     for(let i=0; i<count; i++) {
-      const val = Math.max(0.1, Math.min(0.9, prev + (Math.random() - 0.5) * 0.5));
+      const val = Math.max(0.1, Math.min(0.9, prev + (rand() - 0.5) * 0.8)); // Increased variance slightly
       data.push(val);
       prev = val;
     }
     return data;
-  }, []);
+  }, [name]);
 
   const width = 100;
   const height = 20;
@@ -117,7 +122,7 @@ export default function AgentPanel({ agents }) {
           const isWorking = ['working', 'busy', 'thinking', 'researching'].includes(a.status?.toLowerCase());
           return (
             <div key={a.name} className={`agent-card ${isWorking ? 'working-glow' : ''}`}>
-              <Sparkline active={isWorking} color={config.color || '#4ade80'} />
+              <Sparkline active={isWorking} color={config.color || '#4ade80'} name={a.name} />
               <div className="agent-card-header" style={{ position: 'relative', zIndex: 2 }}>
                 <span style={{ ...styles.dot, backgroundColor: config.color }}></span>
                 <span style={styles.icon}>{config.icon}</span>
@@ -130,7 +135,7 @@ export default function AgentPanel({ agents }) {
                 </span>
               </div>
               {a.current_task && (
-                <div className="agent-card-task" style={{ position: 'relative', zIndex: 2 }}>"{a.current_task.slice(0, 40)}"</div>
+                <div className="agent-card-task" style={{ position: 'relative', zIndex: 2 }}>&quot;{a.current_task.slice(0, 40)}&quot;</div>
               )}
             </div>
           );
