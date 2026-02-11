@@ -1144,6 +1144,12 @@ export default function OfficeCanvas({ agents, nodeConnected }) {
   const canvasRef = useRef(null);
   const frameRef = useRef(0);
   const animRef = useRef(null);
+  const agentsRef = useRef(agents);
+  const nodeConnectedRef = useRef(nodeConnected);
+
+  // Keep refs in sync without recreating draw
+  agentsRef.current = agents;
+  nodeConnectedRef.current = nodeConnected;
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -1153,6 +1159,8 @@ export default function OfficeCanvas({ agents, nodeConnected }) {
     const ch = canvas.height;
     frameRef.current++;
     const frame = frameRef.current;
+    const currentAgents = agentsRef.current;
+    const currentNodeConnected = nodeConnectedRef.current;
 
     // Background with radial vignette
     const bgGrad = ctx.createRadialGradient(cw / 2, ch / 2, 100, cw / 2, ch / 2, cw * 0.7);
@@ -1178,21 +1186,21 @@ export default function OfficeCanvas({ agents, nodeConnected }) {
     drawParticles(ctx, cw, ch, frame);
 
     // Connection lines (before agents so lines go behind)
-    drawConnections(ctx, agents, cw, ch, frame);
+    drawConnections(ctx, currentAgents, cw, ch, frame);
 
     // Agent avatars
-    if (agents) {
-      agents.forEach(agentData => {
+    if (currentAgents) {
+      currentAgents.forEach(agentData => {
         const pos = getSmoothedPos(agentData.name, agentData, cw, ch);
         drawAgent(ctx, pos.x, pos.y, agentData.name, agentData, frame);
       });
     }
 
     // Node connection indicator (drawn on top of everything)
-    drawNodeIndicator(ctx, cw, ch, frame, nodeConnected);
+    drawNodeIndicator(ctx, cw, ch, frame, currentNodeConnected);
 
     animRef.current = requestAnimationFrame(draw);
-  }, [agents, nodeConnected]);
+  }, []); // stable — reads from refs
 
   useEffect(() => {
     const canvas = canvasRef.current;
