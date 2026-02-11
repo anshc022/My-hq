@@ -640,17 +640,31 @@ function drawBubble(ctx, x, y, text, borderColor, S) {
 // ─── Animated dashed connection lines between talking/working agents ───
 function drawConnections(ctx, agents, cw, ch, frame) {
   if (!agents || agents.length < 2) return;
-  const active = agents.filter(a =>
-    a.status === 'talking' || a.status === 'working' || a.status === 'researching'
-  );
+
+  // Filter for active agents
+  // Pulse is only active if he's actually working on a task, not just 'online' monitoring
+  const active = agents.filter(a => {
+    const s = (a.status || '').toLowerCase();
+    const busy = s === 'talking' || s === 'working' || s === 'researching' || s === 'posting' || s === 'thinking';
+    if (a.name === 'pulse' && (a.current_task || '').startsWith('Node:')) return false;
+    return busy;
+  });
+
   if (active.length < 2) return;
+
+  // Sort so Echo is always the hub (index 0) if present
+  active.sort((a, b) => {
+    if (a.name === 'echo') return -1;
+    if (b.name === 'echo') return 1;
+    return 0;
+  });
 
   ctx.save();
   ctx.strokeStyle = '#00bcd4';
-  ctx.lineWidth = 1.5;
+  ctx.lineWidth = 2; // thicker lines for visibility
   ctx.setLineDash([8, 5]);
   ctx.lineDashOffset = -frame * 0.8; // animated dash flow
-  ctx.globalAlpha = 0.55;
+  ctx.globalAlpha = 0.75; // higher opacity
 
   // Connect all active agents to the first one (hub, usually echo)
   const hub = active[0];
@@ -662,32 +676,38 @@ function drawConnections(ctx, agents, cw, ch, frame) {
 
     ctx.beginPath();
     ctx.moveTo(hubPos.x, hubPos.y);
-    // Smooth curve bowing downward
+    // Smooth curve bowing downward for better separation
     const cpx = (hubPos.x + op.x) / 2;
-    const cpy = Math.max(hubPos.y, op.y) + 50;
+    const cpy = Math.max(hubPos.y, op.y) + 40;
     ctx.quadraticCurveTo(cpx, cpy, op.x, op.y);
+    // Add glow effect
+    ctx.shadowColor = '#00bcd4';
+    ctx.shadowBlur = 4;
     ctx.stroke();
+    ctx.shadowBlur = 0;
 
-    // Small moving dot along the curve
-    const t = (frame * 0.008) % 1;
+    // Small moving dot along the curve (data packet)
+    const t = (frame * 0.01) % 1;
     const dotX = (1 - t) * (1 - t) * hubPos.x + 2 * (1 - t) * t * cpx + t * t * op.x;
     const dotY = (1 - t) * (1 - t) * hubPos.y + 2 * (1 - t) * t * cpy + t * t * op.y;
-    ctx.fillStyle = '#00e5ff';
-    ctx.globalAlpha = 0.8;
+    
+    ctx.fillStyle = '#fff';
+    ctx.globalAlpha = 1;
     ctx.beginPath();
-    ctx.arc(dotX, dotY, 3, 0, Math.PI * 2);
+    ctx.arc(dotX, dotY, 2.5, 0, Math.PI * 2);
     ctx.fill();
-    ctx.globalAlpha = 0.55;
+    ctx.globalAlpha = 0.75;
   }
 
   // Also cross-connect active agents to each other (not just hub)
   if (active.length >= 3) {
-    ctx.globalAlpha = 0.25;
+    ctx.globalAlpha = 0.3;
     for (let i = 1; i < active.length; i++) {
       for (let j = i + 1; j < active.length; j++) {
         const a = getSmoothedPos(active[i].name, active[i], cw, ch);
         const b = getSmoothedPos(active[j].name, active[j], cw, ch);
         ctx.beginPath();
+        // ...existing code...
         ctx.moveTo(a.x, a.y);
         const mx = (a.x + b.x) / 2;
         const my = Math.max(a.y, b.y) + 35;
