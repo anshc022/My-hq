@@ -4,12 +4,12 @@ import { AGENTS, ROOMS, DESK_POSITIONS, ROOM_POSITIONS, STATUS_VISUALS, UNIFIED_
 
 // ─── Smooth position interpolation store ───
 const agentAnimPos = {};
-const LERP_SPEED = 0.012;  // slow human-like walk to desk
+const LERP_SPEED = 0.022;  // responsive walk speed for status changes
 
 // ─── Wander system for idle agents ───
 const wanderTargets = {};   // { agentName: { x, y } } in 0-1 range
 const wanderCooldown = {};  // { agentName: frameCount } - when to pick next target
-const WANDER_LERP = 0.003;  // very slow, human-like stroll
+const WANDER_LERP = 0.004;  // slow wandering stroll
 const WANDER_ARRIVE_DIST = 0.02; // close enough = pick new target
 
 // Per-agent speed variation so they don't all move identically
@@ -25,16 +25,6 @@ const WALK_THRESHOLD = 0.4; // min pixel movement per frame to count as walking
 
 // Echo's Den — small private room inside cabin (top-right corner)
 const ECHO_DEN = { x: 0.80, y: 0.06, w: 0.16, h: 0.20, cx: 0.88, cy: 0.16 };
-
-// Work positions — where agents move when working (distinct from idle wander)
-const WORK_POSITIONS = {
-  pixel: { x: 0.15, y: 0.68 },  // Code Lab (bottom-left)
-  dash:  { x: 0.35, y: 0.68 },  // Code Lab (bottom-left)
-  stack: { x: 0.72, y: 0.65 },  // Pulse Bay (bottom-right, like sprint board)
-  probe: { x: 0.85, y: 0.65 },  // Pulse Bay (bottom-right)
-  ship:  { x: 0.45, y: 0.68 },  // Code Lab (bottom-left)
-  pulse: { x: 0.78, y: 0.78 },  // Pulse Bay (their home)
-};
 
 // All rooms as rectangles agents can wander into (percentage coordinates)
 const WANDER_ZONES = [
@@ -113,24 +103,13 @@ function lerp(a, b, t) { return a + (b - a) * t; }
 function isAgentBusy(agentData) {
   if (!agentData) return false;
   const s = (agentData.status || '').toLowerCase();
-  // 'monitoring' is NOT busy — it's Pulse passively watching the node
-  return s === 'working' || s === 'thinking' || s === 'talking' ||
-         s === 'posting' || s === 'researching';
-}
-
-// Check if agent is actively communicating (for connection lines)
-function isAgentCommunicating(agentData) {
-  if (!agentData) return false;
-  const s = (agentData.status || '').toLowerCase();
-  // Only truly active states — NOT monitoring/idle/sleeping
   return s === 'working' || s === 'thinking' || s === 'talking' ||
          s === 'posting' || s === 'researching';
 }
 
 function getTargetPos(name, agentData, cw, ch) {
-  // Pulse wanders freely when just monitoring (node connected)
-  const status = (agentData?.status || '').toLowerCase();
-  const isBusy = isAgentBusy(agentData) && !(name === 'pulse' && status === 'monitoring');
+  // Pulse always wanders freely, even when working (node connected)
+  const isBusy = isAgentBusy(agentData) && name !== 'pulse';
 
   // Echo goes to private den when busy (replying to user)
   if (name === 'echo' && isBusy) {
@@ -139,12 +118,12 @@ function getTargetPos(name, agentData, cw, ch) {
     return { x: ECHO_DEN.cx * cw, y: ECHO_DEN.cy * ch };
   }
 
-  // Other agents move to their work room when busy (visible animation)
+  // Other agents freeze in place when busy (connection lines show comms)
   if (isBusy) {
     delete wanderCooldown[name];
     delete agentIdleActivity[name];
-    const wp = WORK_POSITIONS[name];
-    if (wp) return { x: wp.x * cw, y: wp.y * ch };
+    const cur = agentAnimPos[name];
+    if (cur) return { x: cur.x, y: cur.y };
     const dp = DESK_POSITIONS[name];
     return dp ? { x: dp.x * cw, y: dp.y * ch } : { x: cw * 0.5, y: ch * 0.5 };
   }
@@ -511,8 +490,9 @@ function drawAgent(ctx, x, y, name, agentData, frame) {
   }
 
   if (status === 'thinking') {
+    // Enhanced thinking bubbles for native spawn
     for (let i = 0; i < 3; i++) {
-      const p = (frame * 0.06 + i * 0.7) % 3;
+      const p = (frame * 0.08 + i * 0.7) % 3;
       ctx.globalAlpha = p < 1 ? p : p < 2 ? 1 : 3 - p;
       ctx.fillStyle = '#f1c40f';
       ctx.beginPath();
@@ -520,6 +500,28 @@ function drawAgent(ctx, x, y, name, agentData, frame) {
       ctx.fill();
     }
     ctx.globalAlpha = 1;
+
+    // "Spawned by Echo" indicator for non-echo agents
+    if (name !== 'echo') {
+      const sFs = Math.max(5, Math.round(6 * S));
+      ctx.font = `${sFs}px monospace`;
+      const sLabel = '⚡ delegated';
+      const sw2 = ctx.measureText(sLabel).width;
+      const sPillW = sw2 + 6 * S;
+      const sPillH = Math.round(9 * S);
+      const sPillX = x - sPillW / 2;
+      const sPillY = ay + 38 * S;
+      ctx.fillStyle = 'rgba(241, 196, 15, 0.2)';
+      ctx.globalAlpha = 0.7 + Math.sin(frame * 0.08) * 0.2;
+      ctx.beginPath();
+      ctx.roundRect(sPillX, sPillY, sPillW, sPillH, 2 * S);
+      ctx.fill();
+      ctx.fillStyle = '#f1c40f';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(sLabel, x, sPillY + sPillH / 2);
+      ctx.globalAlpha = 1;
+    }
   }
 
   if (status === 'working') {
@@ -547,35 +549,6 @@ function drawAgent(ctx, x, y, name, agentData, frame) {
       ctx.fillStyle = 'rgba(231, 76, 60, 0.2)';
       ctx.fill();
     }
-    ctx.restore();
-  }
-
-  // Monitoring effect for Pulse — subtle radar sweep
-  if (status === 'monitoring') {
-    ctx.save();
-    const sweepAngle = (frame * 0.02) % (Math.PI * 2);
-    ctx.strokeStyle = '#00FF88';
-    ctx.lineWidth = 1 * S;
-    ctx.globalAlpha = 0.3;
-    // Radar ring
-    ctx.beginPath();
-    ctx.arc(x, ay, 20 * S, 0, Math.PI * 2);
-    ctx.stroke();
-    // Sweep line
-    ctx.globalAlpha = 0.6;
-    ctx.beginPath();
-    ctx.moveTo(x, ay);
-    ctx.lineTo(x + Math.cos(sweepAngle) * 20 * S, ay + Math.sin(sweepAngle) * 20 * S);
-    ctx.stroke();
-    // Sweep trail
-    const grad = ctx.createConicGradient(sweepAngle, x, ay);
-    grad.addColorStop(0, 'rgba(0,255,136,0.25)');
-    grad.addColorStop(0.15, 'rgba(0,255,136,0)');
-    grad.addColorStop(1, 'rgba(0,255,136,0)');
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.arc(x, ay, 20 * S, 0, Math.PI * 2);
-    ctx.fill();
     ctx.restore();
   }
 
@@ -677,31 +650,21 @@ function drawBubble(ctx, x, y, text, borderColor, S) {
   ctx.fillText(t, x, by + bh / 2);
 }
 
-// ─── Animated dashed connection lines between talking/working agents ───
+// ─── Animated dashed connection lines between active agents ───
 function drawConnections(ctx, agents, cw, ch, frame) {
   if (!agents || agents.length < 2) return;
-
-  // Only truly communicating agents (NOT monitoring Pulse)
-  const active = agents.filter(a => isAgentCommunicating(a));
-
+  // Include "thinking" for native sessions_spawn delegations
+  const active = agents.filter(a =>
+    a.status === 'talking' || a.status === 'working' || a.status === 'researching' || a.status === 'thinking'
+  );
   if (active.length < 2) return;
-
-  // Echo is ALWAYS the hub — he's the main agent / tech lead
-  active.sort((a, b) => {
-    if (a.name === 'echo') return -1;
-    if (b.name === 'echo') return 1;
-    return 0;
-  });
-
-  // If Echo isn't active but multiple sub-agents are, still connect them
-  // Pick the first one as temporary hub
 
   ctx.save();
   ctx.strokeStyle = '#00bcd4';
-  ctx.lineWidth = 2; // thicker lines for visibility
+  ctx.lineWidth = 1.5;
   ctx.setLineDash([8, 5]);
   ctx.lineDashOffset = -frame * 0.8; // animated dash flow
-  ctx.globalAlpha = 0.75; // higher opacity
+  ctx.globalAlpha = 0.55;
 
   // Connect all active agents to the first one (hub, usually echo)
   const hub = active[0];
@@ -713,38 +676,32 @@ function drawConnections(ctx, agents, cw, ch, frame) {
 
     ctx.beginPath();
     ctx.moveTo(hubPos.x, hubPos.y);
-    // Smooth curve bowing downward for better separation
+    // Smooth curve bowing downward
     const cpx = (hubPos.x + op.x) / 2;
-    const cpy = Math.max(hubPos.y, op.y) + 40;
+    const cpy = Math.max(hubPos.y, op.y) + 50;
     ctx.quadraticCurveTo(cpx, cpy, op.x, op.y);
-    // Add glow effect
-    ctx.shadowColor = '#00bcd4';
-    ctx.shadowBlur = 4;
     ctx.stroke();
-    ctx.shadowBlur = 0;
 
-    // Small moving dot along the curve (data packet)
-    const t = (frame * 0.01) % 1;
+    // Small moving dot along the curve
+    const t = (frame * 0.008) % 1;
     const dotX = (1 - t) * (1 - t) * hubPos.x + 2 * (1 - t) * t * cpx + t * t * op.x;
     const dotY = (1 - t) * (1 - t) * hubPos.y + 2 * (1 - t) * t * cpy + t * t * op.y;
-    
-    ctx.fillStyle = '#fff';
-    ctx.globalAlpha = 1;
+    ctx.fillStyle = '#00e5ff';
+    ctx.globalAlpha = 0.8;
     ctx.beginPath();
-    ctx.arc(dotX, dotY, 2.5, 0, Math.PI * 2);
+    ctx.arc(dotX, dotY, 3, 0, Math.PI * 2);
     ctx.fill();
-    ctx.globalAlpha = 0.75;
+    ctx.globalAlpha = 0.55;
   }
 
   // Also cross-connect active agents to each other (not just hub)
   if (active.length >= 3) {
-    ctx.globalAlpha = 0.3;
+    ctx.globalAlpha = 0.25;
     for (let i = 1; i < active.length; i++) {
       for (let j = i + 1; j < active.length; j++) {
         const a = getSmoothedPos(active[i].name, active[i], cw, ch);
         const b = getSmoothedPos(active[j].name, active[j], cw, ch);
         ctx.beginPath();
-        // ...existing code...
         ctx.moveTo(a.x, a.y);
         const mx = (a.x + b.x) / 2;
         const my = Math.max(a.y, b.y) + 35;
