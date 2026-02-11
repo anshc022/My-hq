@@ -168,8 +168,8 @@ const PIXEL_LOOKS = {
   },
 };
 
-// Pixel helper: draw a filled rect (1 pixel unit = 2px on canvas)
-const P = 2; // pixel scale
+// Pixel helper: draw a filled rect (1 pixel unit = P px on canvas)
+let P = 3; // pixel scale — updated dynamically based on canvas width
 function px(ctx, bx, by, col, pw, ph) {
   ctx.fillStyle = col;
   ctx.fillRect(bx, by, (pw || 1) * P, (ph || 1) * P);
@@ -1316,6 +1316,8 @@ export default function OfficeCanvas({ agents, nodeConnected }) {
     const ctx = canvas.getContext('2d');
     const cw = canvas.width;
     const ch = canvas.height;
+    // Scale pixel art based on canvas size: 3x on desktop, 2x on small
+    P = cw >= 700 ? 3 : 2;
     frameRef.current++;
     const frame = frameRef.current;
     const currentAgents = agentsRef.current;
@@ -1368,7 +1370,9 @@ export default function OfficeCanvas({ agents, nodeConnected }) {
     const resize = () => {
       const parent = canvas.parentElement;
       const w = parent ? parent.clientWidth : 900;
-      const h = Math.round(w * (480 / 900));
+      // Taller aspect ratio for more room: 0.62 on desktop, 0.55 on mobile
+      const ratio = w >= 700 ? 0.62 : 0.55;
+      const h = Math.round(w * ratio);
       canvas.width = Math.max(w, 280);
       canvas.height = Math.max(h, 150);
     };
