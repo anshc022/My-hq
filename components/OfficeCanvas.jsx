@@ -4,12 +4,13 @@ import { AGENTS, ROOMS, DESK_POSITIONS, ROOM_POSITIONS, STATUS_VISUALS, UNIFIED_
 
 // ─── Smooth position interpolation store ───
 const agentAnimPos = {};
-const LERP_SPEED = 0.04;
+const agentVelocity = {};  // track movement speed per agent
+const LERP_SPEED = 0.08;
 
 // ─── Wander system for idle agents ───
 const wanderTargets = {};   // { agentName: { x, y } } in 0-1 range
 const wanderCooldown = {};  // { agentName: frameCount } - when to pick next target
-const WANDER_LERP = 0.012;  // slower, relaxed movement
+const WANDER_LERP = 0.035;  // brisk human walk speed
 const WANDER_ARRIVE_DIST = 0.02; // close enough = pick new target
 
 // All rooms as rectangles agents can wander into (percentage coordinates)
@@ -29,7 +30,7 @@ function pickWanderTarget(name) {
     y: zone.y + pad + Math.random() * (zone.h - pad * 2),
   };
   // Random cooldown so agents don't all move in sync
-  wanderCooldown[name] = 120 + Math.floor(Math.random() * 200);
+  wanderCooldown[name] = 60 + Math.floor(Math.random() * 100);
   // Pick a new idle activity when picking a new wander target
   pickIdleActivity(name);
 }
@@ -127,14 +128,19 @@ function getTargetPos(name, agentData, cw, ch) {
 
 function getSmoothedPos(name, agentData, cw, ch) {
   const target = getTargetPos(name, agentData, cw, ch);
-  const speed = isAgentBusy(agentData) ? LERP_SPEED : WANDER_LERP;
+  const speed = (isAgentBusy(agentData) && name !== 'pulse') ? LERP_SPEED : WANDER_LERP;
   if (!agentAnimPos[name]) {
     agentAnimPos[name] = { x: target.x, y: target.y };
+    agentVelocity[name] = 0;
     return target;
   }
   const cur = agentAnimPos[name];
+  const prevX = cur.x, prevY = cur.y;
   cur.x = lerp(cur.x, target.x, speed);
   cur.y = lerp(cur.y, target.y, speed);
+  // Track velocity (how fast the agent is moving)
+  const dx = cur.x - prevX, dy = cur.y - prevY;
+  agentVelocity[name] = Math.sqrt(dx * dx + dy * dy);
   return { x: cur.x, y: cur.y };
 }
 
@@ -186,13 +192,18 @@ function drawPixelAgent(ctx, x, y, name, frame, status) {
   const oy = y - 20 * P; // sprite ~20px tall
 
   // ── Legs (2px wide each, slightly apart) ──
-  const walk = (status === 'working' || status === 'talking' || status === 'researching')
-    ? Math.floor(frame * 0.08) % 2 : 0;
+  // Animate legs when agent is actually moving (velocity > threshold)
+  const vel = agentVelocity[name] || 0;
+  const isMoving = vel > 0.3;
+  const walkCycle = isMoving ? Math.floor(frame * 0.15) % 4 : 0;
+  // 4-frame walk: 0=neutral, 1=left forward, 2=neutral, 3=right forward
+  const leftLegOff = walkCycle === 1 ? -P : (walkCycle === 3 ? P : 0);
+  const rightLegOff = walkCycle === 3 ? -P : (walkCycle === 1 ? P : 0);
   px(ctx, ox + 4 * P, oy + 17 * P, look.pants, 2, 3);
   px(ctx, ox + 8 * P, oy + 17 * P, look.pants, 2, 3);
-  // Feet
-  px(ctx, ox + 3 * P, oy + 20 * P - walk * P, '#333', 3, 1);
-  px(ctx, ox + 8 * P, oy + 20 * P + walk * P, '#333', 3, 1);
+  // Feet with walk animation
+  px(ctx, ox + 3 * P, oy + 20 * P + leftLegOff, '#333', 3, 1);
+  px(ctx, ox + 8 * P, oy + 20 * P + rightLegOff, '#333', 3, 1);
 
   // ── Body / Shirt (6px wide, 6px tall) ──
   px(ctx, ox + 3 * P, oy + 11 * P, look.shirt, 8, 6);
