@@ -63,6 +63,10 @@ const PIXEL_LOOKS = {
     skin: '#FFD5A0', hair: '#E67E22', hairStyle: 'short',
     shirt: '#E67E22', pants: '#7a4a10', accessory: 'phone',
   },
+  pulse: {
+    skin: '#B8E6C8', hair: '#00CC66', hairStyle: 'short',
+    shirt: '#00FF88', pants: '#0a5a2a', accessory: 'headset',
+  },
 };
 
 // Pixel helper: draw a filled rect (1 pixel unit = 2px on canvas)
@@ -922,48 +926,56 @@ function drawNodeIndicator(ctx, cw, ch, frame, connected) {
   const nx = cw * 0.88;
   const ny = ch * 0.88;
 
-  // ── Connection lines from node to ALL agent desks (only when online) ──
+  // ── Connection line from node to PULSE agent only (when online) ──
   if (connected) {
-    const agentNames = Object.keys(DESK_POSITIONS);
-    ctx.save();
-    ctx.setLineDash([3, 5]);
-    ctx.lineDashOffset = -frame * 0.4;
-    ctx.lineWidth = 1;
+    const pulseDp = DESK_POSITIONS['pulse'];
+    if (pulseDp) {
+      ctx.save();
+      ctx.setLineDash([3, 5]);
+      ctx.lineDashOffset = -frame * 0.4;
+      ctx.lineWidth = 1.5;
 
-    agentNames.forEach((name, idx) => {
-      const dp = DESK_POSITIONS[name];
-      if (!dp) return;
-      const ax = dp.x * cw;
-      const ay = dp.y * ch;
-      const agentColor = AGENTS[name]?.color || '#00ff88';
+      const ax = pulseDp.x * cw;
+      const ay = pulseDp.y * ch;
+      const agentColor = '#00FF88';
 
-      // Curved line from laptop to each agent's desk
-      const cpx = (nx + ax) / 2;
-      const cpy = Math.max(ny, ay) + 20 + idx * 5;
+      // Curved line from laptop to Pulse desk
+      const cpx = (nx + ax) / 2 + 20;
+      const cpy = (ny + ay) / 2 - 30;
       const lineGrad = ctx.createLinearGradient(nx, ny, ax, ay);
-      lineGrad.addColorStop(0, 'rgba(0,255,136,0.35)');
-      lineGrad.addColorStop(1, agentColor + '55');
+      lineGrad.addColorStop(0, 'rgba(0,255,136,0.5)');
+      lineGrad.addColorStop(1, agentColor + '88');
       ctx.strokeStyle = lineGrad;
-      ctx.globalAlpha = 0.5;
+      ctx.globalAlpha = 0.7;
       ctx.beginPath();
       ctx.moveTo(nx, ny - 10);
       ctx.quadraticCurveTo(cpx, cpy, ax + 14, ay + 8);
       ctx.stroke();
 
       // Data packet along the curve
-      const t = ((frame * 0.006 + idx * 0.16) % 1);
+      const t = ((frame * 0.008) % 1);
       const dotX = (1 - t) * (1 - t) * nx + 2 * (1 - t) * t * cpx + t * t * (ax + 14);
       const dotY = (1 - t) * (1 - t) * (ny - 10) + 2 * (1 - t) * t * cpy + t * t * (ay + 8);
       ctx.fillStyle = agentColor;
-      ctx.globalAlpha = 0.7 * (1 - Math.abs(t - 0.5) * 2);
+      ctx.globalAlpha = 0.8 * (1 - Math.abs(t - 0.5) * 2);
       ctx.beginPath();
-      ctx.arc(dotX, dotY, 1.5, 0, Math.PI * 2);
+      ctx.arc(dotX, dotY, 2, 0, Math.PI * 2);
       ctx.fill();
-    });
 
-    ctx.setLineDash([]);
-    ctx.globalAlpha = 1;
-    ctx.restore();
+      // Second packet offset
+      const t2 = ((frame * 0.008 + 0.5) % 1);
+      const dotX2 = (1 - t2) * (1 - t2) * nx + 2 * (1 - t2) * t2 * cpx + t2 * t2 * (ax + 14);
+      const dotY2 = (1 - t2) * (1 - t2) * (ny - 10) + 2 * (1 - t2) * t2 * cpy + t2 * t2 * (ay + 8);
+      ctx.fillStyle = '#ffffff';
+      ctx.globalAlpha = 0.6 * (1 - Math.abs(t2 - 0.5) * 2);
+      ctx.beginPath();
+      ctx.arc(dotX2, dotY2, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    }
   }
 
   // ── Glow behind laptop ──

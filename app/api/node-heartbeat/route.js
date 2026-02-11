@@ -10,11 +10,15 @@ const supabase = createClient(
 const OFFLINE_THRESHOLD = 35; // seconds
 
 export async function GET() {
-  const { data: rows, error } = await supabase.from('ops_nodes').select('*');
-  if (error) return Response.json({ nodes: [], anyOnline: false, count: 0, onlineCount: 0 });
+  // Fetch both node status AND pulse agent status in parallel
+  const [nodesRes, pulseRes] = await Promise.all([
+    supabase.from('ops_nodes').select('*'),
+    supabase.from('ops_agents').select('*').eq('name', 'pulse').single(),
+  ]);
 
+  const rows = nodesRes.data || [];
   const now = new Date();
-  const list = (rows || []).map(n => {
+  const list = rows.map(n => {
     const lastSeen = new Date(n.last_seen);
     const ageSec = (now - lastSeen) / 1000;
     const status = ageSec < OFFLINE_THRESHOLD ? 'online' : 'offline';
@@ -28,6 +32,15 @@ export async function GET() {
   });
 
   const anyOnline = list.some(n => n.status === 'online');
+
+  // If no nodes online, mark pulse agent as idle
+  if (!anyOnline && pulseRes.data?.status === 'working') {
+    await supabase.from('ops_agents').update({
+      status: 'idle',
+      current_task: null,
+      last_active_at: new Date().toISOString(),
+    }).eq('name', 'pulse');
+  }
 
   return Response.json({
     nodes: list,
@@ -50,6 +63,13 @@ export async function POST(request) {
     );
 
     if (error) return Response.json({ ok: false, error: error.message }, { status: 500 });
+
+    // Update pulse agent — mark as working with the node's hostname as current_task
+    await supabase.from('ops_agents').update({
+      status: 'working',
+      current_task: `Node: ${hostname} online`,
+      last_active_at: new Date().toISOString(),
+    }).eq('name', 'pulse');
 
     return Response.json({ ok: true, status: 'registered', name });
   } catch (err) {
