@@ -477,7 +477,7 @@ function drawAgent(ctx, x, y, name, agentData, frame) {
 
   // ── Speech bubble ──
   if (agentData?.current_task && status !== 'idle' && status !== 'sleeping') {
-    drawBubble(ctx, x, ay - SPRITE_H / 2 - 10, agentData.current_task, config.color);
+    drawBubble(ctx, x, ay - SPRITE_H / 2 - 8 * S, agentData.current_task, config.color, S);
   }
 
   // ── Status effects ──
@@ -485,10 +485,10 @@ function drawAgent(ctx, x, y, name, agentData, frame) {
     for (let i = 0; i < 3; i++) {
       const zz = ((frame * 0.015 + i * 0.33) % 1);
       ctx.globalAlpha = 1 - zz;
-      ctx.font = `${9 + zz * 8}px monospace`;
+      ctx.font = `${Math.round((7 + zz * 6) * S)}px monospace`;
       ctx.fillStyle = '#8888bb';
       ctx.textAlign = 'center';
-      ctx.fillText('z', x + 14 + zz * 12 + i * 4, ay - 10 - zz * 22);
+      ctx.fillText('z', x + 10 * S + zz * 10 * S + i * 3 * S, ay - 8 * S - zz * 18 * S);
     }
     ctx.globalAlpha = 1;
   }
@@ -499,7 +499,7 @@ function drawAgent(ctx, x, y, name, agentData, frame) {
       ctx.globalAlpha = p < 1 ? p : p < 2 ? 1 : 3 - p;
       ctx.fillStyle = '#f1c40f';
       ctx.beginPath();
-      ctx.arc(x + 20 + i * 7, ay - 6, 3, 0, Math.PI * 2);
+      ctx.arc(x + 16 * S + i * 6 * S, ay - 5 * S, 2.5 * S, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.globalAlpha = 1;
@@ -509,13 +509,13 @@ function drawAgent(ctx, x, y, name, agentData, frame) {
     ctx.save();
     for (let i = 0; i < 4; i++) {
       const angle = (frame * 0.03 + i * Math.PI / 2) % (Math.PI * 2);
-      const pr = 28 + Math.sin(frame * 0.05 + i) * 3;
+      const pr = 22 * S + Math.sin(frame * 0.05 + i) * 2 * S;
       const ppx = x + Math.cos(angle) * pr;
       const ppy = ay + Math.sin(angle) * pr;
       ctx.fillStyle = config.color;
       ctx.globalAlpha = 0.5;
       ctx.beginPath();
-      ctx.arc(ppx, ppy, 2, 0, Math.PI * 2);
+      ctx.arc(ppx, ppy, 1.5 * S, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.restore();
@@ -526,7 +526,7 @@ function drawAgent(ctx, x, y, name, agentData, frame) {
     const flash = Math.sin(frame * 0.15) > 0;
     if (flash) {
       ctx.beginPath();
-      ctx.arc(x, ay, 24, 0, Math.PI * 2);
+      ctx.arc(x, ay, 18 * S, 0, Math.PI * 2);
       ctx.fillStyle = 'rgba(231, 76, 60, 0.2)';
       ctx.fill();
     }
@@ -537,21 +537,22 @@ function drawAgent(ctx, x, y, name, agentData, frame) {
   if (!isAgentBusy(agentData) && status !== 'sleeping') {
     const act = agentIdleActivity[name];
     if (act) {
-      const bubbleY = ay - SPRITE_H / 2 - 14;
+      const bubbleY = ay - SPRITE_H / 2 - 10 * S;
       const bubbleX = x;
 
       // Floating bounce
-      const floatOff = Math.sin(frame * 0.04 + x * 0.1) * 3;
+      const floatOff = Math.sin(frame * 0.04 + x * 0.1) * 2 * S;
 
       // Small rounded bubble background
-      const emojiSize = 14;
+      const emojiSize = Math.round(11 * S);
       ctx.save();
 
       // Tiny label below emoji
-      ctx.font = '7px monospace';
+      const lblFs = Math.max(5, Math.round(7 * S));
+      ctx.font = `${lblFs}px monospace`;
       const labelW = ctx.measureText(act.label).width;
-      const bgW = Math.max(labelW + 10, emojiSize + 12);
-      const bgH = 26;
+      const bgW = Math.max(labelW + 8 * S, emojiSize + 10 * S);
+      const bgH = Math.round(22 * S);
       const bgX = bubbleX - bgW / 2;
       const bgY = bubbleY - bgH + floatOff;
 
@@ -559,7 +560,7 @@ function drawAgent(ctx, x, y, name, agentData, frame) {
       ctx.fillStyle = 'rgba(20, 20, 40, 0.75)';
       ctx.globalAlpha = 0.85;
       ctx.beginPath();
-      ctx.roundRect(bgX, bgY, bgW, bgH, 6);
+      ctx.roundRect(bgX, bgY, bgW, bgH, 5 * S);
       ctx.fill();
 
       // Bubble border
@@ -571,9 +572,9 @@ function drawAgent(ctx, x, y, name, agentData, frame) {
       // Tiny triangle pointer
       ctx.fillStyle = 'rgba(20, 20, 40, 0.75)';
       ctx.beginPath();
-      ctx.moveTo(bubbleX - 3, bgY + bgH);
-      ctx.lineTo(bubbleX + 3, bgY + bgH);
-      ctx.lineTo(bubbleX, bgY + bgH + 4);
+      ctx.moveTo(bubbleX - 2 * S, bgY + bgH);
+      ctx.lineTo(bubbleX + 2 * S, bgY + bgH);
+      ctx.lineTo(bubbleX, bgY + bgH + 3 * S);
       ctx.fill();
 
       // Emoji with gentle pulse
@@ -581,13 +582,13 @@ function drawAgent(ctx, x, y, name, agentData, frame) {
       ctx.font = `${Math.round(emojiSize * emojiPulse)}px sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(act.emoji, bubbleX, bgY + 10 + floatOff * 0.2);
+      ctx.fillText(act.emoji, bubbleX, bgY + 8 * S + floatOff * 0.2);
 
       // Label text
-      ctx.font = '7px monospace';
+      ctx.font = `${lblFs}px monospace`;
       ctx.fillStyle = 'rgba(200, 200, 220, 0.7)';
       ctx.textAlign = 'center';
-      ctx.fillText(act.label, bubbleX, bgY + 21 + floatOff * 0.2);
+      ctx.fillText(act.label, bubbleX, bgY + 17 * S + floatOff * 0.2);
 
       ctx.restore();
     }
@@ -595,29 +596,32 @@ function drawAgent(ctx, x, y, name, agentData, frame) {
 }
 
 // ─── Bubble ───
-function drawBubble(ctx, x, y, text, borderColor) {
-  const t = text.length > 28 ? text.slice(0, 26) + '...' : text;
-  ctx.font = '10px monospace';
+function drawBubble(ctx, x, y, text, borderColor, S) {
+  S = S || 1;
+  const maxLen = Math.round(28 * S);
+  const t = text.length > maxLen ? text.slice(0, maxLen - 2) + '..' : text;
+  const fs = Math.max(6, Math.round(10 * S));
+  ctx.font = `${fs}px monospace`;
   const tw = ctx.measureText(t).width;
-  const pad = 10;
+  const pad = 8 * S;
   const bw = tw + pad * 2;
-  const bh = 20;
+  const bh = Math.round(16 * S);
   const bx = x - bw / 2;
   const by = y - bh;
 
   ctx.fillStyle = 'rgba(25, 25, 45, 0.92)';
   ctx.beginPath();
-  ctx.roundRect(bx, by, bw, bh, 6);
+  ctx.roundRect(bx, by, bw, bh, 4 * S);
   ctx.fill();
   ctx.strokeStyle = borderColor;
-  ctx.lineWidth = 1.5;
+  ctx.lineWidth = 1 * S;
   ctx.stroke();
 
   // Pointer
   ctx.beginPath();
-  ctx.moveTo(x - 5, by + bh);
-  ctx.lineTo(x, by + bh + 6);
-  ctx.lineTo(x + 5, by + bh);
+  ctx.moveTo(x - 4 * S, by + bh);
+  ctx.lineTo(x, by + bh + 5 * S);
+  ctx.lineTo(x + 4 * S, by + bh);
   ctx.fillStyle = 'rgba(25, 25, 45, 0.92)';
   ctx.fill();
 
