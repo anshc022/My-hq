@@ -1,4 +1,22 @@
 
+.agent-panel {
+  background: rgba(10, 10, 20, 0.85);
+  border-radius: 10px;
+  padding: 12px;
+  border: 1px solid #2a2a4a;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.agent-panel-title {
+  color: #666;
+  font-size: 11px;
+  letter-spacing: 3px;
+  margin: 0 0 10px;
+  font-family: 'Courier New', monospace;
+  text-transform: uppercase;
+}
+
 .agent-list {
   display: flex;
   flex-direction: column;
@@ -6,12 +24,20 @@
 }
 
 .agent-card {
-  border-left: 2px solid transparent;
+  border-left: 3px solid transparent;
   transition: all 0.2s ease;
-  background: rgba(30, 30, 30, 0.6);
+  background: rgba(20, 20, 35, 0.8);
   backdrop-filter: blur(4px);
   position: relative;
   overflow: hidden;
+  border-radius: 8px;
+  padding: 10px 12px;
+  cursor: default;
+}
+
+.agent-card:hover {
+  background: rgba(30, 30, 50, 0.9);
+  transform: translateX(2px);
 }
 
 /* Use a pseudo-element for the glow to avoid overwriting the slide-in animation */
@@ -19,7 +45,7 @@
   content: '';
   position: absolute;
   inset: 0;
-  border-radius: 6px;
+  border-radius: 8px;
   border: 1px solid transparent;
   pointer-events: none;
   opacity: 0;
@@ -57,32 +83,115 @@
   }
 }
 
-/* Remove direct animation from the class to prevent conflict, 
-   or keep border-color change on the main element if preferred, 
-   but pseudo-element is safer for animation composition. */
 .agent-card.working-glow {
-  border-color: rgba(74, 222, 128, 0.5); /* Fallback/Base */
+  border-color: rgba(74, 222, 128, 0.5);
 }
 
 .agent-card-header {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 2px;
+  margin-bottom: 4px;
+}
+
+.agent-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 6px currentColor;
+}
+
+.agent-icon {
+  font-size: 14px;
+  flex-shrink: 0;
 }
 
 .agent-name {
-  font-weight: 500;
+  font-weight: 700;
   color: #e5e5e5;
-  font-size: 0.9em;
-  letter-spacing: 0.02em;
+  font-size: 13px;
+  letter-spacing: 0.03em;
+  font-family: 'Courier New', monospace;
 }
 
-.agent-status-text {
-  font-size: 0.75em;
+.agent-role {
+  font-size: 11px;
+  font-weight: 600;
+  margin-left: auto;
+  white-space: nowrap;
+  font-family: 'Courier New', monospace;
+}
+
+.agent-card-status {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.agent-status-badge {
+  font-size: 11px;
   color: #a3a3a3;
+  font-family: 'Courier New', monospace;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.agent-card-task {
+  font-size: 11px;
+  color: #6ee7b7;
+  font-family: 'Courier New', monospace;
+  margin-top: 4px;
+  padding: 4px 8px;
+  background: rgba(0, 255, 136, 0.06);
+  border-radius: 4px;
+  border-left: 2px solid rgba(0, 255, 136, 0.3);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 100%;
+}
+
+/* ── Mobile: horizontal scroll cards ── */
+@media (max-width: 900px) {
+  .agent-list {
+    flex-direction: row;
+    overflow-x: auto;
+    gap: 8px;
+    padding-bottom: 6px;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+  .agent-list::-webkit-scrollbar {
+    height: 4px;
+  }
+  .agent-list::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 2px;
+  }
+  .agent-card {
+    min-width: 150px;
+    max-width: 180px;
+    flex-shrink: 0;
+    scroll-snap-align: start;
+    padding: 10px 12px;
+  }
+  .agent-role {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .agent-card {
+    min-width: 130px;
+    max-width: 160px;
+    padding: 8px 10px;
+  }
+  .agent-name {
+    font-size: 12px;
+  }
+  .agent-card-task {
+    font-size: 10px;
+  }
 }
