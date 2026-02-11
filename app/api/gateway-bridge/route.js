@@ -47,50 +47,44 @@ function extractAgent(payload) {
   return null;
 }
 
-// ─── Delegation detection — when Echo delegates, mark sub-agents as working ───
-// These patterns detect when Echo mentions a sub-agent doing work
-const DELEGATION_PATTERNS = {
-  pixel: [/pixel/i],
-  dash:  [/dash/i],
-  stack: [/stack/i],
-  probe: [/probe/i],
-  ship:  [/ship/i],
-};
+// ─── Delegation detection — when Echo EXPLICITLY delegates, mark sub-agents ───
+// Only triggers on clear delegation language like "@pixel handle the UI" or
+// "I'm sending this to Dash". Simple mentions like "Pixel is our designer" are ignored.
 
 // Track which sub-agents are working from a delegation
 const activeDelegations = new Map(); // agentName → { startedAt, task }
 
+// Strict delegation patterns: agent name + explicit delegation verb nearby
+const DELEGATION_VERBS = /(?:delegat|assign|send(?:ing)?\s+(?:this\s+)?to|task(?:ing)?|hand(?:ing)?\s+(?:this\s+)?(?:off\s+)?to|asking|forwarding\s+to|passing\s+to|routing\s+to)/i;
+const AGENT_NAMES_RE = /\b(pixel|dash|stack|probe|ship)\b/gi;
+
 async function detectDelegation(text) {
   if (!text) return;
-  
-  // More flexible detection: look for agent names + action words
-  // e.g., "Dash is coding", "Ship will push", "Pixel is working", "assigned Probe"
-  const actionWords = /is|will|can|should|assigned|sending|asking|delegat|task|work|coding|push|check|review|handle|implement|fix/i;
-  if (!actionWords.test(text)) return;
+  // Must contain explicit delegation language — not just a mention
+  if (!DELEGATION_VERBS.test(text)) return;
 
-  for (const [agentId, patterns] of Object.entries(DELEGATION_PATTERNS)) {
-    const agentName = AGENT_MAP[agentId] || agentId;
-    if (patterns.some(p => p.test(text))) {
-      // Extract task: everything after the agent name, up to 80 chars
-      const agentNamePattern = patterns[0].source;
-      const taskMatch = text.match(new RegExp(`${agentNamePattern}[^.]*`, 'i'));
-      const task = taskMatch ? taskMatch[0].slice(0, 80) : 'Working on delegated task';
+  const matches = [...new Set((text.match(AGENT_NAMES_RE) || []).map(n => n.toLowerCase()))];
+  if (matches.length === 0) return;
 
-      activeDelegations.set(agentName, { startedAt: Date.now(), task });
+  for (const name of matches) {
+    const agentName = name; // pixel, dash, stack, probe, ship are already display names
+    const taskMatch = text.match(new RegExp(`${name}[^.!?]{0,80}`, 'i'));
+    const task = taskMatch ? taskMatch[0].trim().slice(0, 80) : 'Delegated task';
 
-      await supabase.from('ops_agents').update({
-        status: 'working',
-        current_task: task,
-        current_room: getWorkRoom(agentName),
-        last_active_at: new Date().toISOString(),
-      }).eq('name', agentName);
+    activeDelegations.set(agentName, { startedAt: Date.now(), task });
 
-      await supabase.from('ops_events').insert({
-        agent: agentName,
-        event_type: 'task',
-        title: `Working: ${task.slice(0, 60)}`,
-      });
-    }
+    await supabase.from('ops_agents').update({
+      status: 'working',
+      current_task: task,
+      current_room: getWorkRoom(agentName),
+      last_active_at: new Date().toISOString(),
+    }).eq('name', agentName);
+
+    await supabase.from('ops_events').insert({
+      agent: agentName,
+      event_type: 'task',
+      title: `Working: ${task.slice(0, 60)}`,
+    });
   }
 }
 
@@ -259,21 +253,20 @@ function detectTeamDispatch(text) {
 // OpenClaw routes ONE message to ONE agent — that's the reality.
 async function processGatewayMessage(msg) {
   try {
-    // Handle bridge-level events (not from gateway)
+    // Handle bridge-level events — ONLY affects Pulse, no other agent
     if (msg.type === 'node:connected' || msg.type === 'node:disconnected') {
       const isConnected = msg.type === 'node:connected';
-      await Promise.all([
-        supabase.from('ops_events').insert({
-          agent: 'pulse',
-          event_type: 'system',
-          title: isConnected ? 'Bridge connected to gateway' : `Bridge disconnected (${msg.message || ''})`,
-        }),
-        supabase.from('ops_agents').update({
-          status: isConnected ? 'working' : 'idle',
-          current_task: isConnected ? 'Gateway bridge online' : null,
-          last_active_at: new Date().toISOString(),
-        }).eq('name', 'pulse'),
-      ]);
+      await supabase.from('ops_events').insert({
+        agent: 'pulse',
+        event_type: 'system',
+        title: isConnected ? 'Bridge connected to gateway' : `Bridge disconnected (${msg.message || ''})`,
+      });
+      // Only update Pulse status — never touch other agents
+      await supabase.from('ops_agents').update({
+        status: isConnected ? 'idle' : 'idle',
+        current_task: isConnected ? 'Monitoring gateway' : null,
+        last_active_at: new Date().toISOString(),
+      }).eq('name', 'pulse');
       return { type: msg.type };
     }
 
