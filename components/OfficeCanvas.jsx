@@ -1057,8 +1057,9 @@ function drawRoomInterior(ctx, roomKey, rx, ry, rw, rh, cw, ch, frame) {
 
 // ─── Furniture (desks in workspace + cabin decorations) ───
 function drawFurniture(ctx, cw, ch, frame) {
-  // ── Individual desks with monitors ──
+  // ── Individual desks with monitors (skip pulse — it uses the node laptop) ──
   Object.entries(DESK_POSITIONS).forEach(([name, dp]) => {
+    if (name === 'pulse') return; // pulse has no desk, only the node indicator laptop
     const dx = dp.x * cw, dy = dp.y * ch;
     const config = AGENTS[name];
     if (!config) return;
