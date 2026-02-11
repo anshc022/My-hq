@@ -18,6 +18,11 @@ const AGENT_SPEED_MULT = {
   probe: 0.9, ship: 1.05, pulse: 0.95,
 };
 
+// ─── Movement detection for walk animation ───
+const agentPrevPos = {};  // { name: { x, y } }
+const agentIsWalking = {}; // { name: boolean }
+const WALK_THRESHOLD = 0.4; // min pixel movement per frame to count as walking
+
 // All rooms as rectangles agents can wander into (percentage coordinates)
 const WANDER_ZONES = [
   { x: 0.04, y: 0.06, w: 0.53, h: 0.40 }, // workspace (top-left)
@@ -138,11 +143,19 @@ function getSmoothedPos(name, agentData, cw, ch) {
   const speed = baseSpeed * mult;
   if (!agentAnimPos[name]) {
     agentAnimPos[name] = { x: target.x, y: target.y };
+    agentPrevPos[name] = { x: target.x, y: target.y };
     return target;
   }
   const cur = agentAnimPos[name];
+  // Track previous position for walk detection
+  const prev = agentPrevPos[name] || { x: cur.x, y: cur.y };
   cur.x = lerp(cur.x, target.x, speed);
   cur.y = lerp(cur.y, target.y, speed);
+  // Detect if actually moving
+  const dx = cur.x - prev.x;
+  const dy = cur.y - prev.y;
+  agentIsWalking[name] = Math.sqrt(dx * dx + dy * dy) > WALK_THRESHOLD;
+  agentPrevPos[name] = { x: cur.x, y: cur.y };
   return { x: cur.x, y: cur.y };
 }
 
@@ -193,14 +206,31 @@ function drawPixelAgent(ctx, x, y, name, frame, status) {
   const ox = x - 7 * P; // sprite ~14px wide
   const oy = y - 20 * P; // sprite ~20px tall
 
-  // ── Legs (2px wide each, slightly apart) ──
-  const walk = (status === 'working' || status === 'talking' || status === 'researching')
-    ? Math.floor(frame * 0.08) % 2 : 0;
-  px(ctx, ox + 4 * P, oy + 17 * P, look.pants, 2, 3);
-  px(ctx, ox + 8 * P, oy + 17 * P, look.pants, 2, 3);
-  // Feet
-  px(ctx, ox + 3 * P, oy + 20 * P - walk * P, '#333', 3, 1);
-  px(ctx, ox + 8 * P, oy + 20 * P + walk * P, '#333', 3, 1);
+  // ── Legs with walking animation ──
+  const walking = agentIsWalking[name];
+  if (walking) {
+    // Alternating stride: legs swap forward/back
+    const stride = Math.sin(frame * 0.18) * 2.5 * P;
+    // Left leg
+    px(ctx, ox + 4 * P, oy + 17 * P, look.pants, 2, 2);
+    ctx.fillStyle = look.pants;
+    ctx.fillRect(ox + 4 * P, oy + 19 * P + stride, 2 * P, 1 * P);
+    // Right leg
+    px(ctx, ox + 8 * P, oy + 17 * P, look.pants, 2, 2);
+    ctx.fillStyle = look.pants;
+    ctx.fillRect(ox + 8 * P, oy + 19 * P - stride, 2 * P, 1 * P);
+    // Feet
+    ctx.fillStyle = '#333';
+    ctx.fillRect(ox + 3 * P, oy + 20 * P + stride, 3 * P, 1 * P);
+    ctx.fillRect(ox + 8 * P, oy + 20 * P - stride, 3 * P, 1 * P);
+  } else {
+    // Standing still
+    px(ctx, ox + 4 * P, oy + 17 * P, look.pants, 2, 3);
+    px(ctx, ox + 8 * P, oy + 17 * P, look.pants, 2, 3);
+    // Feet
+    px(ctx, ox + 3 * P, oy + 20 * P, '#333', 3, 1);
+    px(ctx, ox + 8 * P, oy + 20 * P, '#333', 3, 1);
+  }
 
   // ── Body / Shirt (6px wide, 6px tall) ──
   px(ctx, ox + 3 * P, oy + 11 * P, look.shirt, 8, 6);
