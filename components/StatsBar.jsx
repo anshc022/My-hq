@@ -8,7 +8,7 @@ export default function StatsBar({ agents, events }) {
   return (
     <div style={styles.bar}>
       <div style={styles.left}>
-        <span style={styles.logo}>OPENCLAW HQ</span>
+        <span style={styles.logo}>Pranshu'S HQ</span>
         <span style={styles.live}>LIVE</span>
       </div>
       <div style={styles.right}>
