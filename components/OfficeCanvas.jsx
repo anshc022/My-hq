@@ -1585,10 +1585,42 @@ export default function OfficeCanvas({ agents, nodeConnected }) {
     // Connection lines (before agents so lines go behind)
     drawConnections(ctx, currentAgents, cw, ch, frame);
 
-    // Agent avatars
+    // Agent avatars — compute positions, then separate overlaps, then draw
     if (currentAgents) {
-      currentAgents.forEach(agentData => {
-        const pos = getSmoothedPos(agentData.name, agentData, cw, ch);
+      // First pass: compute smoothed positions
+      const agentPositions = currentAgents.map(agentData => ({
+        agentData,
+        pos: getSmoothedPos(agentData.name, agentData, cw, ch),
+      }));
+
+      // Second pass: push apart overlapping agents (minimum distance)
+      const MIN_DIST = 28; // minimum pixel distance between agents
+      for (let i = 0; i < agentPositions.length; i++) {
+        for (let j = i + 1; j < agentPositions.length; j++) {
+          const a = agentPositions[i].pos;
+          const b = agentPositions[j].pos;
+          const dx = b.x - a.x;
+          const dy = b.y - a.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < MIN_DIST && dist > 0) {
+            const overlap = (MIN_DIST - dist) / 2;
+            const nx = dx / dist;
+            const ny = dy / dist;
+            a.x -= nx * overlap;
+            a.y -= ny * overlap;
+            b.x += nx * overlap;
+            b.y += ny * overlap;
+            // Also update the cached anim positions so it persists
+            const nameA = agentPositions[i].agentData.name;
+            const nameB = agentPositions[j].agentData.name;
+            if (agentAnimPos[nameA]) { agentAnimPos[nameA].x = a.x; agentAnimPos[nameA].y = a.y; }
+            if (agentAnimPos[nameB]) { agentAnimPos[nameB].x = b.x; agentAnimPos[nameB].y = b.y; }
+          }
+        }
+      }
+
+      // Third pass: draw
+      agentPositions.forEach(({ agentData, pos }) => {
         drawAgent(ctx, pos.x, pos.y, agentData.name, agentData, frame);
       });
     }
