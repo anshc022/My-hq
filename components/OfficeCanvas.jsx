@@ -14,8 +14,10 @@ const WANDER_ARRIVE_DIST = 0.02; // close enough = pick new target
 
 // All rooms as rectangles agents can wander into (percentage coordinates)
 const WANDER_ZONES = [
-  { x: 0.04, y: 0.08, w: 0.53, h: 0.86 }, // workspace
-  { x: 0.61, y: 0.08, w: 0.35, h: 0.86 }, // cabin
+  { x: 0.04, y: 0.06, w: 0.53, h: 0.40 }, // workspace (top-left)
+  { x: 0.61, y: 0.06, w: 0.35, h: 0.40 }, // cabin (top-right)
+  { x: 0.04, y: 0.53, w: 0.53, h: 0.40 }, // lab (bottom-left)
+  { x: 0.61, y: 0.53, w: 0.35, h: 0.40 }, // pulsebay (bottom-right)
 ];
 
 function pickWanderTarget(name) {
@@ -632,12 +634,14 @@ function drawRooms(ctx, cw, ch, frame) {
   const bx = UNIFIED_BOX.x * cw + 2, by = UNIFIED_BOX.y * ch + 2;
   const bw = UNIFIED_BOX.w * cw - 4, bh = UNIFIED_BOX.h * ch - 4;
   const divX = UNIFIED_BOX.dividerX * cw;
+  const divY = UNIFIED_BOX.dividerY * ch;
 
   // Unified background gradient
   const bgGrad = ctx.createLinearGradient(bx, by, bx + bw * 0.3, by + bh);
   bgGrad.addColorStop(0, 'rgba(12,14,35,0.55)');
-  bgGrad.addColorStop(0.55, 'rgba(8,8,16,0.5)');
-  bgGrad.addColorStop(1, 'rgba(20,14,10,0.5)');
+  bgGrad.addColorStop(0.35, 'rgba(8,8,16,0.5)');
+  bgGrad.addColorStop(0.65, 'rgba(10,16,12,0.45)');
+  bgGrad.addColorStop(1, 'rgba(8,18,12,0.5)');
   ctx.fillStyle = bgGrad;
   ctx.beginPath();
   ctx.roundRect(bx, by, bw, bh, 10);
@@ -665,24 +669,24 @@ function drawRooms(ctx, cw, ch, frame) {
   }
   ctx.restore();
 
-  // Subtle left half ambient glow (workspace blue)
-  const glowR = Math.min(bw, bh) * 0.45;
-  const cwGlow = ctx.createRadialGradient(bx + bw * 0.28, by + bh * 0.5, 0, bx + bw * 0.28, by + bh * 0.5, glowR);
-  cwGlow.addColorStop(0, 'rgba(74,106,255,0.05)');
-  cwGlow.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = cwGlow;
-  ctx.beginPath();
-  ctx.roundRect(bx, by, bw, bh, 10);
-  ctx.fill();
-
-  // Subtle right half ambient glow (cabin warm)
-  const ccGlow = ctx.createRadialGradient(bx + bw * 0.78, by + bh * 0.5, 0, bx + bw * 0.78, by + bh * 0.5, glowR * 0.8);
-  ccGlow.addColorStop(0, 'rgba(212,145,90,0.05)');
-  ccGlow.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = ccGlow;
-  ctx.beginPath();
-  ctx.roundRect(bx, by, bw, bh, 10);
-  ctx.fill();
+  // Quadrant ambient glows
+  const glowR = Math.min(bw, bh) * 0.32;
+  // Top-left: workspace blue
+  const g1 = ctx.createRadialGradient(bx + bw * 0.25, by + bh * 0.25, 0, bx + bw * 0.25, by + bh * 0.25, glowR);
+  g1.addColorStop(0, 'rgba(74,106,255,0.05)'); g1.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = g1; ctx.beginPath(); ctx.roundRect(bx, by, bw, bh, 10); ctx.fill();
+  // Top-right: cabin warm
+  const g2 = ctx.createRadialGradient(bx + bw * 0.78, by + bh * 0.25, 0, bx + bw * 0.78, by + bh * 0.25, glowR);
+  g2.addColorStop(0, 'rgba(212,145,90,0.05)'); g2.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = g2; ctx.beginPath(); ctx.roundRect(bx, by, bw, bh, 10); ctx.fill();
+  // Bottom-left: lab green
+  const g3 = ctx.createRadialGradient(bx + bw * 0.25, by + bh * 0.75, 0, bx + bw * 0.25, by + bh * 0.75, glowR);
+  g3.addColorStop(0, 'rgba(46,204,113,0.04)'); g3.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = g3; ctx.beginPath(); ctx.roundRect(bx, by, bw, bh, 10); ctx.fill();
+  // Bottom-right: pulse green
+  const g4 = ctx.createRadialGradient(bx + bw * 0.78, by + bh * 0.75, 0, bx + bw * 0.78, by + bh * 0.75, glowR);
+  g4.addColorStop(0, 'rgba(0,255,136,0.04)'); g4.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = g4; ctx.beginPath(); ctx.roundRect(bx, by, bw, bh, 10); ctx.fill();
 
   // ── Single outer border with glow ──
   const glowPulse = 0.35 + Math.sin(frame * 0.018) * 0.15;
@@ -716,66 +720,50 @@ function drawRooms(ctx, cw, ch, frame) {
   ctx.beginPath(); ctx.moveTo(bx + bw - cLen, by + bh); ctx.lineTo(bx + bw, by + bh); ctx.lineTo(bx + bw, by + bh - cLen); ctx.stroke();
   ctx.globalAlpha = 1;
 
-  // ── Dividing line between workspace and cabin ──
-  // Outer glow
-  const divGlow = ctx.createLinearGradient(divX - 6, by, divX + 6, by);
-  divGlow.addColorStop(0, 'rgba(255,255,255,0)');
-  divGlow.addColorStop(0.5, 'rgba(200,210,255,0.08)');
-  divGlow.addColorStop(1, 'rgba(255,255,255,0)');
-  ctx.fillStyle = divGlow;
+  // ── Vertical dividing line (left | right) ──
+  const vGlow = ctx.createLinearGradient(divX - 6, by, divX + 6, by);
+  vGlow.addColorStop(0, 'rgba(255,255,255,0)'); vGlow.addColorStop(0.5, 'rgba(200,210,255,0.08)'); vGlow.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = vGlow;
   ctx.fillRect(divX - 6, by + 6, 12, bh - 12);
-  // Main line
-  const divGrad = ctx.createLinearGradient(divX, by, divX, by + bh);
-  divGrad.addColorStop(0, 'rgba(255,255,255,0)');
-  divGrad.addColorStop(0.06, 'rgba(255,255,255,0.25)');
-  divGrad.addColorStop(0.5, 'rgba(255,255,255,0.35)');
-  divGrad.addColorStop(0.94, 'rgba(255,255,255,0.25)');
-  divGrad.addColorStop(1, 'rgba(255,255,255,0)');
-  ctx.fillStyle = divGrad;
+  const vLine = ctx.createLinearGradient(divX, by, divX, by + bh);
+  vLine.addColorStop(0, 'rgba(255,255,255,0)'); vLine.addColorStop(0.06, 'rgba(255,255,255,0.25)'); vLine.addColorStop(0.5, 'rgba(255,255,255,0.35)');
+  vLine.addColorStop(0.94, 'rgba(255,255,255,0.25)'); vLine.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = vLine;
   ctx.fillRect(divX - 0.5, by + 6, 1.5, bh - 12);
 
-  // ── Header strip across full width ──
-  const hdrH = 22;
-  const hdrGrad = ctx.createLinearGradient(bx, by, bx + bw, by);
-  hdrGrad.addColorStop(0, 'rgba(74,106,255,0.14)');
-  hdrGrad.addColorStop(0.55, 'rgba(40,40,60,0.05)');
-  hdrGrad.addColorStop(1, 'rgba(212,145,90,0.12)');
-  ctx.fillStyle = hdrGrad;
-  ctx.beginPath();
-  ctx.roundRect(bx + 1, by + 1, bw - 2, hdrH, [9, 9, 0, 0]);
-  ctx.fill();
+  // ── Horizontal dividing line (top | bottom) ──
+  const hGlow = ctx.createLinearGradient(bx, divY - 6, bx, divY + 6);
+  hGlow.addColorStop(0, 'rgba(255,255,255,0)'); hGlow.addColorStop(0.5, 'rgba(200,210,255,0.08)'); hGlow.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = hGlow;
+  ctx.fillRect(bx + 6, divY - 6, bw - 12, 12);
+  const hLine = ctx.createLinearGradient(bx, divY, bx + bw, divY);
+  hLine.addColorStop(0, 'rgba(255,255,255,0)'); hLine.addColorStop(0.06, 'rgba(255,255,255,0.25)'); hLine.addColorStop(0.5, 'rgba(255,255,255,0.35)');
+  hLine.addColorStop(0.94, 'rgba(255,255,255,0.25)'); hLine.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = hLine;
+  ctx.fillRect(bx + 6, divY - 0.5, bw - 12, 1.5);
 
-  // Header divider line
-  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
-  ctx.lineWidth = 0.5;
-  ctx.beginPath();
-  ctx.moveTo(bx + 8, by + hdrH);
-  ctx.lineTo(bx + bw - 8, by + hdrH);
-  ctx.stroke();
-
-  // Left label (workspace)
-  ctx.font = '13px sans-serif';
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'middle';
-  ctx.fillText('💻', bx + 8, by + hdrH / 2 + 1);
-  ctx.font = 'bold 9px monospace';
-  ctx.fillStyle = '#4a6aff';
-  ctx.globalAlpha = 0.7;
-  ctx.fillText('WORKSPACE', bx + 24, by + hdrH / 2 + 1);
-  ctx.globalAlpha = 1;
-
-  // Right label (cabin) — after divider
-  ctx.font = '13px sans-serif';
-  ctx.fillText('🏠', divX + 8, by + hdrH / 2 + 1);
-  ctx.font = 'bold 9px monospace';
-  ctx.fillStyle = '#d4915a';
-  ctx.globalAlpha = 0.7;
-  ctx.fillText('CABIN', divX + 24, by + hdrH / 2 + 1);
-  ctx.globalAlpha = 1;
+  // ── Room labels (one per quadrant) ──
+  const labels = [
+    { icon: '💻', text: 'WORKSPACE', color: '#4a6aff', lx: bx + 8,     ly: by + 10 },
+    { icon: '🏠', text: 'CABIN',     color: '#d4915a', lx: divX + 8,   ly: by + 10 },
+    { icon: '🧪', text: 'CODE LAB',  color: '#2ecc71', lx: bx + 8,     ly: divY + 8 },
+    { icon: '💚', text: 'PULSE BAY', color: '#00FF88', lx: divX + 8,   ly: divY + 8 },
+  ];
+  labels.forEach(l => {
+    ctx.font = '11px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText(l.icon, l.lx, l.ly);
+    ctx.font = 'bold 8px monospace';
+    ctx.fillStyle = l.color;
+    ctx.globalAlpha = 0.6;
+    ctx.fillText(l.text, l.lx + 16, l.ly + 2);
+    ctx.globalAlpha = 1;
+  });
 
   // ── Scanning line ──
-  const scanLine = by + hdrH + ((frame * 0.3) % (bh - hdrH));
-  ctx.fillStyle = 'rgba(74,106,255,0.025)';
+  const scanLine = by + ((frame * 0.3) % bh);
+  ctx.fillStyle = 'rgba(74,106,255,0.02)';
   ctx.fillRect(bx + 4, scanLine, bw - 8, 1);
 
   // ── Bottom status bar ──
@@ -788,8 +776,8 @@ function drawRooms(ctx, cw, ch, frame) {
 
   // ── Room-specific interior decorations ──
   Object.entries(ROOMS).forEach(([key, room]) => {
-    const rx = room.x * cw + 2, ry2 = by + hdrH + 4;
-    const rw = room.w * cw - 4, rh2 = bh - hdrH - 12;
+    const rx = room.x * cw + 4, ry2 = room.y * ch + 22;
+    const rw = room.w * cw - 8, rh2 = room.h * ch - 30;
     drawRoomInterior(ctx, key, rx, ry2, rw, rh2, cw, ch, frame);
   });
 }
@@ -852,130 +840,175 @@ function drawRoomInterior(ctx, roomKey, rx, ry, rw, rh, cw, ch, frame) {
 
   if (roomKey === 'cabin') {
     // Warm cabin ambiance - fireplace glow
-    const fx = rx + rw * 0.5, fy = ry + rh * 0.80;
+    const fx = rx + rw * 0.5, fy = ry + rh * 0.75;
 
     // Fireplace structure
     ctx.fillStyle = 'rgba(60,30,15,0.4)';
-    ctx.beginPath();
-    ctx.roundRect(fx - 20, fy - 8, 40, 18, 3);
-    ctx.fill();
+    ctx.beginPath(); ctx.roundRect(fx - 18, fy - 6, 36, 16, 3); ctx.fill();
     ctx.fillStyle = 'rgba(40,20,10,0.5)';
-    ctx.beginPath();
-    ctx.roundRect(fx - 16, fy - 4, 32, 12, 2);
-    ctx.fill();
+    ctx.beginPath(); ctx.roundRect(fx - 14, fy - 2, 28, 10, 2); ctx.fill();
 
     // Animated fire
     for (let i = 0; i < 5; i++) {
       const flicker = Math.sin(frame * 0.12 + i * 1.7) * 3;
-      const fh = 6 + Math.sin(frame * 0.08 + i * 2.3) * 3;
+      const fh = 5 + Math.sin(frame * 0.08 + i * 2.3) * 2.5;
       const fireColors = ['#ff6b35', '#ff9500', '#ffcc00', '#ff4500', '#ff8c00'];
       ctx.fillStyle = fireColors[i];
       ctx.globalAlpha = 0.25 + Math.sin(frame * 0.1 + i) * 0.1;
       ctx.beginPath();
-      ctx.ellipse(fx - 8 + i * 4 + flicker * 0.3, fy - fh * 0.5, 3, fh * 0.5, 0, 0, Math.PI * 2);
+      ctx.ellipse(fx - 7 + i * 3.5 + flicker * 0.3, fy - fh * 0.5, 2.5, fh * 0.4, 0, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.globalAlpha = 1;
 
-    // Warm glow emanating from fireplace
-    const fireGlow = ctx.createRadialGradient(fx, fy, 0, fx, fy, 60);
+    // Warm glow
+    const fireGlow = ctx.createRadialGradient(fx, fy, 0, fx, fy, 50);
     fireGlow.addColorStop(0, `rgba(255,150,50,${0.04 + Math.sin(frame * 0.03) * 0.02})`);
     fireGlow.addColorStop(1, 'rgba(255,100,30,0)');
     ctx.fillStyle = fireGlow;
     ctx.fillRect(rx, ry, rw, rh);
 
     // Couch
-    const cx = rx + rw * 0.5, cy = ry + rh * 0.55;
+    const ccx = rx + rw * 0.5, ccy = ry + rh * 0.45;
     ctx.fillStyle = 'rgba(80,45,25,0.35)';
-    ctx.beginPath();
-    ctx.roundRect(cx - 28, cy, 56, 16, 5);
-    ctx.fill();
+    ctx.beginPath(); ctx.roundRect(ccx - 24, ccy, 48, 14, 4); ctx.fill();
     ctx.fillStyle = 'rgba(90,55,30,0.3)';
-    ctx.beginPath();
-    ctx.roundRect(cx - 28, cy - 10, 56, 12, 5);
-    ctx.fill();
-    // Cushion lines
-    ctx.strokeStyle = 'rgba(0,0,0,0.15)';
-    ctx.lineWidth = 0.5;
-    ctx.beginPath(); ctx.moveTo(cx - 9, cy + 1); ctx.lineTo(cx - 9, cy + 14); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(cx + 9, cy + 1); ctx.lineTo(cx + 9, cy + 14); ctx.stroke();
-    // Pillows
-    ctx.fillStyle = 'rgba(180,100,50,0.15)';
-    ctx.beginPath(); ctx.roundRect(cx - 25, cy - 6, 10, 8, 3); ctx.fill();
-    ctx.fillStyle = 'rgba(100,60,30,0.15)';
-    ctx.beginPath(); ctx.roundRect(cx + 16, cy - 6, 10, 8, 3); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(ccx - 24, ccy - 8, 48, 10, 4); ctx.fill();
 
-    // Coffee table
-    ctx.fillStyle = 'rgba(60,35,18,0.35)';
-    ctx.beginPath();
-    ctx.roundRect(cx - 14, cy + 22, 28, 10, 3);
-    ctx.fill();
-    // Coffee cup on table
-    ctx.fillStyle = 'rgba(220,220,210,0.15)';
-    ctx.beginPath();
-    ctx.arc(cx - 4, cy + 26, 3, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = 'rgba(120,80,40,0.2)';
-    ctx.beginPath();
-    ctx.arc(cx - 4, cy + 26, 2, 0, Math.PI * 2);
-    ctx.fill();
-    // Steam from coffee
-    for (let i = 0; i < 2; i++) {
-      const sy = cy + 22 - i * 4 - Math.sin(frame * 0.05 + i) * 2;
-      ctx.strokeStyle = 'rgba(200,200,200,0.08)';
-      ctx.lineWidth = 0.5;
-      ctx.beginPath();
-      ctx.moveTo(cx - 4, cy + 23);
-      ctx.quadraticCurveTo(cx - 4 + Math.sin(frame * 0.04 + i) * 3, sy, cx - 3 + i * 2, sy - 4);
-      ctx.stroke();
-    }
+    // Window with moonlight
+    const wx = rx + 10, wy = ry + 10;
+    ctx.fillStyle = 'rgba(15,20,40,0.4)';
+    ctx.beginPath(); ctx.roundRect(wx, wy, 18, 24, 3); ctx.fill();
+    ctx.strokeStyle = 'rgba(100,70,40,0.3)';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath(); ctx.moveTo(wx + 9, wy); ctx.lineTo(wx + 9, wy + 24); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(wx, wy + 12); ctx.lineTo(wx + 18, wy + 12); ctx.stroke();
+    ctx.fillStyle = 'rgba(200,220,255,0.12)';
+    ctx.beginPath(); ctx.arc(wx + 5, wy + 6, 0.8, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(wx + 13, wy + 9, 0.6, 0, Math.PI * 2); ctx.fill();
 
     // Bookshelf on right wall
-    const bsx = rx + rw - 18, bsy = ry + 14;
+    const bsx = rx + rw - 16, bsy = ry + 10;
     ctx.fillStyle = 'rgba(50,30,15,0.4)';
-    ctx.beginPath();
-    ctx.roundRect(bsx, bsy, 12, rh * 0.5, 2);
-    ctx.fill();
-    const bookColors = ['#e74c3c', '#3498db', '#2ecc71', '#f1c40f', '#9b59b6', '#e67e22', '#1abc9c', '#e91e63'];
-    for (let si = 0; si < 4; si++) {
-      // Shelf divider
+    ctx.beginPath(); ctx.roundRect(bsx, bsy, 10, rh * 0.45, 2); ctx.fill();
+    const bookColors = ['#e74c3c', '#3498db', '#2ecc71', '#f1c40f', '#9b59b6', '#e67e22'];
+    for (let si = 0; si < 3; si++) {
       ctx.fillStyle = 'rgba(70,40,20,0.3)';
-      ctx.fillRect(bsx + 1, bsy + 6 + si * (rh * 0.12), 10, 1);
-      // Books
-      for (let bi = 0; bi < 3; bi++) {
-        const bc = bookColors[(si * 3 + bi) % bookColors.length];
-        ctx.fillStyle = bc;
+      ctx.fillRect(bsx + 1, bsy + 5 + si * (rh * 0.13), 8, 1);
+      for (let bi = 0; bi < 2; bi++) {
+        ctx.fillStyle = bookColors[(si * 2 + bi) % bookColors.length];
         ctx.globalAlpha = 0.2;
-        ctx.fillRect(bsx + 2 + bi * 3.5, bsy + 1 + si * (rh * 0.12), 2.5, rh * 0.10);
+        ctx.fillRect(bsx + 2 + bi * 4, bsy + 1 + si * (rh * 0.13), 3, rh * 0.11);
       }
     }
     ctx.globalAlpha = 1;
+  }
 
-    // Window with moonlight
-    const wx = rx + 12, wy = ry + 16;
-    ctx.fillStyle = 'rgba(15,20,40,0.4)';
+  if (roomKey === 'lab') {
+    // Code Lab — terminals, test racks, data streams
+    // Terminal screens on left
+    for (let i = 0; i < 2; i++) {
+      const tx = rx + 10, ty = ry + 10 + i * (rh * 0.38);
+      ctx.fillStyle = 'rgba(5,15,10,0.5)';
+      ctx.beginPath(); ctx.roundRect(tx, ty, 24, rh * 0.28, 3); ctx.fill();
+      // Terminal text lines
+      for (let ln = 0; ln < 5; ln++) {
+        const lw = 8 + Math.random() * 12;
+        ctx.fillStyle = '#2ecc71';
+        ctx.globalAlpha = 0.15 + Math.sin(frame * 0.02 + ln + i * 3) * 0.05;
+        ctx.fillRect(tx + 3, ty + 4 + ln * (rh * 0.05), lw, 2);
+      }
+      ctx.globalAlpha = 1;
+      // Blinking cursor
+      if (Math.floor(frame * 0.03) % 2 === i) {
+        ctx.fillStyle = '#2ecc71';
+        ctx.globalAlpha = 0.4;
+        ctx.fillRect(tx + 3, ty + 4 + 5 * (rh * 0.05), 4, 2);
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    // Test rack / server rack on right
+    const srx = rx + rw - 20, sry = ry + 8;
+    ctx.fillStyle = 'rgba(20,30,25,0.4)';
+    ctx.beginPath(); ctx.roundRect(srx, sry, 14, rh * 0.7, 2); ctx.fill();
+    for (let si = 0; si < 6; si++) {
+      const ledOn = Math.sin(frame * 0.05 + si * 1.2) > 0;
+      ctx.fillStyle = ledOn ? '#2ecc71' : '#333';
+      ctx.globalAlpha = ledOn ? 0.5 : 0.15;
+      ctx.beginPath(); ctx.arc(srx + 5, sry + 8 + si * (rh * 0.10), 2, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.04)';
+      ctx.globalAlpha = 1;
+      ctx.fillRect(srx + 9, sry + 6 + si * (rh * 0.10), 3, 4);
+    }
+    ctx.globalAlpha = 1;
+
+    // Floating data particles
+    for (let p = 0; p < 4; p++) {
+      const px = rx + rw * 0.3 + Math.sin(frame * 0.015 + p * 2) * rw * 0.15;
+      const py = ry + rh * 0.3 + Math.cos(frame * 0.012 + p * 1.7) * rh * 0.2;
+      ctx.fillStyle = '#2ecc71';
+      ctx.globalAlpha = 0.12 + Math.sin(frame * 0.03 + p) * 0.06;
+      ctx.beginPath(); ctx.arc(px, py, 1.5, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  if (roomKey === 'pulsebay') {
+    // Pulse Bay — heartbeat monitor, node dashboard, status ring
+    // Central heartbeat monitor
+    const mox = rx + rw * 0.5, moy = ry + rh * 0.35;
+    ctx.fillStyle = 'rgba(5,18,10,0.5)';
+    ctx.beginPath(); ctx.roundRect(mox - 28, moy - 14, 56, 28, 4); ctx.fill();
+    ctx.strokeStyle = 'rgba(0,255,136,0.2)';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath(); ctx.roundRect(mox - 28, moy - 14, 56, 28, 4); ctx.stroke();
+
+    // Heartbeat line
+    ctx.strokeStyle = '#00FF88';
+    ctx.lineWidth = 1.5;
+    ctx.globalAlpha = 0.5;
     ctx.beginPath();
-    ctx.roundRect(wx, wy, 20, 28, 3);
-    ctx.fill();
-    // Window panes
-    ctx.strokeStyle = 'rgba(100,70,40,0.3)';
-    ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(wx + 10, wy); ctx.lineTo(wx + 10, wy + 28); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(wx, wy + 14); ctx.lineTo(wx + 20, wy + 14); ctx.stroke();
-    // Starlight
-    ctx.fillStyle = 'rgba(200,220,255,0.12)';
-    ctx.beginPath(); ctx.arc(wx + 6, wy + 6, 1, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(wx + 14, wy + 10, 0.8, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(wx + 4, wy + 20, 0.6, 0, Math.PI * 2); ctx.fill();
-    // Moon glow
-    const moonGlow = ctx.createRadialGradient(wx + 15, wy + 6, 0, wx + 15, wy + 6, 18);
-    moonGlow.addColorStop(0, 'rgba(180,200,255,0.06)');
-    moonGlow.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = moonGlow;
-    ctx.fillRect(wx - 5, wy - 5, 30, 38);
+    for (let hx = 0; hx < 50; hx++) {
+      const t = (hx / 50 + frame * 0.008) % 1;
+      let hy = 0;
+      if (t > 0.35 && t < 0.40) hy = -8;
+      else if (t > 0.40 && t < 0.45) hy = 10;
+      else if (t > 0.45 && t < 0.50) hy = -4;
+      const px = mox - 24 + hx;
+      const py = moy + hy;
+      if (hx === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+    ctx.globalAlpha = 1;
 
-    // Plant in cabin
-    drawPlant(ctx, rx + rw * 0.25, ry + rh * 0.25);
+    // Status ring around monitor
+    const ringPulse = 0.15 + Math.sin(frame * 0.025) * 0.08;
+    const ringGlow = ctx.createRadialGradient(mox, moy, 20, mox, moy, 40);
+    ringGlow.addColorStop(0, 'rgba(0,255,136,0)');
+    ringGlow.addColorStop(0.7, `rgba(0,255,136,${ringPulse})`);
+    ringGlow.addColorStop(1, 'rgba(0,255,136,0)');
+    ctx.fillStyle = ringGlow;
+    ctx.fillRect(mox - 40, moy - 40, 80, 80);
+
+    // Node status text
+    ctx.font = 'bold 6px monospace';
+    ctx.fillStyle = '#00FF88';
+    ctx.globalAlpha = 0.4;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText('NODE STATUS', mox, moy + 18);
+    ctx.globalAlpha = 1;
+
+    // Ambient green particles
+    for (let gp = 0; gp < 3; gp++) {
+      const gpx = rx + rw * (0.2 + gp * 0.3) + Math.sin(frame * 0.01 + gp) * 8;
+      const gpy = ry + rh * 0.75 + Math.cos(frame * 0.013 + gp * 2) * 6;
+      ctx.fillStyle = '#00FF88';
+      ctx.globalAlpha = 0.08 + Math.sin(frame * 0.02 + gp) * 0.04;
+      ctx.beginPath(); ctx.arc(gpx, gpy, 1.5, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
   }
 
   ctx.restore();
@@ -1157,8 +1190,8 @@ function drawWatermark(ctx, cw, ch) {
 
 // ─── Node Connection Indicator — pixel art laptop in bottom-right ───
 function drawNodeIndicator(ctx, cw, ch, frame, connected) {
-  const nx = cw * 0.32;
-  const ny = ch * 0.92;
+  const nx = cw * 0.78;
+  const ny = ch * 0.88;
 
   // ── Connection line from node to PULSE agent only (when online) ──
   if (connected) {
