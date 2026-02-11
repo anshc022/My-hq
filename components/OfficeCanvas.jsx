@@ -669,22 +669,16 @@ function drawRooms(ctx, cw, ch, frame) {
 
     // ── Ambient glow in room center ──
     const glowR = Math.min(rw, rh) * 0.5;
+    const ar = parseInt(accent.slice(1, 3), 16) || 0;
+    const ag = parseInt(accent.slice(3, 5), 16) || 0;
+    const ab = parseInt(accent.slice(5, 7), 16) || 0;
     const centerGlow = ctx.createRadialGradient(
       rx + rw / 2, ry + rh / 2, 0,
       rx + rw / 2, ry + rh / 2, glowR
     );
-    centerGlow.addColorStop(0, accent.replace(')', ',0.04)').replace('rgb(', 'rgba(').replace('#', ''));
-    // Use hex to rgba for accent
-    const ar = parseInt(accent.slice(1, 3), 16) || 0;
-    const ag = parseInt(accent.slice(3, 5), 16) || 0;
-    const ab = parseInt(accent.slice(5, 7), 16) || 0;
-    const centerGlow2 = ctx.createRadialGradient(
-      rx + rw / 2, ry + rh / 2, 0,
-      rx + rw / 2, ry + rh / 2, glowR
-    );
-    centerGlow2.addColorStop(0, `rgba(${ar},${ag},${ab},0.06)`);
-    centerGlow2.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = centerGlow2;
+    centerGlow.addColorStop(0, `rgba(${ar},${ag},${ab},0.06)`);
+    centerGlow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = centerGlow;
     ctx.beginPath();
     ctx.roundRect(rx, ry, rw, rh, 10);
     ctx.fill();
