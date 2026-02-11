@@ -642,11 +642,16 @@ function drawConnections(ctx, agents, cw, ch, frame) {
   if (!agents || agents.length < 2) return;
 
   // Filter for active agents
-  // Pulse is only active if he's actually working on a task, not just 'online' monitoring
+  // STRICT: Pulse is excluded unless explicitly handling a non-system task
   const active = agents.filter(a => {
     const s = (a.status || '').toLowerCase();
     const busy = s === 'talking' || s === 'working' || s === 'researching' || s === 'posting' || s === 'thinking';
-    if (a.name === 'pulse' && (a.current_task || '').startsWith('Node:')) return false;
+    
+    // Strict Pulse Filter: Exclude if task contains "Node:" or starts with "Active" or is generic system status
+    if (a.name === 'pulse') {
+        const task = (a.current_task || '').trim();
+        if (!task || task.startsWith('Node:') || task.includes('gateway') || task === 'Monitoring system') return false;
+    }
     return busy;
   });
 
@@ -656,7 +661,8 @@ function drawConnections(ctx, agents, cw, ch, frame) {
   active.sort((a, b) => {
     if (a.name === 'echo') return -1;
     if (b.name === 'echo') return 1;
-    return 0;
+    // Secondary sort: keep consistent order (e.g. by name) so hub doesn't flip flop
+    return a.name.localeCompare(b.name);
   });
 
   ctx.save();
@@ -674,27 +680,37 @@ function drawConnections(ctx, agents, cw, ch, frame) {
     const other = active[i];
     const op = getSmoothedPos(other.name, other, cw, ch);
 
+    // Determine bow direction based on screen position
+    // If we are low on screen (>60% height), bow UP (-50), else bow DOWN (+50)
+    // This prevents lines from going off-screen bottom when agents work in the Lab
+    const avgY = (hubPos.y + op.y) / 2;
+    const bowSize = avgY > ch * 0.6 ? -50 : 50;
+
     ctx.beginPath();
     ctx.moveTo(hubPos.x, hubPos.y);
-    // Smooth curve bowing downward for better separation
+    // Smooth curve bowing
     const cpx = (hubPos.x + op.x) / 2;
-    const cpy = Math.max(hubPos.y, op.y) + 40;
-    ctx.quadraticCurveTo(cpx, cpy, op.x, op.y);
+    const cpy = Math.max(hubPos.y, op.y) + bowSize; 
+    // If bowing up, use min y
+    const ctrlY = bowSize > 0 ? Math.max(hubPos.y, op.y) + bowSize : Math.min(hubPos.y, op.y) + bowSize;
+    
+    ctx.quadraticCurveTo(cpx, ctrlY, op.x, op.y);
+    
     // Add glow effect
     ctx.shadowColor = '#00bcd4';
-    ctx.shadowBlur = 4;
+    ctx.shadowBlur = 6;
     ctx.stroke();
     ctx.shadowBlur = 0;
 
     // Small moving dot along the curve (data packet)
-    const t = (frame * 0.01) % 1;
+    const t = (frame * 0.015) % 1; // Faster data packets
     const dotX = (1 - t) * (1 - t) * hubPos.x + 2 * (1 - t) * t * cpx + t * t * op.x;
-    const dotY = (1 - t) * (1 - t) * hubPos.y + 2 * (1 - t) * t * cpy + t * t * op.y;
+    const dotY = (1 - t) * (1 - t) * hubPos.y + 2 * (1 - t) * t * ctrlY + t * t * op.y;
     
     ctx.fillStyle = '#fff';
     ctx.globalAlpha = 1;
     ctx.beginPath();
-    ctx.arc(dotX, dotY, 2.5, 0, Math.PI * 2);
+    ctx.arc(dotX, dotY, 3, 0, Math.PI * 2);
     ctx.fill();
     ctx.globalAlpha = 0.75;
   }
@@ -706,7 +722,22 @@ function drawConnections(ctx, agents, cw, ch, frame) {
       for (let j = i + 1; j < active.length; j++) {
         const a = getSmoothedPos(active[i].name, active[i], cw, ch);
         const b = getSmoothedPos(active[j].name, active[j], cw, ch);
+        
+        // Same bowing logic
+        const avgY = (a.y + b.y) / 2;
+        const bow = avgY > ch * 0.6 ? -35 : 35;
+        const cy = bow > 0 ? Math.max(a.y, b.y) + bow : Math.min(a.y, b.y) + bow;
+
         ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        const mx = (a.x + b.x) / 2;
+        ctx.quadraticCurveTo(mx, cy, b.x, b.y);
+        ctx.stroke();
+      }
+    }
+  }
+
+  ctx.restore();
         // ...existing code...
         ctx.moveTo(a.x, a.y);
         const mx = (a.x + b.x) / 2;
