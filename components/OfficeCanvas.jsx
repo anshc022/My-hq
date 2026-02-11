@@ -25,15 +25,32 @@ const WALK_THRESHOLD = 0.4; // min pixel movement per frame to count as walking
 
 // All rooms as rectangles agents can wander into (percentage coordinates)
 const WANDER_ZONES = [
-  { x: 0.04, y: 0.06, w: 0.53, h: 0.40 }, // workspace (top-left)
-  { x: 0.61, y: 0.06, w: 0.35, h: 0.40 }, // cabin (top-right)
-  { x: 0.04, y: 0.53, w: 0.53, h: 0.40 }, // lab (bottom-left)
-  { x: 0.61, y: 0.53, w: 0.35, h: 0.40 }, // pulsebay (bottom-right)
+  { x: 0.04, y: 0.06, w: 0.53, h: 0.40 }, // 0: workspace (top-left)
+  { x: 0.61, y: 0.06, w: 0.35, h: 0.40 }, // 1: cabin (top-right)
+  { x: 0.04, y: 0.53, w: 0.53, h: 0.40 }, // 2: lab (bottom-left)
+  { x: 0.61, y: 0.53, w: 0.35, h: 0.40 }, // 3: pulsebay (bottom-right)
 ];
 
+// Each agent prefers certain rooms (70% chance preferred, 30% any room)
+const AGENT_PREFERRED_ZONES = {
+  echo:  [0, 1],    // workspace, cabin
+  pixel: [1, 3],    // cabin, pulsebay
+  dash:  [0, 2],    // workspace, lab
+  stack: [2, 0],    // lab, workspace
+  probe: [2, 3],    // lab, pulsebay
+  ship:  [0, 2],    // workspace, lab
+  pulse: [3, 1],    // pulsebay, cabin
+};
+
 function pickWanderTarget(name) {
-  // Pick a random room, then a random spot inside it with padding
-  const zone = WANDER_ZONES[Math.floor(Math.random() * WANDER_ZONES.length)];
+  // 70% chance to pick a preferred room, 30% any room
+  let zone;
+  const prefs = AGENT_PREFERRED_ZONES[name];
+  if (prefs && Math.random() < 0.7) {
+    zone = WANDER_ZONES[prefs[Math.floor(Math.random() * prefs.length)]];
+  } else {
+    zone = WANDER_ZONES[Math.floor(Math.random() * WANDER_ZONES.length)];
+  }
   const pad = 0.04;
   wanderTargets[name] = {
     x: zone.x + pad + Math.random() * (zone.w - pad * 2),
@@ -1470,8 +1487,8 @@ export default function OfficeCanvas({ agents, nodeConnected }) {
     const ctx = canvas.getContext('2d');
     const cw = canvas.width;
     const ch = canvas.height;
-    // Scale pixel art based on canvas size: 3x on desktop, 2x on small
-    P = cw >= 700 ? 3 : 1.5;
+    // Scale pixel art based on canvas size: 3x desktop, 1.2x phone
+    P = cw >= 700 ? 3 : 1.2;
     frameRef.current++;
     const frame = frameRef.current;
     const currentAgents = agentsRef.current;
