@@ -5,31 +5,31 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-// ─── Agent ID mapping (gateway agentId → internal name) ───
+// ─── Agent ID mapping (gateway agentId → display name) ───
 const AGENT_MAP = {
   main: 'echo', echo: 'echo',
-  scout: 'scout', quill: 'quill',
-  sage: 'sage', sentinel: 'sentinel',
-  xalt: 'xalt',
+  scout: 'pixel', quill: 'dash',
+  sage: 'stack', sentinel: 'probe',
+  xalt: 'ship',
 };
 
 // ─── Each agent has their own work room (so they spread out on the canvas) ───
 const AGENT_WORK_ROOM = {
-  echo:     'meeting',   // Tech Lead → standup room
-  scout:    'research',  // Pixel UI/UX → code lab
-  quill:    'research',  // Dash Frontend → code lab
-  sage:     'board',     // Stack Backend → sprint board
-  sentinel: 'board',     // Probe QA → sprint board
-  xalt:     'research',  // Ship DevOps → code lab
+  echo:  'meeting',   // Tech Lead → standup room
+  pixel: 'research',  // Pixel UI/UX → code lab
+  dash:  'research',  // Dash Frontend → code lab
+  stack: 'board',     // Stack Backend → sprint board
+  probe: 'board',     // Probe QA → sprint board
+  ship:  'research',  // Ship DevOps → code lab
 };
 
 const AGENT_TALK_ROOM = {
-  echo:     'meeting',   // leads standup
-  scout:    'meeting',   // shows designs
-  quill:    'meeting',   // discusses with team
-  sage:     'meeting',   // API discussion
-  sentinel: 'board',     // reports bugs on board
-  xalt:     'board',     // deployment status
+  echo:  'meeting',   // leads standup
+  pixel: 'meeting',   // shows designs
+  dash:  'meeting',   // discusses with team
+  stack: 'meeting',   // API discussion
+  probe: 'board',     // reports bugs on board
+  ship:  'board',     // deployment status
 };
 
 function getWorkRoom(agent) { return AGENT_WORK_ROOM[agent] || 'research'; }
@@ -49,11 +49,11 @@ function extractAgent(payload) {
 // ─── Delegation detection — when Echo delegates, mark sub-agents as working ───
 // These patterns detect when Echo mentions a sub-agent doing work
 const DELEGATION_PATTERNS = {
-  scout:    [/pixel/i],
-  quill:    [/dash/i],
-  sage:     [/stack/i],
-  sentinel: [/probe/i],
-  xalt:     [/ship/i],
+  pixel: [/pixel/i],
+  dash:  [/dash/i],
+  stack: [/stack/i],
+  probe: [/probe/i],
+  ship:  [/ship/i],
 };
 
 // Track which sub-agents are working from a delegation
@@ -161,10 +161,10 @@ const ROOM_ALIASES = {
 };
 
 const AGENT_NAME_MAP = {
-  echo: 'echo', pixel: 'scout', dash: 'quill', stack: 'sage',
-  probe: 'sentinel', ship: 'xalt',
-  // also accept internal IDs
-  scout: 'scout', quill: 'quill', sage: 'sage', sentinel: 'sentinel', xalt: 'xalt',
+  echo: 'echo', pixel: 'pixel', dash: 'dash', stack: 'stack',
+  probe: 'probe', ship: 'ship',
+  // also accept old internal IDs
+  scout: 'pixel', quill: 'dash', sage: 'stack', sentinel: 'probe', xalt: 'ship',
 };
 
 const ALL_KEYWORDS = ['everyone', 'all', 'team', 'all agents', 'everybody', 'guys', 'y\'all', 'yall'];
@@ -197,7 +197,7 @@ async function detectRoomCommand(text) {
 
   // Check for "everyone/all" first
   if (ALL_KEYWORDS.some(k => lower.includes(k))) {
-    targetAgents = ['echo', 'scout', 'quill', 'sage', 'sentinel', 'xalt'];
+    targetAgents = ['echo', 'pixel', 'dash', 'stack', 'probe', 'ship'];
   } else {
     // Check for specific agent names
     for (const [name, id] of Object.entries(AGENT_NAME_MAP)) {
@@ -221,7 +221,7 @@ async function detectRoomCommand(text) {
 }
 
 // ─── Team dispatch detection (logging only — actual dispatch happens on EC2) ───
-const ALL_AGENTS = ['scout', 'quill', 'sage', 'sentinel', 'xalt'];
+const ALL_AGENTS = ['pixel', 'dash', 'stack', 'probe', 'ship'];
 
 const TEAM_TRIGGERS = [
   'roll call', 'rollcall', 'team report', 'status report', 'team check',
@@ -230,7 +230,7 @@ const TEAM_TRIGGERS = [
 ];
 
 const AGENT_DISPATCH_MAP = {
-  pixel: 'scout', dash: 'quill', stack: 'sage', probe: 'sentinel', ship: 'xalt',
+  pixel: 'pixel', dash: 'dash', stack: 'stack', probe: 'probe', ship: 'ship',
 };
 
 // Detect team/single dispatch commands (EC2 bridge handles the actual dispatch)
