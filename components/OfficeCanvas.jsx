@@ -23,23 +23,28 @@ const agentPrevPos = {};  // { name: { x, y } }
 const agentIsWalking = {}; // { name: boolean }
 const WALK_THRESHOLD = 0.4; // min pixel movement per frame to count as walking
 
+// Echo's Den — small private room inside cabin (top-right corner)
+const ECHO_DEN = { x: 0.80, y: 0.06, w: 0.16, h: 0.20, cx: 0.88, cy: 0.16 };
+
 // All rooms as rectangles agents can wander into (percentage coordinates)
 const WANDER_ZONES = [
   { x: 0.04, y: 0.06, w: 0.53, h: 0.40 }, // 0: workspace (top-left)
-  { x: 0.61, y: 0.06, w: 0.35, h: 0.40 }, // 1: cabin (top-right)
+  { x: 0.61, y: 0.06, w: 0.18, h: 0.40 }, // 1: cabin (top-right, left part — avoid Echo's den)
+  { x: 0.61, y: 0.27, w: 0.35, h: 0.19 }, // 1b: cabin bottom strip (below den)
   { x: 0.04, y: 0.53, w: 0.53, h: 0.40 }, // 2: lab (bottom-left)
   { x: 0.61, y: 0.53, w: 0.35, h: 0.40 }, // 3: pulsebay (bottom-right)
 ];
 
 // Each agent prefers certain rooms (70% chance preferred, 30% any room)
+// Note: indices shifted — 0:workspace, 1:cabin-left, 2:cabin-bottom, 3:lab, 4:pulsebay
 const AGENT_PREFERRED_ZONES = {
   echo:  [0, 1],    // workspace, cabin
-  pixel: [1, 3],    // cabin, pulsebay
-  dash:  [0, 2],    // workspace, lab
-  stack: [2, 0],    // lab, workspace
-  probe: [2, 3],    // lab, pulsebay
-  ship:  [0, 2],    // workspace, lab
-  pulse: [3, 1],    // pulsebay, cabin
+  pixel: [1, 4],    // cabin, pulsebay
+  dash:  [0, 3],    // workspace, lab
+  stack: [3, 0],    // lab, workspace
+  probe: [3, 4],    // lab, pulsebay
+  ship:  [0, 3],    // workspace, lab
+  pulse: [4, 2],    // pulsebay, cabin
 };
 
 function pickWanderTarget(name) {
@@ -106,12 +111,17 @@ function getTargetPos(name, agentData, cw, ch) {
   // Pulse always wanders freely, even when working (node connected)
   const isBusy = isAgentBusy(agentData) && name !== 'pulse';
 
-  // If agent is busy → freeze in place (stay where you are, connection lines show comms)
-  if (isBusy) {
-    // Clear wander state so they pick a fresh target when idle again
+  // Echo goes to private den when busy (replying to user)
+  if (name === 'echo' && isBusy) {
     delete wanderCooldown[name];
     delete agentIdleActivity[name];
-    // Return current position (freeze) — if no position yet, use desk as fallback
+    return { x: ECHO_DEN.cx * cw, y: ECHO_DEN.cy * ch };
+  }
+
+  // Other agents freeze in place when busy (connection lines show comms)
+  if (isBusy) {
+    delete wanderCooldown[name];
+    delete agentIdleActivity[name];
     const cur = agentAnimPos[name];
     if (cur) return { x: cur.x, y: cur.y };
     const dp = DESK_POSITIONS[name];
@@ -793,6 +803,50 @@ function drawRooms(ctx, cw, ch, frame) {
   hLine.addColorStop(0.94, 'rgba(255,255,255,0.25)'); hLine.addColorStop(1, 'rgba(255,255,255,0)');
   ctx.fillStyle = hLine;
   ctx.fillRect(bx + 6, divY - 0.5, bw - 12, 1.5);
+
+  // ── Echo's Den — small private room inside cabin ──
+  const denX = ECHO_DEN.x * cw, denY = ECHO_DEN.y * ch;
+  const denW = ECHO_DEN.w * cw, denH = ECHO_DEN.h * ch;
+
+  // Den background
+  ctx.fillStyle = 'rgba(74, 144, 217, 0.06)';
+  ctx.beginPath();
+  ctx.roundRect(denX, denY, denW, denH, 4);
+  ctx.fill();
+
+  // Den border
+  const denGlow = 0.3 + Math.sin(frame * 0.025) * 0.12;
+  ctx.strokeStyle = '#4A90D9';
+  ctx.globalAlpha = denGlow;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.roundRect(denX, denY, denW, denH, 4);
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+
+  // Den label
+  ctx.font = '9px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  ctx.fillText('⚙️', denX + 4, denY + 3);
+  ctx.font = 'bold 6px monospace';
+  ctx.fillStyle = '#4A90D9';
+  ctx.globalAlpha = 0.55;
+  ctx.fillText("ECHO'S DEN", denX + 16, denY + 5);
+  ctx.globalAlpha = 1;
+
+  // Small monitor/desk inside den
+  const mdx = ECHO_DEN.cx * cw + 8, mdy = ECHO_DEN.cy * ch - 8;
+  ctx.fillStyle = '#111128';
+  ctx.beginPath();
+  ctx.roundRect(mdx - 6, mdy - 8, 12, 10, 2);
+  ctx.fill();
+  // Screen glow
+  ctx.fillStyle = 'rgba(74, 144, 217, 0.3)';
+  ctx.fillRect(mdx - 4, mdy - 6, 8, 6);
+  // Stand
+  ctx.fillStyle = '#2a2a48';
+  ctx.fillRect(mdx - 1, mdy + 2, 2, 3);
 
   // ── Room labels (one per quadrant) ──
   const labels = [
