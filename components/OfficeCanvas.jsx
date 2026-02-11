@@ -75,8 +75,11 @@ function isAgentBusy(agentData) {
 }
 
 function getTargetPos(name, agentData, cw, ch) {
+  // Pulse always wanders freely, even when working (node connected)
+  const isBusy = isAgentBusy(agentData) && name !== 'pulse';
+
   // If agent is busy → go to desk
-  if (isAgentBusy(agentData)) {
+  if (isBusy) {
     // Clear wander state so they pick a fresh target when idle again
     delete wanderTargets[name];
     delete wanderCooldown[name];
