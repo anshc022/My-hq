@@ -1,21 +1,31 @@
-// In-memory node heartbeat store
-// Nodes POST to register, GET to check status
-// No DB needed — ephemeral, resets on deploy (nodes re-register via heartbeat)
+// Node heartbeat — backed by Supabase ops_nodes table
+// Works correctly on Vercel serverless (no in-memory state)
+import { createClient } from '@supabase/supabase-js';
 
-let nodes = {};
-// { name: { status, hostname, lastSeen: Date.now(), ip } }
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 
-const OFFLINE_THRESHOLD = 35000; // 35s without heartbeat = offline
+const OFFLINE_THRESHOLD = 35; // seconds
 
 export async function GET() {
-  const now = Date.now();
-  const list = Object.entries(nodes).map(([name, n]) => ({
-    name,
-    hostname: n.hostname || name,
-    status: (now - n.lastSeen) < OFFLINE_THRESHOLD ? 'online' : 'offline',
-    lastSeen: new Date(n.lastSeen).toISOString(),
-    uptimeMs: now - (n.connectedAt || n.lastSeen),
-  }));
+  const { data: rows, error } = await supabase.from('ops_nodes').select('*');
+  if (error) return Response.json({ nodes: [], anyOnline: false, count: 0, onlineCount: 0 });
+
+  const now = new Date();
+  const list = (rows || []).map(n => {
+    const lastSeen = new Date(n.last_seen);
+    const ageSec = (now - lastSeen) / 1000;
+    const status = ageSec < OFFLINE_THRESHOLD ? 'online' : 'offline';
+    return {
+      name: n.name,
+      hostname: n.hostname || n.name,
+      status,
+      lastSeen: n.last_seen,
+      uptimeMs: now - new Date(n.connected_at),
+    };
+  });
 
   const anyOnline = list.some(n => n.status === 'online');
 
@@ -33,18 +43,13 @@ export async function POST(request) {
     const name = body.name || 'unknown';
     const hostname = body.hostname || name;
 
-    if (!nodes[name]) {
-      nodes[name] = { hostname, lastSeen: Date.now(), connectedAt: Date.now() };
-    } else {
-      nodes[name].lastSeen = Date.now();
-      nodes[name].hostname = hostname;
-    }
+    // Upsert: insert or update last_seen
+    const { error } = await supabase.from('ops_nodes').upsert(
+      { name, hostname, last_seen: new Date().toISOString() },
+      { onConflict: 'name' }
+    );
 
-    // Clean up stale nodes older than 5 minutes
-    const cutoff = Date.now() - 300000;
-    for (const [k, v] of Object.entries(nodes)) {
-      if (v.lastSeen < cutoff) delete nodes[k];
-    }
+    if (error) return Response.json({ ok: false, error: error.message }, { status: 500 });
 
     return Response.json({ ok: true, status: 'registered', name });
   } catch (err) {
