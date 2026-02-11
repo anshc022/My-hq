@@ -716,15 +716,23 @@ function drawRooms(ctx, cw, ch, frame) {
   ctx.beginPath(); ctx.moveTo(bx + bw - cLen, by + bh); ctx.lineTo(bx + bw, by + bh); ctx.lineTo(bx + bw, by + bh - cLen); ctx.stroke();
   ctx.globalAlpha = 1;
 
-  // ── Thin dividing line between workspace and cabin ──
+  // ── Dividing line between workspace and cabin ──
+  // Outer glow
+  const divGlow = ctx.createLinearGradient(divX - 6, by, divX + 6, by);
+  divGlow.addColorStop(0, 'rgba(255,255,255,0)');
+  divGlow.addColorStop(0.5, 'rgba(200,210,255,0.08)');
+  divGlow.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = divGlow;
+  ctx.fillRect(divX - 6, by + 6, 12, bh - 12);
+  // Main line
   const divGrad = ctx.createLinearGradient(divX, by, divX, by + bh);
   divGrad.addColorStop(0, 'rgba(255,255,255,0)');
-  divGrad.addColorStop(0.08, 'rgba(255,255,255,0.06)');
-  divGrad.addColorStop(0.5, 'rgba(255,255,255,0.10)');
-  divGrad.addColorStop(0.92, 'rgba(255,255,255,0.06)');
+  divGrad.addColorStop(0.06, 'rgba(255,255,255,0.25)');
+  divGrad.addColorStop(0.5, 'rgba(255,255,255,0.35)');
+  divGrad.addColorStop(0.94, 'rgba(255,255,255,0.25)');
   divGrad.addColorStop(1, 'rgba(255,255,255,0)');
   ctx.fillStyle = divGrad;
-  ctx.fillRect(divX - 0.5, by + 10, 1, bh - 20);
+  ctx.fillRect(divX - 0.5, by + 6, 1.5, bh - 12);
 
   // ── Header strip across full width ──
   const hdrH = 22;
