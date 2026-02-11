@@ -922,40 +922,48 @@ function drawNodeIndicator(ctx, cw, ch, frame, connected) {
   const nx = cw * 0.88;
   const ny = ch * 0.88;
 
-  // ── Connection line from node to Echo's desk ──
+  // ── Connection lines from node to ALL agent desks (only when online) ──
   if (connected) {
-    const echoPos = DESK_POSITIONS.echo;
-    if (echoPos) {
-      const ex = echoPos.x * cw;
-      const ey = echoPos.y * ch;
-      ctx.save();
-      ctx.setLineDash([4, 6]);
-      ctx.lineDashOffset = -frame * 0.5;
-      const lineGrad = ctx.createLinearGradient(nx, ny, ex, ey);
-      lineGrad.addColorStop(0, 'rgba(0,255,136,0.5)');
-      lineGrad.addColorStop(1, 'rgba(0,188,212,0.3)');
+    const agentNames = Object.keys(DESK_POSITIONS);
+    ctx.save();
+    ctx.setLineDash([3, 5]);
+    ctx.lineDashOffset = -frame * 0.4;
+    ctx.lineWidth = 1;
+
+    agentNames.forEach((name, idx) => {
+      const dp = DESK_POSITIONS[name];
+      if (!dp) return;
+      const ax = dp.x * cw;
+      const ay = dp.y * ch;
+      const agentColor = AGENTS[name]?.color || '#00ff88';
+
+      // Curved line from laptop to each agent's desk
+      const cpx = (nx + ax) / 2;
+      const cpy = Math.max(ny, ay) + 20 + idx * 5;
+      const lineGrad = ctx.createLinearGradient(nx, ny, ax, ay);
+      lineGrad.addColorStop(0, 'rgba(0,255,136,0.35)');
+      lineGrad.addColorStop(1, agentColor + '55');
       ctx.strokeStyle = lineGrad;
-      ctx.lineWidth = 1.5;
+      ctx.globalAlpha = 0.5;
       ctx.beginPath();
       ctx.moveTo(nx, ny - 10);
-      ctx.lineTo(ex + 20, ey + 10);
+      ctx.quadraticCurveTo(cpx, cpy, ax + 14, ay + 8);
       ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.restore();
 
-      // Data packets traveling along the line
-      for (let i = 0; i < 3; i++) {
-        const t = ((frame * 0.008 + i * 0.33) % 1);
-        const px = nx + (ex + 20 - nx) * t;
-        const py = (ny - 10) + (ey + 10 - (ny - 10)) * t;
-        ctx.fillStyle = '#00ff88';
-        ctx.globalAlpha = 0.6 * (1 - Math.abs(t - 0.5) * 2);
-        ctx.beginPath();
-        ctx.arc(px, py, 2, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.globalAlpha = 1;
-    }
+      // Data packet along the curve
+      const t = ((frame * 0.006 + idx * 0.16) % 1);
+      const dotX = (1 - t) * (1 - t) * nx + 2 * (1 - t) * t * cpx + t * t * (ax + 14);
+      const dotY = (1 - t) * (1 - t) * (ny - 10) + 2 * (1 - t) * t * cpy + t * t * (ay + 8);
+      ctx.fillStyle = agentColor;
+      ctx.globalAlpha = 0.7 * (1 - Math.abs(t - 0.5) * 2);
+      ctx.beginPath();
+      ctx.arc(dotX, dotY, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 1;
+    ctx.restore();
   }
 
   // ── Glow behind laptop ──

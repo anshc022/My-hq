@@ -48,19 +48,19 @@ export default function Home() {
     };
   }, [fetchAll]);
 
-  // Poll gateway-bridge for node connection status
+  // Poll node-heartbeat for real-time node connection status
   useEffect(() => {
     const checkNode = async () => {
       try {
-        const res = await fetch('/api/gateway-bridge');
+        const res = await fetch('/api/node-heartbeat');
         const data = await res.json();
-        setNodeConnected(data?.status === 'ready');
+        setNodeConnected(data?.anyOnline === true);
       } catch {
         setNodeConnected(false);
       }
     };
     checkNode();
-    const iv = setInterval(checkNode, 10000);
+    const iv = setInterval(checkNode, 5000);
     return () => clearInterval(iv);
   }, []);
 
