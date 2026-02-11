@@ -106,25 +106,16 @@ function getTargetPos(name, agentData, cw, ch) {
   // Pulse always wanders freely, even when working (node connected)
   const isBusy = isAgentBusy(agentData) && name !== 'pulse';
 
-  // If agent is busy → go to desk
+  // If agent is busy → freeze in place (stay where you are, connection lines show comms)
   if (isBusy) {
     // Clear wander state so they pick a fresh target when idle again
-    delete wanderTargets[name];
     delete wanderCooldown[name];
     delete agentIdleActivity[name];
-    const room = agentData?.current_room || 'desk';
-    if (room === 'desk') {
-      const dp = DESK_POSITIONS[name];
-      return dp ? { x: dp.x * cw, y: dp.y * ch } : { x: cw * 0.5, y: ch * 0.5 };
-    }
-    const rp = ROOM_POSITIONS[room];
-    if (!rp) return { x: cw * 0.5, y: ch * 0.5 };
-    const agents = Object.keys(AGENTS);
-    const idx = agents.indexOf(name);
-    const spread = 38;
-    const ox = (idx % 3) * spread - spread;
-    const oy = Math.floor(idx / 3) * 32;
-    return { x: rp.x * cw + ox, y: rp.y * ch + oy };
+    // Return current position (freeze) — if no position yet, use desk as fallback
+    const cur = agentAnimPos[name];
+    if (cur) return { x: cur.x, y: cur.y };
+    const dp = DESK_POSITIONS[name];
+    return dp ? { x: dp.x * cw, y: dp.y * ch } : { x: cw * 0.5, y: ch * 0.5 };
   }
 
   // Idle → wander freely
@@ -446,7 +437,29 @@ function drawAgent(ctx, x, y, name, agentData, frame) {
   ctx.textBaseline = 'middle';
   ctx.fillText(label, x, pillY + pillH / 2);
 
-
+  // ── "Replying to you" indicator for Echo when active ──
+  if (name === 'echo' && isAgentBusy(agentData)) {
+    const rFs = Math.max(5, Math.round(7 * S));
+    ctx.font = `${rFs}px monospace`;
+    const rLabel = '↩ replying to you';
+    const rw2 = ctx.measureText(rLabel).width;
+    const rPillW = rw2 + 6 * S;
+    const rPillH = Math.round(10 * S);
+    const rPillX = x - rPillW / 2;
+    const rPillY = pillY + pillH + 2 * S;
+    // Pill bg
+    ctx.fillStyle = 'rgba(74, 144, 217, 0.25)';
+    ctx.globalAlpha = 0.85 + Math.sin(frame * 0.06) * 0.15;
+    ctx.beginPath();
+    ctx.roundRect(rPillX, rPillY, rPillW, rPillH, 2 * S);
+    ctx.fill();
+    // Text
+    ctx.fillStyle = '#7cb8f0';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(rLabel, x, rPillY + rPillH / 2);
+    ctx.globalAlpha = 1;
+  }
 
   // ── Speech bubble ──
   if (agentData?.current_task && status !== 'idle' && status !== 'sleeping') {
