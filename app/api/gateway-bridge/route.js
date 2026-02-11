@@ -178,6 +178,49 @@ async function cleanupStaleDelegations() {
   }
 }
 
+// ─── Role-based auto-assignment ───
+// When user tasks Echo, auto-assign relevant sub-agents based on task keywords
+const ROLE_TASK_MAP = {
+  pixel: { keywords: ['ui', 'ux', 'design', 'css', 'style', 'visual', 'layout', 'mockup', 'wireframe', 'responsive', 'theme', 'color', 'icon', 'animation', 'pixel art'], strong: ['design', 'ui', 'ux', 'mockup', 'wireframe'] },
+  dash:  { keywords: ['frontend', 'react', 'component', 'page', 'jsx', 'dashboard', 'form', 'button', 'next', 'nextjs', 'tailwind', 'widget', 'html', 'view', 'render'], strong: ['component', 'react', 'frontend', 'page', 'dashboard'] },
+  stack: { keywords: ['backend', 'api', 'database', 'server', 'schema', 'sql', 'supabase', 'endpoint', 'route', 'auth', 'query', 'migration', 'table', 'model'], strong: ['api', 'database', 'backend', 'schema', 'endpoint'] },
+  probe: { keywords: ['test', 'bug', 'security', 'scan', 'audit', 'lint', 'review', 'verify', 'validate', 'vulnerability', 'qa'], strong: ['test', 'security', 'audit', 'review', 'scan'] },
+  ship:  { keywords: ['deploy', 'push', 'git', 'commit', 'docker', 'build', 'release', 'production', 'staging', 'devops', 'ci', 'cd', 'pipeline'], strong: ['deploy', 'push', 'commit', 'release', 'production'] },
+};
+
+const TASK_ACTION_RE = /\b(?:create|build|add|fix|update|implement|deploy|push|test|review|design|make|setup|migrate|change|modify|write|code|develop|ship|commit|check|scan|audit|refactor|optimize)\b/i;
+
+async function autoAssignByRole(text) {
+  if (!text) return;
+  const lower = text.toLowerCase();
+
+  // Must have actionable task content — skip greetings/chit-chat
+  if (!TASK_ACTION_RE.test(lower)) return;
+
+  const agentsToAssign = [];
+  for (const [agentName, config] of Object.entries(ROLE_TASK_MAP)) {
+    const hasStrong = config.strong.some(kw => lower.includes(kw));
+    const weakCount = config.keywords.filter(kw => lower.includes(kw)).length;
+    if (hasStrong || weakCount >= 2) {
+      agentsToAssign.push(agentName);
+    }
+  }
+
+  if (agentsToAssign.length === 0) return;
+
+  for (const name of agentsToAssign) {
+    if (activeDelegations.has(name)) continue;
+    activeDelegations.set(name, { startedAt: Date.now(), task: `Preparing: ${text.slice(0, 60)}` });
+
+    await supabase.from('ops_agents').update({
+      status: 'thinking',
+      current_task: `Preparing: ${text.slice(0, 60)}`,
+      current_room: getWorkRoom(name),
+      last_active_at: new Date().toISOString(),
+    }).eq('name', name);
+  }
+}
+
 // ─── Track active runs (per agent, per request) ───
 const activeRuns = new Map(); // runId → { agent, text, startedAt, toolCalls, chatLogged, recovered }
 
@@ -514,6 +557,11 @@ async function processGatewayMessage(msg) {
 
       // Check for user-initiated delegation ("tell ship to X", "@ship", etc.)
       await detectUserDelegation(text);
+
+      // Auto-assign sub-agents to "thinking" based on task role keywords
+      if (agent === 'echo' && text) {
+        await autoAssignByRole(text);
+      }
 
       // Check for team dispatch commands (log it — EC2 bridge handles actual dispatch)
       const dispatch = detectTeamDispatch(text);
