@@ -6,33 +6,98 @@ import { AGENTS, ROOMS, DESK_POSITIONS, ROOM_POSITIONS, STATUS_VISUALS } from '@
 const agentAnimPos = {};
 const LERP_SPEED = 0.04;
 
+// ─── Wander system for idle agents ───
+const wanderTargets = {};   // { agentName: { x, y } } in 0-1 range
+const wanderCooldown = {};  // { agentName: frameCount } - when to pick next target
+const WANDER_LERP = 0.012;  // slower, relaxed movement
+const WANDER_ARRIVE_DIST = 0.02; // close enough = pick new target
+
+// All rooms as rectangles agents can wander into (percentage coordinates)
+const WANDER_ZONES = [
+  { x: 0.05, y: 0.06, w: 0.50, h: 0.48 }, // dev floor
+  { x: 0.05, y: 0.64, w: 0.38, h: 0.30 }, // standup
+  { x: 0.63, y: 0.06, w: 0.32, h: 0.38 }, // code lab
+  { x: 0.53, y: 0.64, w: 0.42, h: 0.30 }, // sprint board
+];
+
+function pickWanderTarget(name) {
+  // Pick a random room, then a random spot inside it with padding
+  const zone = WANDER_ZONES[Math.floor(Math.random() * WANDER_ZONES.length)];
+  const pad = 0.04;
+  wanderTargets[name] = {
+    x: zone.x + pad + Math.random() * (zone.w - pad * 2),
+    y: zone.y + pad + Math.random() * (zone.h - pad * 2),
+  };
+  // Random cooldown so agents don't all move in sync
+  wanderCooldown[name] = 120 + Math.floor(Math.random() * 200);
+}
+
 function lerp(a, b, t) { return a + (b - a) * t; }
 
+function isAgentBusy(agentData) {
+  if (!agentData) return false;
+  const s = (agentData.status || '').toLowerCase();
+  return s === 'working' || s === 'thinking' || s === 'talking' ||
+         s === 'posting' || s === 'researching';
+}
+
 function getTargetPos(name, agentData, cw, ch) {
-  const room = agentData?.current_room || 'desk';
-  if (room === 'desk') {
-    const dp = DESK_POSITIONS[name];
-    return dp ? { x: dp.x * cw, y: dp.y * ch } : { x: cw * 0.5, y: ch * 0.5 };
+  // If agent is busy → go to desk
+  if (isAgentBusy(agentData)) {
+    // Clear wander state so they pick a fresh target when idle again
+    delete wanderTargets[name];
+    delete wanderCooldown[name];
+    const room = agentData?.current_room || 'desk';
+    if (room === 'desk') {
+      const dp = DESK_POSITIONS[name];
+      return dp ? { x: dp.x * cw, y: dp.y * ch } : { x: cw * 0.5, y: ch * 0.5 };
+    }
+    const rp = ROOM_POSITIONS[room];
+    if (!rp) return { x: cw * 0.5, y: ch * 0.5 };
+    const agents = Object.keys(AGENTS);
+    const idx = agents.indexOf(name);
+    const spread = 38;
+    const ox = (idx % 3) * spread - spread;
+    const oy = Math.floor(idx / 3) * 32;
+    return { x: rp.x * cw + ox, y: rp.y * ch + oy };
   }
-  const rp = ROOM_POSITIONS[room];
-  if (!rp) return { x: cw * 0.5, y: ch * 0.5 };
-  const agents = Object.keys(AGENTS);
-  const idx = agents.indexOf(name);
-  const spread = 38;
-  const ox = (idx % 3) * spread - spread;
-  const oy = Math.floor(idx / 3) * 32;
-  return { x: rp.x * cw + ox, y: rp.y * ch + oy };
+
+  // Idle → wander freely
+  if (!wanderTargets[name]) {
+    pickWanderTarget(name);
+  }
+
+  // Check if arrived at current wander target
+  const wt = wanderTargets[name];
+  const cur = agentAnimPos[name];
+  if (cur) {
+    const dx = (cur.x / cw) - wt.x;
+    const dy = (cur.y / ch) - wt.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < WANDER_ARRIVE_DIST) {
+      // Decrement cooldown
+      if (!wanderCooldown[name]) wanderCooldown[name] = 0;
+      wanderCooldown[name]--;
+      if (wanderCooldown[name] <= 0) {
+        pickWanderTarget(name);
+      }
+    }
+  }
+
+  const target = wanderTargets[name];
+  return { x: target.x * cw, y: target.y * ch };
 }
 
 function getSmoothedPos(name, agentData, cw, ch) {
   const target = getTargetPos(name, agentData, cw, ch);
+  const speed = isAgentBusy(agentData) ? LERP_SPEED : WANDER_LERP;
   if (!agentAnimPos[name]) {
     agentAnimPos[name] = { x: target.x, y: target.y };
     return target;
   }
   const cur = agentAnimPos[name];
-  cur.x = lerp(cur.x, target.x, LERP_SPEED);
-  cur.y = lerp(cur.y, target.y, LERP_SPEED);
+  cur.x = lerp(cur.x, target.x, speed);
+  cur.y = lerp(cur.y, target.y, speed);
   return { x: cur.x, y: cur.y };
 }
 
