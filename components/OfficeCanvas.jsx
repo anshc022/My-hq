@@ -30,6 +30,39 @@ function pickWanderTarget(name) {
   };
   // Random cooldown so agents don't all move in sync
   wanderCooldown[name] = 120 + Math.floor(Math.random() * 200);
+  // Pick a new idle activity when picking a new wander target
+  pickIdleActivity(name);
+}
+
+// ─── Idle activities for wandering agents ───
+const IDLE_ACTIVITIES = [
+  { emoji: '📱', label: 'browsing memes' },
+  { emoji: '☕', label: 'coffee break' },
+  { emoji: '😴', label: 'power nap' },
+  { emoji: '🎵', label: 'humming' },
+  { emoji: '🎮', label: 'gaming' },
+  { emoji: '📖', label: 'reading' },
+  { emoji: '🍕', label: 'snacking' },
+  { emoji: '🎧', label: 'vibing' },
+  { emoji: '💬', label: 'chatting' },
+  { emoji: '🧘', label: 'meditating' },
+  { emoji: '✏️', label: 'doodling' },
+  { emoji: '🤳', label: 'selfie time' },
+  { emoji: '🏓', label: 'ping pong' },
+  { emoji: '😎', label: 'chilling' },
+  { emoji: '🎤', label: 'singing' },
+  { emoji: '🐱', label: 'cat videos' },
+  { emoji: '💤', label: 'resting' },
+  { emoji: '🫖', label: 'tea time' },
+  { emoji: '🖥️', label: 'scrolling' },
+  { emoji: '🎲', label: 'playing dice' },
+];
+
+const agentIdleActivity = {}; // { name: { emoji, label } }
+
+function pickIdleActivity(name) {
+  const act = IDLE_ACTIVITIES[Math.floor(Math.random() * IDLE_ACTIVITIES.length)];
+  agentIdleActivity[name] = act;
 }
 
 function lerp(a, b, t) { return a + (b - a) * t; }
@@ -47,6 +80,7 @@ function getTargetPos(name, agentData, cw, ch) {
     // Clear wander state so they pick a fresh target when idle again
     delete wanderTargets[name];
     delete wanderCooldown[name];
+    delete agentIdleActivity[name];
     const room = agentData?.current_room || 'desk';
     if (room === 'desk') {
       const dp = DESK_POSITIONS[name];
@@ -435,6 +469,66 @@ function drawAgent(ctx, x, y, name, agentData, frame) {
       ctx.fill();
     }
     ctx.restore();
+  }
+
+  // ── Idle activity bubble (when wandering) ──
+  if (!isAgentBusy(agentData) && status !== 'sleeping') {
+    const act = agentIdleActivity[name];
+    if (act) {
+      const bubbleY = ay - SPRITE_H / 2 - 14;
+      const bubbleX = x;
+
+      // Floating bounce
+      const floatOff = Math.sin(frame * 0.04 + x * 0.1) * 3;
+
+      // Small rounded bubble background
+      const emojiSize = 14;
+      ctx.save();
+
+      // Tiny label below emoji
+      ctx.font = '7px monospace';
+      const labelW = ctx.measureText(act.label).width;
+      const bgW = Math.max(labelW + 10, emojiSize + 12);
+      const bgH = 26;
+      const bgX = bubbleX - bgW / 2;
+      const bgY = bubbleY - bgH + floatOff;
+
+      // Bubble bg
+      ctx.fillStyle = 'rgba(20, 20, 40, 0.75)';
+      ctx.globalAlpha = 0.85;
+      ctx.beginPath();
+      ctx.roundRect(bgX, bgY, bgW, bgH, 6);
+      ctx.fill();
+
+      // Bubble border
+      ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+
+      // Tiny triangle pointer
+      ctx.fillStyle = 'rgba(20, 20, 40, 0.75)';
+      ctx.beginPath();
+      ctx.moveTo(bubbleX - 3, bgY + bgH);
+      ctx.lineTo(bubbleX + 3, bgY + bgH);
+      ctx.lineTo(bubbleX, bgY + bgH + 4);
+      ctx.fill();
+
+      // Emoji with gentle pulse
+      const emojiPulse = 1 + Math.sin(frame * 0.06) * 0.08;
+      ctx.font = `${Math.round(emojiSize * emojiPulse)}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(act.emoji, bubbleX, bgY + 10 + floatOff * 0.2);
+
+      // Label text
+      ctx.font = '7px monospace';
+      ctx.fillStyle = 'rgba(200, 200, 220, 0.7)';
+      ctx.textAlign = 'center';
+      ctx.fillText(act.label, bubbleX, bgY + 21 + floatOff * 0.2);
+
+      ctx.restore();
+    }
   }
 }
 
