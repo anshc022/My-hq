@@ -12,6 +12,7 @@ export default function Home() {
   const [agents, setAgents] = useState([]);
   const [events, setEvents] = useState([]);
   const [messages, setMessages] = useState([]);
+  const [nodeConnected, setNodeConnected] = useState(false);
 
 
   const fetchAll = useCallback(async () => {
@@ -47,6 +48,22 @@ export default function Home() {
     };
   }, [fetchAll]);
 
+  // Poll gateway-bridge for node connection status
+  useEffect(() => {
+    const checkNode = async () => {
+      try {
+        const res = await fetch('/api/gateway-bridge');
+        const data = await res.json();
+        setNodeConnected(data?.status === 'ready');
+      } catch {
+        setNodeConnected(false);
+      }
+    };
+    checkNode();
+    const iv = setInterval(checkNode, 10000);
+    return () => clearInterval(iv);
+  }, []);
+
 
 
   return (
@@ -58,7 +75,7 @@ export default function Home() {
           <AgentPanel agents={agents} />
         </div>
         <div className="hq-center">
-          <OfficeCanvas agents={agents} />
+          <OfficeCanvas agents={agents} nodeConnected={nodeConnected} />
         </div>
         <div className="hq-sidebar-right">
           <MissionBoard />

@@ -917,6 +917,187 @@ function drawWatermark(ctx, cw, ch) {
   ctx.restore();
 }
 
+// ─── Node Connection Indicator — pixel art laptop in bottom-right ───
+function drawNodeIndicator(ctx, cw, ch, frame, connected) {
+  const nx = cw * 0.88;
+  const ny = ch * 0.88;
+
+  // ── Connection line from node to Echo's desk ──
+  if (connected) {
+    const echoPos = DESK_POSITIONS.echo;
+    if (echoPos) {
+      const ex = echoPos.x * cw;
+      const ey = echoPos.y * ch;
+      ctx.save();
+      ctx.setLineDash([4, 6]);
+      ctx.lineDashOffset = -frame * 0.5;
+      const lineGrad = ctx.createLinearGradient(nx, ny, ex, ey);
+      lineGrad.addColorStop(0, 'rgba(0,255,136,0.5)');
+      lineGrad.addColorStop(1, 'rgba(0,188,212,0.3)');
+      ctx.strokeStyle = lineGrad;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(nx, ny - 10);
+      ctx.lineTo(ex + 20, ey + 10);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+
+      // Data packets traveling along the line
+      for (let i = 0; i < 3; i++) {
+        const t = ((frame * 0.008 + i * 0.33) % 1);
+        const px = nx + (ex + 20 - nx) * t;
+        const py = (ny - 10) + (ey + 10 - (ny - 10)) * t;
+        ctx.fillStyle = '#00ff88';
+        ctx.globalAlpha = 0.6 * (1 - Math.abs(t - 0.5) * 2);
+        ctx.beginPath();
+        ctx.arc(px, py, 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  // ── Glow behind laptop ──
+  const glowColor = connected ? 'rgba(0,255,136,0.15)' : 'rgba(255,80,80,0.1)';
+  const glowPulse = 0.8 + Math.sin(frame * 0.05) * 0.2;
+  ctx.save();
+  ctx.shadowColor = connected ? '#00ff88' : '#ff5050';
+  ctx.shadowBlur = connected ? 14 * glowPulse : 6;
+  ctx.fillStyle = glowColor;
+  ctx.beginPath();
+  ctx.ellipse(nx, ny, 30, 18, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // ── Laptop base (closed bottom) ──
+  ctx.fillStyle = '#2a2a3e';
+  ctx.beginPath();
+  ctx.roundRect(nx - 22, ny - 2, 44, 6, 2);
+  ctx.fill();
+  // Base edge highlight
+  ctx.fillStyle = 'rgba(255,255,255,0.06)';
+  ctx.fillRect(nx - 20, ny - 2, 40, 1);
+
+  // ── Laptop screen (angled back) ──
+  ctx.fillStyle = '#1a1a2e';
+  ctx.beginPath();
+  ctx.roundRect(nx - 18, ny - 26, 36, 24, 3);
+  ctx.fill();
+
+  // Screen content
+  if (connected) {
+    // Active screen with code lines
+    const screenGrad = ctx.createLinearGradient(nx - 15, ny - 23, nx - 15, ny - 5);
+    screenGrad.addColorStop(0, '#0a1a0a');
+    screenGrad.addColorStop(1, '#0a0f0a');
+    ctx.fillStyle = screenGrad;
+    ctx.fillRect(nx - 15, ny - 23, 30, 18);
+
+    // Terminal-style green text
+    ctx.fillStyle = '#00ff88';
+    ctx.globalAlpha = 0.6;
+    for (let li = 0; li < 4; li++) {
+      const lw = 8 + ((li * 7 + 3) % 10);
+      ctx.fillRect(nx - 12, ny - 21 + li * 4, lw, 1.5);
+    }
+    // Blinking cursor
+    if (Math.sin(frame * 0.1) > 0) {
+      ctx.fillRect(nx - 12 + 14, ny - 21 + 12, 3, 2);
+    }
+    ctx.globalAlpha = 1;
+
+    // Scan line effect
+    const scanY = ny - 23 + ((frame * 0.4) % 18);
+    ctx.fillStyle = 'rgba(0,255,136,0.03)';
+    ctx.fillRect(nx - 15, scanY, 30, 2);
+  } else {
+    // Offline — dark screen
+    ctx.fillStyle = '#0a0a14';
+    ctx.fillRect(nx - 15, ny - 23, 30, 18);
+    // X mark
+    ctx.strokeStyle = '#ff5050';
+    ctx.globalAlpha = 0.4;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(nx - 5, ny - 18);
+    ctx.lineTo(nx + 5, ny - 10);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(nx + 5, ny - 18);
+    ctx.lineTo(nx - 5, ny - 10);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
+  // Screen border glow
+  ctx.strokeStyle = connected ? '#00ff88' : '#ff5050';
+  ctx.globalAlpha = connected ? 0.3 : 0.15;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.roundRect(nx - 18, ny - 26, 36, 24, 3);
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+
+  // ── Power LED ──
+  ctx.fillStyle = connected ? '#00ff88' : '#ff5050';
+  ctx.globalAlpha = 0.6 + Math.sin(frame * 0.06) * 0.3;
+  ctx.beginPath();
+  ctx.arc(nx, ny + 1, 1.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // ── Label pill below ──
+  const label = connected ? 'NODE' : 'OFFLINE';
+  ctx.font = 'bold 8px monospace';
+  const lw = ctx.measureText(label).width;
+  const pillW = lw + 10;
+  const pillH = 13;
+  const pillX = nx - pillW / 2;
+  const pillY = ny + 8;
+
+  ctx.fillStyle = connected ? '#00ff88' : '#ff5050';
+  ctx.globalAlpha = 0.8;
+  ctx.beginPath();
+  ctx.roundRect(pillX, pillY, pillW, pillH, 3);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
+  ctx.fillStyle = '#000';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(label, nx, pillY + pillH / 2);
+
+  // ── Hostname tag ──
+  if (connected) {
+    ctx.font = '7px monospace';
+    ctx.fillStyle = 'rgba(0,255,136,0.5)';
+    ctx.textAlign = 'center';
+    ctx.fillText('Windows PC', nx, pillY + pillH + 9);
+  }
+
+  // ── WiFi signal icon (top-right of laptop) ──
+  if (connected) {
+    const wf = nx + 24;
+    const wy = ny - 20;
+    ctx.strokeStyle = '#00ff88';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 3; i++) {
+      ctx.globalAlpha = 0.3 + i * 0.15;
+      ctx.beginPath();
+      ctx.arc(wf, wy + 6, 3 + i * 3, -Math.PI * 0.8, -Math.PI * 0.2);
+      ctx.stroke();
+    }
+    // Dot at base
+    ctx.globalAlpha = 0.7;
+    ctx.fillStyle = '#00ff88';
+    ctx.beginPath();
+    ctx.arc(wf, wy + 6, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+}
+
 // ─── Helper: lighten a hex color ───
 function lighten(hex, amt) {
   let r = parseInt(hex.slice(1, 3), 16);
@@ -939,7 +1120,7 @@ function darken(hex, amt) {
 }
 
 // ─── Main component ───
-export default function OfficeCanvas({ agents }) {
+export default function OfficeCanvas({ agents, nodeConnected }) {
   const canvasRef = useRef(null);
   const frameRef = useRef(0);
   const animRef = useRef(null);
@@ -987,8 +1168,11 @@ export default function OfficeCanvas({ agents }) {
       });
     }
 
+    // Node connection indicator (drawn on top of everything)
+    drawNodeIndicator(ctx, cw, ch, frame, nodeConnected);
+
     animRef.current = requestAnimationFrame(draw);
-  }, [agents]);
+  }, [agents, nodeConnected]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
