@@ -111,6 +111,34 @@ async function detectNativeSpawn(toolName, toolData) {
     });
     return;
   }
+
+  // ─── Exec / Node tools — Echo is using the node (Pulse's domain) ───
+  // When Echo runs commands on the user's PC, show Pulse as working
+  // so the connection line appears between Echo ↔ Pulse on the canvas.
+  const EXEC_TOOLS = [
+    'exec_run', 'exec', 'shell', 'terminal',
+    'fs_read', 'fs_write', 'fs_delete', 'fs_list', 'fs_mkdir',
+    'file_read', 'file_write', 'file_delete', 'file_list',
+    'read_file', 'write_file', 'list_directory',
+    'run_command', 'execute', 'powershell',
+  ];
+  if (EXEC_TOOLS.some(t => name.includes(t))) {
+    const cmd = toolData?.command || toolData?.path || toolData?.cmd || name;
+    const preview = typeof cmd === 'string' ? cmd.slice(0, 60) : name;
+    await supabase.from('ops_agents').update({
+      status: 'working',
+      current_task: `Node exec: ${preview}`,
+      current_room: getWorkRoom('pulse'),
+      last_active_at: new Date().toISOString(),
+    }).eq('name', 'pulse');
+
+    await supabase.from('ops_events').insert({
+      agent: 'pulse',
+      event_type: 'task',
+      title: `Echo → Node: ${preview}`,
+    });
+    return;
+  }
 }
 
 // ─── Track active runs (per agent, per request) ───
@@ -300,6 +328,20 @@ async function processGatewayMessage(msg) {
         current_room: 'desk',
         last_active_at: new Date().toISOString(),
       }).eq('name', agent);
+
+      // If Echo finished, also reset Pulse (in case exec tools were used)
+      if (agent === 'echo') {
+        const { data: pulseData } = await supabase.from('ops_agents')
+          .select('status, current_task').eq('name', 'pulse').single();
+        if (pulseData?.current_task?.startsWith('Node exec:')) {
+          await supabase.from('ops_agents').update({
+            status: 'idle',
+            current_task: null,
+            current_room: 'desk',
+            last_active_at: new Date().toISOString(),
+          }).eq('name', 'pulse');
+        }
+      }
 
       await supabase.from('ops_events').insert({
         agent,
