@@ -143,6 +143,98 @@ async function detectNativeSpawn(sourceAgent, toolName, toolData) {
   }
 }
 
+// ─── Delegation detection from Echo's assistant text ───
+// The gateway doesnt expose sub-agent events separately.
+// When Echo says "Delegating to **Dash** (Quill)" we parse it to light up agents.
+// Also detects: "Stack is working", "assigned to Probe", team mobilization lists etc.
+const delegatedAgents = new Set(); // track which agents we've already activated this batch
+
+async function detectDelegationFromText(text) {
+  if (!text) return;
+  const lower = text.toLowerCase();
+
+  // Pattern 1: "Delegating to **Dash** (Quill)" or "Delegating to **Stack**"
+  // Pattern 2: "- **Dash** (Quill) → task description"
+  // Pattern 3: "Dash — task" or "Dash: task" or "Stack has completed"
+  const AGENT_KEYWORDS = {
+    'dash': 'dash', 'quill': 'dash',
+    'stack': 'stack', 'sage': 'stack',
+    'probe': 'probe', 'sentinel': 'probe',
+    'pixel': 'pixel', 'scout': 'pixel',
+    'ship': 'ship', 'xalt': 'ship',
+    'pulse': 'pulse',
+  };
+
+  // Completion signals — "has completed", "finished", "done with"
+  const isCompletion = lower.includes('has completed') || lower.includes('finished') ||
+    lower.includes('completed the') || lower.includes('done with') ||
+    lower.includes('has delivered') || lower.includes('is done');
+
+  // Delegation signals — active work being assigned
+  const isDelegation = lower.includes('delegat') || lower.includes('team mobilized') ||
+    lower.includes('assigning') || lower.includes('task:') ||
+    lower.includes('spawning') || lower.includes('is working') ||
+    lower.includes('will handle') || lower.includes('dispatching');
+
+  if (!isDelegation && !isCompletion) return;
+
+  const now = new Date().toISOString();
+  const foundAgents = new Set();
+
+  for (const [keyword, displayName] of Object.entries(AGENT_KEYWORDS)) {
+    if (lower.includes(keyword) && !foundAgents.has(displayName)) {
+      foundAgents.add(displayName);
+
+      // Extract the task snippet after the agent name
+      const taskMatch = text.match(new RegExp(keyword + '[^:→—]*[:\\→—]+\\s*(.{5,80})', 'i'));
+      const task = taskMatch ? taskMatch[1].replace(/\*\*/g, '').replace(/[#`]/g, '').trim() : null;
+
+      if (isCompletion) {
+        // ── Completion: show agent as 'talking' with their result ──
+        const completionMsg = task || 'Task completed ✓';
+        const cleanMsg = completionMsg.length > 70 ? completionMsg.slice(0, 70) + '...' : completionMsg;
+
+        await supabase.from('ops_agents').update({
+          status: 'talking',
+          current_task: `✓ ${cleanMsg}`,
+          current_room: getTalkRoom(displayName),
+          last_active_at: now,
+        }).eq('name', displayName);
+
+        await supabase.from('ops_events').insert({
+          agent: displayName,
+          event_type: 'system',
+          title: `Completed: ${cleanMsg.slice(0, 60)}`,
+        });
+
+        // Keep visible for 20s then auto-clear
+        activeAgents.set(displayName, { startedAt: Date.now(), runId: null });
+        delegatedAgents.delete(displayName); // allow re-delegation later
+      } else if (!delegatedAgents.has(displayName)) {
+        // ── Delegation: mark agent as 'working' on assigned task ──
+        delegatedAgents.add(displayName);
+        const cleanTask = (task || 'Working on delegated task...').slice(0, 70);
+
+        await supabase.from('ops_agents').update({
+          status: 'working',
+          current_task: cleanTask,
+          current_room: getWorkRoom(displayName),
+          last_active_at: now,
+        }).eq('name', displayName);
+
+        await supabase.from('ops_events').insert({
+          agent: displayName,
+          event_type: 'task',
+          title: `Echo delegated: ${cleanTask.slice(0, 60)}`,
+        });
+
+        // Auto-clear delegated agents via the cleanupStaleAgents mechanism
+        activeAgents.set(displayName, { startedAt: Date.now(), runId: null });
+      }
+    }
+  }
+}
+
 // ─── Track active runs (per agent, per request) ───
 const activeRuns = new Map(); // runId → { agent, text, startedAt, toolCalls, chatLogged, recovered }
 
@@ -269,12 +361,21 @@ async function cleanupStaleAgents() {
   if (Date.now() - lastCleanupAt < 5_000) return;
   lastCleanupAt = Date.now();
 
+  // Also clear the delegation tracker periodically
+  if (delegatedAgents.size > 0) {
+    delegatedAgents.clear();
+  }
+
   const cutoff = new Date(Date.now() - COOLDOWN_MS).toISOString();
+  // Clean up agents stuck in 'researching' or 'working' for too long
+  // (sub-agents detected via delegation text that never got a lifecycle:end)
   const { data: stale } = await supabase
     .from('ops_agents')
-    .select('name, last_active_at')
-    .eq('status', 'researching')
-    .lt('last_active_at', cutoff);
+    .select('name, status, last_active_at')
+    .in('status', ['researching', 'working', 'talking', 'thinking'])
+    .lt('last_active_at', cutoff)
+    .neq('name', 'echo')  // don't auto-clear echo
+    .neq('name', 'pulse'); // don't auto-clear pulse (it monitors)
 
   if (stale && stale.length > 0) {
     for (const agent of stale) {
@@ -556,6 +657,14 @@ async function processGatewayMessage(msg) {
         current_room: getTalkRoom(agent),
         last_active_at: new Date().toISOString(),
       }).eq('name', agent);
+
+      // ── Delegation detection from Echo's response text ──
+      // Sub-agent events are invisible to the gateway observer. The only signal
+      // is Echo's assistant text: "Delegating to **Dash** (Quill)" etc.
+      // Parse this to light up sub-agents on the dashboard.
+      if (agent === 'echo') {
+        await detectDelegationFromText(text);
+      }
 
       return { type: 'assistant_stream', agent };
     }
