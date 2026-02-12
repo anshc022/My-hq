@@ -371,33 +371,50 @@ async function detectRoomCommand(text) {
 // ─── Stale agent cleanup ───
 // On Vercel serverless, setTimeout doesn't survive across invocations.
 // Instead, at the start of each request we check for agents stuck in
-// 'researching' status for longer than the cooldown window.
-const COOLDOWN_MS = 30_000; // 30s visibility after sub-agent finishes
+// busy status for too long and reset them.
+//
+// Two tiers:
+//   - 'researching' (cooldown phase after work): clean after 45s
+//   - 'working'/'talking'/'thinking' (might be in a real run): clean after 5 min
+const COOLDOWN_MS = 45_000;        // researching = post-work cooldown
+const ACTIVE_TIMEOUT_MS = 300_000; // working/talking/thinking = real work
 let lastCleanupAt = 0;
+let lastDelegationClearAt = 0;
 
 async function cleanupStaleAgents() {
-  // Only run at most once every 5 seconds to avoid hammering DB
-  if (Date.now() - lastCleanupAt < 5_000) return;
+  // Only run at most once every 8 seconds to avoid hammering DB
+  if (Date.now() - lastCleanupAt < 8_000) return;
   lastCleanupAt = Date.now();
 
-  // Also clear the delegation tracker periodically
-  if (delegatedAgents.size > 0) {
+  // Clear delegation tracker every 2 minutes (not every request)
+  if (Date.now() - lastDelegationClearAt > 120_000) {
+    lastDelegationClearAt = Date.now();
     delegatedAgents.clear();
   }
 
-  const cutoff = new Date(Date.now() - COOLDOWN_MS).toISOString();
-  // Clean up agents stuck in 'researching' or 'working' for too long
-  // (sub-agents detected via delegation text that never got a lifecycle:end)
-  const { data: stale } = await supabase
+  // Tier 1: agents in post-work "researching" cooldown — clean after 45s
+  const cooldownCutoff = new Date(Date.now() - COOLDOWN_MS).toISOString();
+  const { data: staleResearching } = await supabase
     .from('ops_agents')
     .select('name, status, last_active_at')
-    .in('status', ['researching', 'working', 'talking', 'thinking'])
-    .lt('last_active_at', cutoff)
-    .neq('name', 'echo')  // don't auto-clear echo
-    .neq('name', 'pulse'); // don't auto-clear pulse (it monitors)
+    .eq('status', 'researching')
+    .lt('last_active_at', cooldownCutoff)
+    .neq('name', 'echo')
+    .neq('name', 'pulse');
 
-  if (stale && stale.length > 0) {
-    for (const agent of stale) {
+  // Tier 2: agents stuck in active work — clean after 5 min (real timeout)
+  const activeCutoff = new Date(Date.now() - ACTIVE_TIMEOUT_MS).toISOString();
+  const { data: staleActive } = await supabase
+    .from('ops_agents')
+    .select('name, status, last_active_at')
+    .in('status', ['working', 'talking', 'thinking'])
+    .lt('last_active_at', activeCutoff)
+    .neq('name', 'echo')
+    .neq('name', 'pulse');
+
+  const allStale = [...(staleResearching || []), ...(staleActive || [])];
+  if (allStale.length > 0) {
+    for (const agent of allStale) {
       activeAgents.delete(agent.name);
       cooldownTimers.delete(agent.name);
       await supabase.from('ops_agents').update({
@@ -406,6 +423,22 @@ async function cleanupStaleAgents() {
         current_room: 'desk',
         last_active_at: new Date().toISOString(),
       }).eq('name', agent.name);
+    }
+
+    // If Echo is monitoring and all subs are now idle, idle Echo too
+    const { data: echoData } = await supabase.from('ops_agents')
+      .select('status, current_task').eq('name', 'echo').single();
+    if (echoData?.status === 'researching' && echoData?.current_task?.startsWith('Monitoring:')) {
+      const { data: anyActive } = await supabase.from('ops_agents')
+        .select('name').neq('name', 'echo').neq('name', 'pulse')
+        .in('status', ['working', 'thinking', 'talking', 'researching']);
+      if (!anyActive || anyActive.length === 0) {
+        activeAgents.delete('echo');
+        await supabase.from('ops_agents').update({
+          status: 'idle', current_task: null, current_room: 'desk',
+          last_active_at: new Date().toISOString(),
+        }).eq('name', 'echo');
+      }
     }
   }
 }
