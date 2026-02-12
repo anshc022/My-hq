@@ -186,8 +186,23 @@ async function detectDelegationFromText(text) {
       foundAgents.add(displayName);
 
       // Extract the task snippet after the agent name
-      const taskMatch = text.match(new RegExp(keyword + '[^:→—]*[:\\→—]+\\s*(.{5,80})', 'i'));
-      const task = taskMatch ? taskMatch[1].replace(/\*\*/g, '').replace(/[#`]/g, '').trim() : null;
+      // Patterns: "**Stack** is checking...", "Stack → do something", "Stack: task", "Stack — fixing"
+      const taskPatterns = [
+        new RegExp('\\*\\*' + keyword + '\\*\\*\\s*(?:\\([^)]*\\))?\\s*(?:is|will|has been|was)\\s+(.{5,100})', 'i'),
+        new RegExp(keyword + '\\s*[:\\→—]+\\s*(.{5,100})', 'i'),
+        new RegExp(keyword + '\\s+(?:is|will)\\s+(.{5,100})', 'i'),
+      ];
+      let task = null;
+      for (const pat of taskPatterns) {
+        const m = text.match(pat);
+        if (m) {
+          task = m[1].replace(/\*\*/g, '').replace(/[#`\n]/g, ' ').replace(/\s+/g, ' ').trim();
+          // Trim at sentence boundary
+          const sentEnd = task.match(/^(.{10,70}?)[.!\n]/);
+          if (sentEnd) task = sentEnd[1];
+          break;
+        }
+      }
 
       if (isCompletion) {
         // ── Completion: show agent as 'talking' with their result ──
@@ -602,15 +617,61 @@ async function processGatewayMessage(msg) {
           current_room: getTalkRoom(agent),
           last_active_at: new Date().toISOString(),
         }).eq('name', agent);
+
+        // Check if Echo is monitoring sub-agents — update the list or idle Echo
+        const { data: echoData } = await supabase.from('ops_agents')
+          .select('status, current_task').eq('name', 'echo').single();
+        if (echoData?.status === 'researching' && echoData?.current_task?.startsWith('Monitoring:')) {
+          // Check remaining active subs (exclude the one that just finished)
+          const { data: remainingSubs } = await supabase.from('ops_agents')
+            .select('name, status')
+            .neq('name', 'echo').neq('name', agent)
+            .in('status', ['working', 'thinking', 'talking']);
+
+          if (remainingSubs && remainingSubs.length > 0) {
+            // Update Echo's task with remaining active sub-agents
+            const subNames = remainingSubs.map(s => s.name).join(', ');
+            await supabase.from('ops_agents').update({
+              current_task: `Monitoring: ${subNames}`,
+              last_active_at: new Date().toISOString(),
+            }).eq('name', 'echo');
+          } else {
+            // All sub-agents done — Echo goes idle
+            activeAgents.delete('echo');
+            await supabase.from('ops_agents').update({
+              status: 'idle',
+              current_task: null,
+              current_room: 'desk',
+              last_active_at: new Date().toISOString(),
+            }).eq('name', 'echo');
+          }
+        }
       } else {
-        // Echo goes idle immediately (or short delay)
-        activeAgents.delete(agent);
-        await supabase.from('ops_agents').update({
-          status: 'idle',
-          current_task: null,
-          current_room: 'desk',
-          last_active_at: new Date().toISOString(),
-        }).eq('name', agent);
+        // Echo: check if sub-agents are still working before going idle
+        // If any sub-agent is active, keep Echo in 'researching' so connection lines persist
+        const { data: activeSubs } = await supabase.from('ops_agents')
+          .select('name, status')
+          .neq('name', 'echo')
+          .in('status', ['working', 'thinking', 'talking', 'researching']);
+
+        if (activeSubs && activeSubs.length > 0) {
+          const subNames = activeSubs.map(s => s.name).join(', ');
+          await supabase.from('ops_agents').update({
+            status: 'researching',
+            current_task: `Monitoring: ${subNames}`,
+            current_room: 'meeting',
+            last_active_at: new Date().toISOString(),
+          }).eq('name', agent);
+          activeAgents.set(agent, { startedAt: Date.now(), runId: null });
+        } else {
+          activeAgents.delete(agent);
+          await supabase.from('ops_agents').update({
+            status: 'idle',
+            current_task: null,
+            current_room: 'desk',
+            last_active_at: new Date().toISOString(),
+          }).eq('name', agent);
+        }
       }
 
       // If Echo finished, also reset Pulse (in case exec tools were used)
