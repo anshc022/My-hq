@@ -263,21 +263,63 @@ async function detectRoomCommand(text) {
 // OpenClaw routes ONE message to ONE agent — that's the reality.
 async function processGatewayMessage(msg) {
   try {
-    // Handle bridge-level events — ONLY affects Pulse, no other agent
+    // Handle bridge-level events — Pulse monitors infra
     if (msg.type === 'node:connected' || msg.type === 'node:disconnected') {
       const isConnected = msg.type === 'node:connected';
       await supabase.from('ops_events').insert({
         agent: 'pulse',
-        event_type: 'system',
-        title: isConnected ? 'Bridge connected to gateway' : `Bridge disconnected (${msg.message || ''})`,
+        event_type: isConnected ? 'system' : 'alert',
+        title: isConnected ? 'Node connected — monitoring active' : `⚠️ Node disconnected! (${msg.message || 'unknown'})`,
       });
-      // Only update Pulse status — never touch other agents
-      await supabase.from('ops_agents').update({
-        status: isConnected ? 'monitoring' : 'idle',
-        current_task: isConnected ? 'Monitoring gateway' : null,
-        last_active_at: new Date().toISOString(),
-      }).eq('name', 'pulse');
+
+      if (isConnected) {
+        await supabase.from('ops_agents').update({
+          status: 'monitoring',
+          current_task: 'Monitoring EC2 + Node',
+          last_active_at: new Date().toISOString(),
+        }).eq('name', 'pulse');
+      } else {
+        // Node disconnected = Pulse goes into alert/fix mode
+        await supabase.from('ops_agents').update({
+          status: 'working',
+          current_task: '⚠️ Node offline — investigating...',
+          current_room: getWorkRoom('pulse'),
+          last_active_at: new Date().toISOString(),
+        }).eq('name', 'pulse');
+        activeAgents.set('pulse', { startedAt: Date.now(), runId: null });
+      }
       return { type: msg.type };
+    }
+
+    // Handle heartbeat events — Pulse tracks system health
+    if (msg.type === 'event' && msg.event === 'heartbeat') {
+      const hb = msg.payload || {};
+      const status = hb.status || hb.data?.status;
+      const reason = hb.reason || hb.data?.reason || '';
+
+      // If heartbeat shows an issue, activate Pulse
+      if (status === 'error' || status === 'failed' || reason.includes('error')) {
+        await supabase.from('ops_agents').update({
+          status: 'working',
+          current_task: `🔧 Fixing: ${reason.slice(0, 50)}`,
+          current_room: getWorkRoom('pulse'),
+          last_active_at: new Date().toISOString(),
+        }).eq('name', 'pulse');
+
+        await supabase.from('ops_events').insert({
+          agent: 'pulse',
+          event_type: 'alert',
+          title: `Heartbeat error: ${reason.slice(0, 60)}`,
+        });
+        activeAgents.set('pulse', { startedAt: Date.now(), runId: null });
+      }
+      // Normal heartbeat — just update last_active
+      else {
+        await supabase.from('ops_agents').update({
+          last_active_at: new Date().toISOString(),
+        }).eq('name', 'pulse');
+      }
+      return { type: 'heartbeat', status };
     }
 
     if (msg.type !== 'event') return null;
@@ -389,6 +431,44 @@ async function processGatewayMessage(msg) {
           to_agent: 'user',
           message: run.text.slice(0, 1500),
         });
+      }
+
+      // ── Detect anomalies and alert Pulse ──
+      const runDuration = run ? (Date.now() - run.startedAt) : 0;
+      const responseText = run?.text || '';
+      const isErrorResponse = responseText === 'NO...' || responseText === 'NO' || responseText.length < 5;
+      const isSuspiciouslyFast = runDuration > 0 && runDuration < 3000 && !run?.toolCalls.length;
+
+      if (agent === 'echo' && (isErrorResponse || isSuspiciouslyFast)) {
+        await supabase.from('ops_events').insert({
+          agent: 'pulse',
+          event_type: 'alert',
+          title: isErrorResponse
+            ? `⚠️ Echo gave error response: "${responseText.slice(0, 30)}"`
+            : `⚠️ Echo run too fast (${Math.round(runDuration / 1000)}s, no tools)`,
+        });
+
+        // Briefly light up Pulse to show it noticed
+        await supabase.from('ops_agents').update({
+          status: 'working',
+          current_task: `Monitoring anomaly: Echo ${isErrorResponse ? 'error response' : 'fast exit'}`,
+          current_room: getWorkRoom('pulse'),
+          last_active_at: new Date().toISOString(),
+        }).eq('name', 'pulse');
+
+        // Auto-reset Pulse after 10s
+        setTimeout(async () => {
+          const { data: p } = await supabase.from('ops_agents')
+            .select('current_task').eq('name', 'pulse').single();
+          if (p?.current_task?.startsWith('Monitoring anomaly')) {
+            await supabase.from('ops_agents').update({
+              status: 'monitoring',
+              current_task: 'Monitoring EC2 + Node',
+              current_room: 'desk',
+              last_active_at: new Date().toISOString(),
+            }).eq('name', 'pulse');
+          }
+        }, 10_000);
       }
 
       // ── Cooldown phase: keep agent visually active for overlap & connection lines ──
