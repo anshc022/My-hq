@@ -244,6 +244,10 @@ const activeAgents = new Map(); // displayName → { startedAt, runId }
 // ─── Cooldown timers — keep agents visually active after finishing ───
 const cooldownTimers = new Map(); // displayName → timeoutId
 
+// ─── Pulse alert rate-limiting (avoid spam) ───
+let lastPulseAlertAt = 0;
+let pulseAlertCount = 0;
+
 // ─── Stuck run watchdog — REAL: just marks agent as timed out, no fake conversations ───
 const STUCK_TIMEOUT_MS = 120_000; // 2 minutes
 let watchdogInterval = null;
@@ -552,42 +556,39 @@ async function processGatewayMessage(msg) {
         });
       }
 
-      // ── Detect anomalies and alert Pulse ──
+      // ── Detect anomalies and alert Pulse (rate-limited) ──
       const runDuration = run ? (Date.now() - run.startedAt) : 0;
       const responseText = run?.text || '';
-      const isErrorResponse = responseText === 'NO...' || responseText === 'NO' || responseText.length < 5;
-      const isSuspiciouslyFast = runDuration > 0 && runDuration < 3000 && !run?.toolCalls.length;
+      const isErrorResponse = responseText === 'NO...' || responseText === 'NO' || (responseText.length < 5 && responseText.length > 0);
+      const isSuspiciouslyFast = runDuration > 0 && runDuration < 3000 && !run?.toolCalls.length && responseText.length > 5;
 
-      if (agent === 'echo' && (isErrorResponse || isSuspiciouslyFast)) {
+      // Reset Pulse alert counter when Echo gives a real response
+      if (agent === 'echo' && !isErrorResponse && responseText.length >= 10) {
+        pulseAlertCount = 0;
+      }
+
+      // Rate-limit Pulse alerts: max one every 5 minutes for Echo errors
+      const now5 = Date.now();
+      const PULSE_ALERT_COOLDOWN = 300_000; // 5 minutes
+      if (agent === 'echo' && (isErrorResponse || isSuspiciouslyFast) && (now5 - lastPulseAlertAt > PULSE_ALERT_COOLDOWN)) {
+        lastPulseAlertAt = now5;
+        pulseAlertCount++;
+
         await supabase.from('ops_events').insert({
           agent: 'pulse',
           event_type: 'alert',
           title: isErrorResponse
-            ? `⚠️ Echo gave error response: "${responseText.slice(0, 30)}"`
+            ? `⚠️ Echo error response (${pulseAlertCount}x): "${responseText.slice(0, 20)}"`
             : `⚠️ Echo run too fast (${Math.round(runDuration / 1000)}s, no tools)`,
         });
 
         // Briefly light up Pulse to show it noticed
         await supabase.from('ops_agents').update({
           status: 'working',
-          current_task: `Monitoring anomaly: Echo ${isErrorResponse ? 'error response' : 'fast exit'}`,
+          current_task: `Monitoring: Echo ${isErrorResponse ? 'error' : 'fast exit'} (${pulseAlertCount}x)`,
           current_room: getWorkRoom('pulse'),
           last_active_at: new Date().toISOString(),
         }).eq('name', 'pulse');
-
-        // Auto-reset Pulse after 10s
-        setTimeout(async () => {
-          const { data: p } = await supabase.from('ops_agents')
-            .select('current_task').eq('name', 'pulse').single();
-          if (p?.current_task?.startsWith('Monitoring anomaly')) {
-            await supabase.from('ops_agents').update({
-              status: 'monitoring',
-              current_task: 'Monitoring EC2 + Node',
-              current_room: 'desk',
-              last_active_at: new Date().toISOString(),
-            }).eq('name', 'pulse');
-          }
-        }, 10_000);
       }
 
       // ── Cooldown phase: keep agent visually active for overlap & connection lines ──
