@@ -149,6 +149,9 @@ const activeRuns = new Map(); // runId → { agent, text, startedAt, toolCalls, 
 // ─── Track which agents are currently active (for collaboration detection) ───
 const activeAgents = new Map(); // displayName → { startedAt, runId }
 
+// ─── Cooldown timers — keep agents visually active after finishing ───
+const cooldownTimers = new Map(); // displayName → timeoutId
+
 // ─── Stuck run watchdog — REAL: just marks agent as timed out, no fake conversations ───
 const STUCK_TIMEOUT_MS = 120_000; // 2 minutes
 let watchdogInterval = null;
@@ -312,6 +315,33 @@ async function processGatewayMessage(msg) {
           }
         }
 
+        // If another sub-agent is in cooldown (reviewing), extend it so they overlap
+        for (const [cooldownAgent, timer] of cooldownTimers.entries()) {
+          if (cooldownAgent !== agent) {
+            // Cancel the idle timer — keep them in "reviewing" state longer
+            clearTimeout(timer);
+            // Re-schedule with fresh 25s from now
+            const newTimer = setTimeout(async () => {
+              cooldownTimers.delete(cooldownAgent);
+              activeAgents.delete(cooldownAgent);
+              await supabase.from('ops_agents').update({
+                status: 'idle',
+                current_task: null,
+                current_room: 'desk',
+                last_active_at: new Date().toISOString(),
+              }).eq('name', cooldownAgent);
+            }, 25_000);
+            cooldownTimers.set(cooldownAgent, newTimer);
+
+            // Update their task to show cross-agent awareness
+            await supabase.from('ops_agents').update({
+              status: 'researching',
+              current_task: `Syncing with ${agent}...`,
+              last_active_at: new Date().toISOString(),
+            }).eq('name', cooldownAgent);
+          }
+        }
+
         if (spawner) {
           // Make sure the spawner is also showing as active on dashboard
           await supabase.from('ops_agents').update({
@@ -352,9 +382,6 @@ async function processGatewayMessage(msg) {
       const run = runId ? activeRuns.get(runId) : null;
       const isSubagent = agent !== 'echo';
 
-      // Remove from active agents tracking
-      activeAgents.delete(agent);
-
       // Save the final real response as a message
       if (run?.text) {
         await supabase.from('ops_messages').insert({
@@ -364,13 +391,45 @@ async function processGatewayMessage(msg) {
         });
       }
 
-      // Return ONLY this agent to idle
-      await supabase.from('ops_agents').update({
-        status: 'idle',
-        current_task: null,
-        current_room: 'desk',
-        last_active_at: new Date().toISOString(),
-      }).eq('name', agent);
+      // ── Cooldown phase: keep agent visually active for overlap & connection lines ──
+      // Sub-agents transition to "reviewing" for 25s before going idle.
+      // This creates visual overlap so connection lines appear between collaborators.
+      const COOLDOWN_MS = 25_000;
+
+      if (isSubagent) {
+        // Cancel any existing cooldown for this agent
+        if (cooldownTimers.has(agent)) clearTimeout(cooldownTimers.get(agent));
+
+        // Transition to "reviewing" state (still counts as busy for connection lines)
+        await supabase.from('ops_agents').update({
+          status: 'researching',
+          current_task: `Reviewing work & syncing with team...`,
+          current_room: getTalkRoom(agent),
+          last_active_at: new Date().toISOString(),
+        }).eq('name', agent);
+
+        // Schedule idle transition after cooldown
+        const timer = setTimeout(async () => {
+          cooldownTimers.delete(agent);
+          activeAgents.delete(agent);
+          await supabase.from('ops_agents').update({
+            status: 'idle',
+            current_task: null,
+            current_room: 'desk',
+            last_active_at: new Date().toISOString(),
+          }).eq('name', agent);
+        }, COOLDOWN_MS);
+        cooldownTimers.set(agent, timer);
+      } else {
+        // Echo goes idle immediately (or short delay)
+        activeAgents.delete(agent);
+        await supabase.from('ops_agents').update({
+          status: 'idle',
+          current_task: null,
+          current_room: 'desk',
+          last_active_at: new Date().toISOString(),
+        }).eq('name', agent);
+      }
 
       // If Echo finished, also reset Pulse (in case exec tools were used)
       if (agent === 'echo') {
