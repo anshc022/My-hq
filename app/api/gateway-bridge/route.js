@@ -146,6 +146,9 @@ async function detectNativeSpawn(sourceAgent, toolName, toolData) {
 // ─── Track active runs (per agent, per request) ───
 const activeRuns = new Map(); // runId → { agent, text, startedAt, toolCalls, chatLogged, recovered }
 
+// ─── Track which agents are currently active (for collaboration detection) ───
+const activeAgents = new Map(); // displayName → { startedAt, runId }
+
 // ─── Stuck run watchdog — REAL: just marks agent as timed out, no fake conversations ───
 const STUCK_TIMEOUT_MS = 120_000; // 2 minutes
 let watchdogInterval = null;
@@ -283,7 +286,7 @@ async function processGatewayMessage(msg) {
 
     // ── lifecycle:start — ONE agent starts processing a request ──
     if (eventName === 'agent' && payload.stream === 'lifecycle' && payload.data?.phase === 'start') {
-      const isSubagent = payload.sessionKey?.includes('subagent');
+      const isSubagent = agent !== 'echo'; // any non-echo agent is a sub-agent
 
       if (runId) {
         activeRuns.set(runId, {
@@ -293,9 +296,42 @@ async function processGatewayMessage(msg) {
         });
       }
 
+      // Track this agent as active
+      activeAgents.set(agent, { startedAt: Date.now(), runId });
+
+      // ── Collaboration detection from lifecycle events ──
+      // When a sub-agent starts while another agent is already active,
+      // they're collaborating (one spawned the other). Mark collaboration.
+      let spawner = null;
+      if (isSubagent) {
+        // Find who likely spawned this agent (the most recent active agent)
+        for (const [otherAgent, info] of activeAgents.entries()) {
+          if (otherAgent !== agent && (Date.now() - info.startedAt) < 120_000) {
+            spawner = otherAgent;
+            break; // First found active agent is likely the spawner
+          }
+        }
+
+        if (spawner) {
+          // Make sure the spawner is also showing as active on dashboard
+          await supabase.from('ops_agents').update({
+            status: 'working',
+            last_active_at: new Date().toISOString(),
+          }).eq('name', spawner).in('status', ['working', 'talking', 'thinking']);
+
+          await supabase.from('ops_events').insert({
+            agent,
+            event_type: 'collab',
+            title: `${spawner} → ${agent}: collaboration started`,
+          });
+        }
+      }
+
       await supabase.from('ops_agents').update({
         status: 'working',
-        current_task: isSubagent ? 'Working on delegated sub-task...' : 'Processing request...',
+        current_task: spawner
+          ? `Task from ${spawner}...`
+          : (isSubagent ? 'Working on delegated sub-task...' : 'Processing request...'),
         current_room: getWorkRoom(agent),
         last_active_at: new Date().toISOString(),
       }).eq('name', agent);
@@ -303,16 +339,21 @@ async function processGatewayMessage(msg) {
       await supabase.from('ops_events').insert({
         agent,
         event_type: 'task',
-        title: isSubagent ? 'Sub-agent started working' : 'Started processing request',
+        title: spawner
+          ? `Spawned by ${spawner}`
+          : (isSubagent ? 'Sub-agent started working' : 'Started processing request'),
       });
 
-      return { type: 'lifecycle_start', agent, isSubagent };
+      return { type: 'lifecycle_start', agent, isSubagent, spawner };
     }
 
     // ── lifecycle:end — ONE agent finishes processing ──
     if (eventName === 'agent' && payload.stream === 'lifecycle' && payload.data?.phase === 'end') {
       const run = runId ? activeRuns.get(runId) : null;
-      const isSubagent = run?.isSubagent || payload.sessionKey?.includes('subagent');
+      const isSubagent = agent !== 'echo';
+
+      // Remove from active agents tracking
+      activeAgents.delete(agent);
 
       // Save the final real response as a message
       if (run?.text) {
