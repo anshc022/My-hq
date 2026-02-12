@@ -54,15 +54,15 @@ function extractAgent(payload) {
 }
 
 // ─── Native spawn detection ───
-// When Echo calls sessions_spawn(agentId: "scout"), detect which
-// sub-agent is being spawned and mark them as "thinking" on the dashboard.
-// This replaces ALL hardcoded keyword matching — Echo's AI decides.
+// When ANY agent calls sessions_spawn / sessions_send, detect which
+// agent is being contacted and mark them as "thinking" on the dashboard.
+// Full mesh: all agents can collaborate with each other.
 
-async function detectNativeSpawn(toolName, toolData) {
+async function detectNativeSpawn(sourceAgent, toolName, toolData) {
   if (!toolName) return;
   const name = toolName.toLowerCase();
 
-  // sessions_spawn — Echo is spawning a sub-agent natively
+  // sessions_spawn — an agent is spawning another agent
   if (name === 'sessions_spawn') {
     const targetAgentId = toolData?.agentId || toolData?.agent_id;
     const task = toolData?.task || toolData?.label || 'Sub-agent task';
@@ -70,7 +70,7 @@ async function detectNativeSpawn(toolName, toolData) {
       const displayName = AGENT_MAP[targetAgentId];
       await supabase.from('ops_agents').update({
         status: 'thinking',
-        current_task: `Spawned: ${task.slice(0, 70)}`,
+        current_task: `${sourceAgent} → ${displayName}: ${task.slice(0, 55)}`,
         current_room: getWorkRoom(displayName),
         last_active_at: new Date().toISOString(),
       }).eq('name', displayName);
@@ -78,26 +78,28 @@ async function detectNativeSpawn(toolName, toolData) {
       await supabase.from('ops_events').insert({
         agent: displayName,
         event_type: 'task',
-        title: `Echo spawned: ${task.slice(0, 60)}`,
+        title: `${sourceAgent} spawned: ${task.slice(0, 50)}`,
       });
     }
     return;
   }
 
-  // sessions_send — Echo is sending a message to another agent's session
+  // sessions_send — an agent is sending a message to another agent's session
   if (name === 'sessions_send') {
     const sessionKey = toolData?.sessionKey || toolData?.session_key || '';
     const msg = toolData?.message || '';
     // Extract agentId from sessionKey: "agent:<agentId>:..."
     const m = sessionKey.match(/^agent:([^:]+)/);
-    if (m && AGENT_MAP[m[1]] && m[1] !== 'main') {
+    if (m && AGENT_MAP[m[1]]) {
       const displayName = AGENT_MAP[m[1]];
-      await supabase.from('ops_agents').update({
-        status: 'thinking',
-        current_task: `Message from Echo: ${msg.slice(0, 50)}`,
-        current_room: getWorkRoom(displayName),
-        last_active_at: new Date().toISOString(),
-      }).eq('name', displayName);
+      if (displayName !== sourceAgent) {
+        await supabase.from('ops_agents').update({
+          status: 'thinking',
+          current_task: `Message from ${sourceAgent}: ${msg.slice(0, 45)}`,
+          current_room: getWorkRoom(displayName),
+          last_active_at: new Date().toISOString(),
+        }).eq('name', displayName);
+      }
     }
     return;
   }
@@ -399,9 +401,8 @@ async function processGatewayMessage(msg) {
       });
 
       // Detect native agent-to-agent tools (sessions_spawn, sessions_send, agents_list)
-      if (agent === 'echo') {
-        await detectNativeSpawn(toolName, payload.data?.arguments || payload.data?.input || payload.data);
-      }
+      // Any agent can now collaborate with any other agent
+      await detectNativeSpawn(agent, toolName, payload.data?.arguments || payload.data?.input || payload.data);
 
       return { type: 'tool_call', agent, tool: toolName };
     }
