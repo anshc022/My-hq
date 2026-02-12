@@ -257,6 +257,39 @@ async function detectRoomCommand(text) {
   return { agents: targetAgents, room: targetRoom };
 }
 
+// ─── Stale agent cleanup ───
+// On Vercel serverless, setTimeout doesn't survive across invocations.
+// Instead, at the start of each request we check for agents stuck in
+// 'researching' status for longer than the cooldown window.
+const COOLDOWN_MS = 30_000; // 30s visibility after sub-agent finishes
+let lastCleanupAt = 0;
+
+async function cleanupStaleAgents() {
+  // Only run at most once every 5 seconds to avoid hammering DB
+  if (Date.now() - lastCleanupAt < 5_000) return;
+  lastCleanupAt = Date.now();
+
+  const cutoff = new Date(Date.now() - COOLDOWN_MS).toISOString();
+  const { data: stale } = await supabase
+    .from('ops_agents')
+    .select('name, last_active_at')
+    .eq('status', 'researching')
+    .lt('last_active_at', cutoff);
+
+  if (stale && stale.length > 0) {
+    for (const agent of stale) {
+      activeAgents.delete(agent.name);
+      cooldownTimers.delete(agent.name);
+      await supabase.from('ops_agents').update({
+        status: 'idle',
+        current_task: null,
+        current_room: 'desk',
+        last_active_at: new Date().toISOString(),
+      }).eq('name', agent.name);
+    }
+  }
+}
+
 // ─── Process REAL OpenClaw gateway events ───
 // Only the agent that ACTUALLY receives the gateway event gets updated.
 // No fake collaborators, no simulated inter-agent messages.
@@ -357,25 +390,10 @@ async function processGatewayMessage(msg) {
           }
         }
 
-        // If another sub-agent is in cooldown (reviewing), extend it so they overlap
-        for (const [cooldownAgent, timer] of cooldownTimers.entries()) {
+        // If another sub-agent is in cooldown (researching), extend it by refreshing last_active_at
+        for (const [cooldownAgent] of cooldownTimers.entries()) {
           if (cooldownAgent !== agent) {
-            // Cancel the idle timer — keep them in "reviewing" state longer
-            clearTimeout(timer);
-            // Re-schedule with fresh 25s from now
-            const newTimer = setTimeout(async () => {
-              cooldownTimers.delete(cooldownAgent);
-              activeAgents.delete(cooldownAgent);
-              await supabase.from('ops_agents').update({
-                status: 'idle',
-                current_task: null,
-                current_room: 'desk',
-                last_active_at: new Date().toISOString(),
-              }).eq('name', cooldownAgent);
-            }, 25_000);
-            cooldownTimers.set(cooldownAgent, newTimer);
-
-            // Update their task to show cross-agent awareness
+            // Refresh their last_active_at so the cleanup timer restarts from now
             await supabase.from('ops_agents').update({
               status: 'researching',
               current_task: `Syncing with ${agent}...`,
@@ -472,34 +490,16 @@ async function processGatewayMessage(msg) {
       }
 
       // ── Cooldown phase: keep agent visually active for overlap & connection lines ──
-      // Sub-agents transition to "reviewing" for 25s before going idle.
-      // This creates visual overlap so connection lines appear between collaborators.
-      const COOLDOWN_MS = 25_000;
-
+      // Sub-agents transition to "researching" for 30s before going idle.
+      // Cleanup happens via cleanupStaleAgents() on the next request.
       if (isSubagent) {
-        // Cancel any existing cooldown for this agent
-        if (cooldownTimers.has(agent)) clearTimeout(cooldownTimers.get(agent));
-
-        // Transition to "reviewing" state (still counts as busy for connection lines)
+        // Mark as 'researching' — cleanup will clear it after COOLDOWN_MS
         await supabase.from('ops_agents').update({
           status: 'researching',
           current_task: `Reviewing work & syncing with team...`,
           current_room: getTalkRoom(agent),
           last_active_at: new Date().toISOString(),
         }).eq('name', agent);
-
-        // Schedule idle transition after cooldown
-        const timer = setTimeout(async () => {
-          cooldownTimers.delete(agent);
-          activeAgents.delete(agent);
-          await supabase.from('ops_agents').update({
-            status: 'idle',
-            current_task: null,
-            current_room: 'desk',
-            last_active_at: new Date().toISOString(),
-          }).eq('name', agent);
-        }, COOLDOWN_MS);
-        cooldownTimers.set(agent, timer);
       } else {
         // Echo goes idle immediately (or short delay)
         activeAgents.delete(agent);
@@ -664,6 +664,9 @@ export async function POST(request) {
     }
 
     if (Array.isArray(body.events)) {
+      // Clean up stale 'researching' agents on each batch
+      await cleanupStaleAgents();
+
       const results = [];
       for (const evt of body.events) {
         const r = await processGatewayMessage(evt);
