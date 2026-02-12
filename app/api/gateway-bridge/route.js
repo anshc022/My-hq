@@ -168,15 +168,36 @@ async function detectDelegationFromText(text) {
   // Completion signals — "has completed", "finished", "done with"
   const isCompletion = lower.includes('has completed') || lower.includes('finished') ||
     lower.includes('completed the') || lower.includes('done with') ||
-    lower.includes('has delivered') || lower.includes('is done');
+    lower.includes('has delivered') || lower.includes('is done') ||
+    lower.includes('result:') || lower.includes('report:');
 
-  // Delegation signals — active work being assigned
+  // Delegation signals — active work being assigned or referenced
+  // Echo uses many phrasings: "Dash is going for...", "Stack will check...",
+  // "I've asked Probe to...", "relaunched the task", "upgrades in progress"
   const isDelegation = lower.includes('delegat') || lower.includes('team mobilized') ||
-    lower.includes('assigning') || lower.includes('task:') ||
+    lower.includes('assigning') || lower.includes('task') ||
     lower.includes('spawning') || lower.includes('is working') ||
-    lower.includes('will handle') || lower.includes('dispatching');
+    lower.includes('will handle') || lower.includes('dispatching') ||
+    lower.includes('is going') || lower.includes('in progress') ||
+    lower.includes('is updating') || lower.includes('is checking') ||
+    lower.includes('is creating') || lower.includes('is building') ||
+    lower.includes('is redesign') || lower.includes('is writing') ||
+    lower.includes('is fixing') || lower.includes('is running') ||
+    lower.includes('is generating') || lower.includes('is analyzing') ||
+    lower.includes('relaunched') || lower.includes('re-launched') ||
+    lower.includes('asked') || lower.includes('told') ||
+    lower.includes('overhaul') || lower.includes('upgrade');
 
-  if (!isDelegation && !isCompletion) return;
+  // Fallback: if Echo mentions any agent name with action context, treat as delegation
+  const AGENT_NAMES_IN_TEXT = ['dash', 'stack', 'probe', 'pixel', 'ship', 'pulse', 'quill', 'sage', 'sentinel', 'scout', 'xalt'];
+  const mentionsAgent = AGENT_NAMES_IN_TEXT.some(n => lower.includes(n));
+  const hasActionContext = lower.includes(' is ') || lower.includes(' will ') ||
+    lower.includes(' has ') || lower.includes('going') || lower.includes('working') ||
+    lower.includes('updat') || lower.includes('creat') || lower.includes('build') ||
+    lower.includes('fix') || lower.includes('check') || lower.includes('design') ||
+    lower.includes('writ') || lower.includes('generat') || lower.includes('deploy');
+
+  if (!isDelegation && !isCompletion && !(mentionsAgent && hasActionContext)) return;
 
   const now = new Date().toISOString();
   const foundAgents = new Set();
