@@ -108,8 +108,10 @@ function isAgentBusy(agentData) {
 }
 
 function getTargetPos(name, agentData, cw, ch) {
-  // Pulse always wanders freely, even when working (node connected)
-  const isBusy = isAgentBusy(agentData) && name !== 'pulse';
+  // Pulse wanders when just monitoring, but goes to work room when doing real tasks
+  const status = (agentData?.status || '').toLowerCase();
+  const isPulseMonitoring = name === 'pulse' && status === 'monitoring';
+  const isBusy = isAgentBusy(agentData) && !isPulseMonitoring;
 
   // Echo goes to private den when busy (replying to user)
   if (name === 'echo' && isBusy) {
