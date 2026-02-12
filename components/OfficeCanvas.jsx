@@ -476,6 +476,67 @@ function drawAgent(ctx, x, y, name, agentData, frame) {
   // ── Speech bubble ──
   if (agentData?.current_task && status !== 'idle' && status !== 'sleeping') {
     drawBubble(ctx, x, ay - SPRITE_H / 2 - 8 * S, agentData.current_task, config.color, S);
+
+    // Typing dots animation when talking
+    if (status === 'talking') {
+      const dotY = ay - SPRITE_H / 2 - 4 * S;
+      for (let d = 0; d < 3; d++) {
+        const bounce = Math.sin(frame * 0.12 + d * 1.2) * 2 * S;
+        ctx.globalAlpha = 0.5 + Math.sin(frame * 0.1 + d * 0.8) * 0.4;
+        ctx.fillStyle = config.color;
+        ctx.beginPath();
+        ctx.arc(x - 8 * S + d * 6 * S, dotY + bounce, 1.8 * S, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  // ── Pulsing status dot on name pill ──
+  if (isAgentBusy(agentData)) {
+    const dotR = 3 * S;
+    const dotX = pillX + pillW + 3 * S;
+    const dotY2 = pillY + pillH / 2;
+    const pulse = 0.6 + Math.sin(frame * 0.1) * 0.4;
+
+    // Outer glow
+    ctx.globalAlpha = pulse * 0.3;
+    const dotColor = status === 'talking' ? '#2ecc71' : status === 'working' ? '#f39c12' : status === 'researching' ? '#9b59b6' : '#3498db';
+    ctx.fillStyle = dotColor;
+    ctx.beginPath();
+    ctx.arc(dotX, dotY2, dotR * 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Inner dot
+    ctx.globalAlpha = pulse;
+    ctx.beginPath();
+    ctx.arc(dotX, dotY2, dotR, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    // Status action micro-label
+    const actionLabel = status === 'talking' ? '💬 responding' :
+                        status === 'working' ? '🔧 working' :
+                        status === 'thinking' ? '🧠 thinking' :
+                        status === 'researching' ? '🔍 researching' :
+                        status === 'posting' ? '📝 posting' : '⚡ active';
+    const aFs = Math.max(5, Math.round(6 * S));
+    ctx.font = `${aFs}px monospace`;
+    const aLabelW = ctx.measureText(actionLabel).width;
+    const aPillW = aLabelW + 6 * S;
+    const aPillH = Math.round(9 * S);
+    const aPillX = x - aPillW / 2;
+    const aPillY = pillY + pillH + (name === 'echo' && isAgentBusy(agentData) ? 14 * S : 2 * S);
+    ctx.fillStyle = dotColor + '30';
+    ctx.globalAlpha = 0.85;
+    ctx.beginPath();
+    ctx.roundRect(aPillX, aPillY, aPillW, aPillH, 2 * S);
+    ctx.fill();
+    ctx.fillStyle = dotColor;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(actionLabel, x, aPillY + aPillH / 2);
+    ctx.globalAlpha = 1;
   }
 
   // ── Status effects ──
@@ -619,37 +680,81 @@ function drawAgent(ctx, x, y, name, agentData, frame) {
 // ─── Bubble ───
 function drawBubble(ctx, x, y, text, borderColor, S) {
   S = S || 1;
-  const maxLen = Math.round(28 * S);
-  const t = text.length > maxLen ? text.slice(0, maxLen - 2) + '..' : text;
-  const fs = Math.max(6, Math.round(10 * S));
+
+  // Clean up the text
+  let t = (text || '').replace(/^Responding:\s*"?/i, '').replace(/"$/, '');
+
+  // Word-wrap into multiple lines
+  const maxCharsPerLine = 35;
+  const words = t.split(' ');
+  const lines = [];
+  let currentLine = '';
+  for (const word of words) {
+    if ((currentLine + ' ' + word).trim().length > maxCharsPerLine) {
+      if (currentLine) lines.push(currentLine.trim());
+      currentLine = word;
+    } else {
+      currentLine = currentLine ? currentLine + ' ' + word : word;
+    }
+  }
+  if (currentLine) lines.push(currentLine.trim());
+
+  // Cap at 3 lines max
+  if (lines.length > 3) {
+    lines.length = 3;
+    lines[2] = lines[2].slice(0, maxCharsPerLine - 3) + '...';
+  }
+  if (lines.length === 0) return;
+
+  const fs = Math.max(6, Math.round(9 * S));
   ctx.font = `${fs}px monospace`;
-  const tw = ctx.measureText(t).width;
+
+  // Measure widest line
+  let maxW = 0;
+  for (const line of lines) {
+    const w = ctx.measureText(line).width;
+    if (w > maxW) maxW = w;
+  }
+
   const pad = 8 * S;
-  const bw = tw + pad * 2;
-  const bh = Math.round(16 * S);
+  const lineH = Math.round(13 * S);
+  const bw = maxW + pad * 2;
+  const bh = lineH * lines.length + pad;
   const bx = x - bw / 2;
   const by = y - bh;
 
-  ctx.fillStyle = 'rgba(25, 25, 45, 0.92)';
+  // Background with slight glass effect
+  ctx.fillStyle = 'rgba(15, 15, 35, 0.93)';
   ctx.beginPath();
-  ctx.roundRect(bx, by, bw, bh, 4 * S);
+  ctx.roundRect(bx, by, bw, bh, 5 * S);
   ctx.fill();
+
+  // Colored border (agent color)
   ctx.strokeStyle = borderColor;
-  ctx.lineWidth = 1 * S;
+  ctx.lineWidth = 1.2 * S;
   ctx.stroke();
 
-  // Pointer
+  // Subtle inner glow
+  ctx.strokeStyle = borderColor + '33';
+  ctx.lineWidth = 3 * S;
+  ctx.stroke();
+  ctx.lineWidth = 1.2 * S;
+
+  // Pointer triangle
   ctx.beginPath();
   ctx.moveTo(x - 4 * S, by + bh);
   ctx.lineTo(x, by + bh + 5 * S);
   ctx.lineTo(x + 4 * S, by + bh);
-  ctx.fillStyle = 'rgba(25, 25, 45, 0.92)';
+  ctx.fillStyle = 'rgba(15, 15, 35, 0.93)';
   ctx.fill();
 
-  ctx.fillStyle = '#e0e0e0';
+  // Draw each line of text
+  ctx.fillStyle = '#e8e8f0';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(t, x, by + bh / 2);
+  for (let i = 0; i < lines.length; i++) {
+    ctx.fillText(lines[i], x, by + pad / 2 + lineH * i + lineH / 2);
+  }
 }
 
 // ─── Animated dashed connection lines between active agents ───

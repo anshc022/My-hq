@@ -547,10 +547,12 @@ async function processGatewayMessage(msg) {
       }
 
       // Update ONLY the agent that's actually responding
-      const preview = text.length > 80 ? text.slice(0, 80) + '...' : text;
+      // Strip markdown formatting for clean display
+      const clean = text.replace(/\*\*/g, '').replace(/[#`]/g, '').replace(/\n+/g, ' ').trim();
+      const preview = clean.length > 120 ? clean.slice(0, 120) + '...' : clean;
       await supabase.from('ops_agents').update({
         status: 'talking',
-        current_task: `Responding: "${preview}"`,
+        current_task: preview,
         current_room: getTalkRoom(agent),
         last_active_at: new Date().toISOString(),
       }).eq('name', agent);
