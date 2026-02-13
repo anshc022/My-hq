@@ -148,6 +148,8 @@ async function detectNativeSpawn(sourceAgent, toolName, toolData) {
 // When Echo says "Delegating to **Dash** (Quill)" we parse it to light up agents.
 // Also detects: "Stack is working", "assigned to Probe", team mobilization lists etc.
 const delegatedAgents = new Set(); // track which agents we've already activated this batch
+const delegationTracker = new Map(); // displayName → { delegatedAt, task } — protected minimum active time
+const MIN_DELEGATION_DURATION = 60_000; // 60s — sub-agents stay "working" at least this long
 
 async function detectDelegationFromText(text) {
   if (!text) return;
@@ -246,6 +248,7 @@ async function detectDelegationFromText(text) {
         // Keep visible for 20s then auto-clear
         activeAgents.set(displayName, { startedAt: Date.now(), runId: null });
         delegatedAgents.delete(displayName); // allow re-delegation later
+        delegationTracker.delete(displayName); // clear protection on completion
       } else if (!delegatedAgents.has(displayName)) {
         // ── Delegation: mark agent as 'working' on assigned task ──
         delegatedAgents.add(displayName);
@@ -264,10 +267,23 @@ async function detectDelegationFromText(text) {
           title: `Echo delegated: ${cleanTask.slice(0, 60)}`,
         });
 
-        // Auto-clear delegated agents via the cleanupStaleAgents mechanism
+        // Track delegation with timestamp — sub-agent protected for MIN_DELEGATION_DURATION
         activeAgents.set(displayName, { startedAt: Date.now(), runId: null });
+        delegationTracker.set(displayName, { delegatedAt: Date.now(), task: cleanTask });
       }
     }
+  }
+
+  // ── Switch Echo to coordinator mode when sub-agents are actively delegated ──
+  if (foundAgents.size > 0 && !isCompletion) {
+    const workingNames = [...foundAgents].join(', ');
+    await supabase.from('ops_agents').update({
+      status: 'researching',
+      current_task: `Coordinating: ${workingNames}`,
+      current_room: 'meeting',
+      last_active_at: now,
+    }).eq('name', 'echo');
+    activeAgents.set('echo', { startedAt: Date.now(), runId: null });
   }
 }
 
@@ -411,6 +427,12 @@ async function cleanupStaleAgents() {
   if (Date.now() - lastDelegationClearAt > 120_000) {
     lastDelegationClearAt = Date.now();
     delegatedAgents.clear();
+    // Also clear expired delegations from protection tracker
+    for (const [name, info] of delegationTracker) {
+      if (Date.now() - info.delegatedAt > MIN_DELEGATION_DURATION) {
+        delegationTracker.delete(name);
+      }
+    }
   }
 
   // Tier 1: agents in post-work "researching" cooldown — clean after 45s
@@ -436,6 +458,16 @@ async function cleanupStaleAgents() {
   const allStale = [...(staleResearching || []), ...(staleActive || [])];
   if (allStale.length > 0) {
     for (const agent of allStale) {
+      // Protect recently-delegated agents from going idle
+      const delegation = delegationTracker.get(agent.name);
+      if (delegation && Date.now() - delegation.delegatedAt < MIN_DELEGATION_DURATION) {
+        // Refresh last_active_at to keep them visible
+        await supabase.from('ops_agents').update({
+          last_active_at: new Date().toISOString(),
+        }).eq('name', agent.name);
+        continue; // Still within protected window — skip cleanup
+      }
+      delegationTracker.delete(agent.name);
       activeAgents.delete(agent.name);
       cooldownTimers.delete(agent.name);
       await supabase.from('ops_agents').update({
@@ -449,7 +481,7 @@ async function cleanupStaleAgents() {
     // If Echo is monitoring and all subs are now idle, idle Echo too
     const { data: echoData } = await supabase.from('ops_agents')
       .select('status, current_task').eq('name', 'echo').single();
-    if (echoData?.status === 'researching' && echoData?.current_task?.startsWith('Monitoring:')) {
+    if (echoData?.status === 'researching' && (echoData?.current_task?.startsWith('Monitoring:') || echoData?.current_task?.startsWith('Coordinating:'))) {
       const { data: anyActive } = await supabase.from('ops_agents')
         .select('name').neq('name', 'echo').neq('name', 'pulse')
         .in('status', ['working', 'thinking', 'talking', 'researching']);
@@ -550,6 +582,12 @@ async function processGatewayMessage(msg) {
 
       // Track this agent as active
       activeAgents.set(agent, { startedAt: Date.now(), runId });
+
+      // Reset delegation tracking for new Echo run (fresh start)
+      if (!isSubagent) {
+        delegationTracker.clear();
+        delegatedAgents.clear();
+      }
 
       // ── Collaboration detection from lifecycle events ──
       // When a sub-agent starts while another agent is already active,
@@ -664,19 +702,31 @@ async function processGatewayMessage(msg) {
       // Sub-agents transition to "researching" for 30s before going idle.
       // Cleanup happens via cleanupStaleAgents() on the next request.
       if (isSubagent) {
-        // Mark as 'researching' — cleanup will clear it after COOLDOWN_MS
-        await supabase.from('ops_agents').update({
-          status: 'researching',
-          current_task: `Reviewing work & syncing with team...`,
-          current_room: getTalkRoom(agent),
-          last_active_at: new Date().toISOString(),
-        }).eq('name', agent);
+        // Check if this agent is still within protected delegation window
+        const delegation = delegationTracker.get(agent);
+        if (delegation && Date.now() - delegation.delegatedAt < MIN_DELEGATION_DURATION) {
+          // Stay WORKING — don't downgrade to researching yet
+          await supabase.from('ops_agents').update({
+            status: 'working',
+            current_task: delegation.task || 'Working on delegated task...',
+            current_room: getWorkRoom(agent),
+            last_active_at: new Date().toISOString(),
+          }).eq('name', agent);
+        } else {
+          delegationTracker.delete(agent);
+          // Mark as 'researching' — cleanup will clear it after COOLDOWN_MS
+          await supabase.from('ops_agents').update({
+            status: 'researching',
+            current_task: `Reviewing work & syncing with team...`,
+            current_room: getTalkRoom(agent),
+            last_active_at: new Date().toISOString(),
+          }).eq('name', agent);
+        }
 
         // Check if Echo is monitoring sub-agents — update the list or idle Echo
         const { data: echoData } = await supabase.from('ops_agents')
           .select('status, current_task').eq('name', 'echo').single();
-        if (echoData?.status === 'researching' && echoData?.current_task?.startsWith('Monitoring:')) {
-          // Check remaining active subs (exclude the one that just finished)
+        if (echoData?.status === 'researching' && (echoData?.current_task?.startsWith('Monitoring:') || echoData?.current_task?.startsWith('Coordinating:'))) {
           const { data: remainingSubs } = await supabase.from('ops_agents')
             .select('name, status')
             .neq('name', 'echo').neq('name', agent)
@@ -763,23 +813,55 @@ async function processGatewayMessage(msg) {
         if (run) run.text = text; // gateway sends full accumulated text
       }
 
-      // Update ONLY the agent that's actually responding
       // Strip markdown formatting for clean display
       const clean = text.replace(/\*\*/g, '').replace(/[#`]/g, '').replace(/\n+/g, ' ').trim();
       const preview = clean.length > 120 ? clean.slice(0, 120) + '...' : clean;
-      await supabase.from('ops_agents').update({
-        status: 'talking',
-        current_task: preview,
-        current_room: getTalkRoom(agent),
-        last_active_at: new Date().toISOString(),
-      }).eq('name', agent);
 
-      // ── Delegation detection from Echo's response text ──
-      // Sub-agent events are invisible to the gateway observer. The only signal
-      // is Echo's assistant text: "Delegating to **Dash** (Quill)" etc.
-      // Parse this to light up sub-agents on the dashboard.
       if (agent === 'echo') {
+        // ── Delegation detection from Echo's response text ──
+        // Gateway doesn't expose sub-agent events separately.
+        // Parse Echo's text to light up sub-agents on the dashboard.
         await detectDelegationFromText(text);
+
+        // Check if any sub-agents are actively delegated
+        const activeDelegations = [];
+        for (const [name, info] of delegationTracker) {
+          if (Date.now() - info.delegatedAt < MIN_DELEGATION_DURATION) {
+            activeDelegations.push(name);
+            // Refresh sub-agent timestamps to prevent cleanup
+            await supabase.from('ops_agents').update({
+              last_active_at: new Date().toISOString(),
+            }).eq('name', name).neq('status', 'idle');
+          }
+        }
+
+        if (activeDelegations.length > 0) {
+          // ── Echo = COORDINATOR: sub-agents do the real work ──
+          // Echo only takes commands and updates the user.
+          // Sub-agents visually show as working with their tasks.
+          await supabase.from('ops_agents').update({
+            status: 'researching',
+            current_task: `Coordinating: ${activeDelegations.join(', ')}`,
+            current_room: 'meeting',
+            last_active_at: new Date().toISOString(),
+          }).eq('name', 'echo');
+        } else {
+          // No active delegations — Echo is responding directly
+          await supabase.from('ops_agents').update({
+            status: 'talking',
+            current_task: preview,
+            current_room: getTalkRoom(agent),
+            last_active_at: new Date().toISOString(),
+          }).eq('name', agent);
+        }
+      } else {
+        // Non-echo agent: normal talking update
+        await supabase.from('ops_agents').update({
+          status: 'talking',
+          current_task: preview,
+          current_room: getTalkRoom(agent),
+          last_active_at: new Date().toISOString(),
+        }).eq('name', agent);
       }
 
       return { type: 'assistant_stream', agent };
