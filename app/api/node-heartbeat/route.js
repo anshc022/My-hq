@@ -34,7 +34,7 @@ export async function GET() {
   const anyOnline = list.some(n => n.status === 'online');
 
   // If no nodes online, mark pulse agent as idle
-  if (!anyOnline && (pulseRes.data?.status === 'working' || pulseRes.data?.status === 'monitoring')) {
+  if (!anyOnline && pulseRes.data?.status === 'working') {
     await supabase.from('ops_agents').update({
       status: 'idle',
       current_task: null,
@@ -64,9 +64,9 @@ export async function POST(request) {
 
     if (error) return Response.json({ ok: false, error: error.message }, { status: 500 });
 
-    // Update pulse agent — mark as monitoring (not working!) with the node's hostname
+    // Update pulse agent — mark as working with the node's hostname as current_task
     await supabase.from('ops_agents').update({
-      status: 'monitoring',
+      status: 'working',
       current_task: `Node: ${hostname} online`,
       last_active_at: new Date().toISOString(),
     }).eq('name', 'pulse');

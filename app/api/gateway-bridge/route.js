@@ -21,22 +21,22 @@ const DISPLAY_TO_GW = {
 
 // ─── Each agent has their own work room (so they spread out on the canvas) ───
 const AGENT_WORK_ROOM = {
-  echo:  'meeting',   // Tech Lead → standup room
-  pixel: 'research',  // Pixel UI/UX → code lab
-  dash:  'research',  // Dash Frontend → code lab
-  stack: 'board',     // Stack Backend → sprint board
-  probe: 'board',     // Probe QA → sprint board
-  ship:  'research',  // Ship DevOps → code lab
-  pulse: 'board',     // Pulse Node Health → sprint board
+  echo:  'meeting',   // Content Strategist → war room (planning)
+  pixel: 'research',  // Art Director → content studio
+  dash:  'research',  // Copywriter → content studio
+  stack: 'board',     // Growth Hacker → analytics lab
+  probe: 'board',     // Analytics → analytics lab
+  ship:  'research',  // Publisher → content studio
+  pulse: 'board',     // Community Mgr → community hub
 };
 
 const AGENT_TALK_ROOM = {
-  echo:  'meeting',   // leads standup
-  pixel: 'meeting',   // shows designs
-  dash:  'meeting',   // discusses with team
-  stack: 'meeting',   // API discussion
-  probe: 'board',     // reports bugs on board
-  ship:  'board',     // deployment status
+  echo:  'meeting',   // leads content planning
+  pixel: 'meeting',   // shows visual concepts
+  dash:  'meeting',   // discusses captions
+  stack: 'meeting',   // shares analytics
+  probe: 'board',     // reports metrics
+  ship:  'board',     // posting status
 };
 
 function getWorkRoom(agent) { return AGENT_WORK_ROOM[agent] || 'research'; }
