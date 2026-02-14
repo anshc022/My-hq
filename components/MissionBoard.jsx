@@ -57,7 +57,7 @@ export default function MissionBoard() {
       <div style={styles.metrics}>
         <div style={styles.metric}>
           <span style={styles.metricLabel}>Gateway</span>
-          <span style={styles.metricValue}>ws://16.171.175.97</span>
+          <span style={styles.metricValue}>ws://13.60.27.149</span>
         </div>
         <div style={styles.metric}>
           <span style={styles.metricLabel}>Model</span>

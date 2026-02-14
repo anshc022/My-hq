@@ -16,7 +16,7 @@ const AGENT_ACCOUNTS = {
 };
 
 const WAR_ROOM = '1469627420893122652';
-const GATEWAY_URL = process.env.OPENCLAW_GATEWAY_HTTP_URL || 'http://16.171.175.97:18789';
+const GATEWAY_URL = process.env.OPENCLAW_GATEWAY_HTTP_URL || 'http://13.60.27.149:18789';
 const GATEWAY_TOKEN = process.env.OPENCLAW_GATEWAY_TOKEN || '';
 
 // Send a task to a specific agent, delivered through their own Discord bot
