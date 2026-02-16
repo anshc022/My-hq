@@ -159,7 +159,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="text-center py-5 px-5 border-t border-white/[0.03] mt-6 font-mono">
         <div className="text-[10px] text-muted tracking-[0.15em] flex items-center justify-center gap-3">
-          <span className="text-accent font-semibold">OPENCLAW</span>
+          <span className="text-accent font-semibold">OPS</span>
           <span className="text-white/[0.06]">•</span>
           <span>HQ DASHBOARD</span>
           <span className="text-white/[0.06]">•</span>

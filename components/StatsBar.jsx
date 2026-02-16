@@ -25,7 +25,7 @@ export default function StatsBar({ agents, nodeConnected }) {
           ⚡
         </div>
         <div className="flex items-baseline gap-1.5">
-          <span className="text-[13px] font-bold text-white tracking-[0.15em]">OPENCLAW</span>
+          <span className="text-[13px] font-bold text-white tracking-[0.15em]">OPS</span>
           <span className="text-[9px] text-muted tracking-widest">HQ</span>
         </div>
       </div>

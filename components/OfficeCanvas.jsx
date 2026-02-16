@@ -1235,7 +1235,7 @@ function drawWatermark(ctx, cw, ch) {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillStyle = 'rgba(255,255,255,0.008)';
-  ctx.fillText('OPENCLAW HQ', cw / 2, ch / 2);
+  ctx.fillText('OPS HQ', cw / 2, ch / 2);
   ctx.font = '14px monospace';
   ctx.fillStyle = 'rgba(255,255,255,0.015)';
   ctx.fillText('V2 — 6 AGENT DEV TEAM', cw / 2, ch / 2 + 28);

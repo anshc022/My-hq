@@ -774,7 +774,7 @@ async function processGatewayMessage(msg) {
 export async function GET() {
   return Response.json({
     status: 'ready',
-    gateway: process.env.OPENCLAW_GATEWAY_URL || 'ws://51.20.10.68:18789',
+    gateway: process.env.GATEWAY_URL || 'ws://51.20.10.68:18789',
     agents: [...new Set(Object.values(AGENT_MAP))],
     activeRuns: activeRuns.size,
     timestamp: new Date().toISOString(),

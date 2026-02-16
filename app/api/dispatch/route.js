@@ -16,8 +16,8 @@ const AGENT_ACCOUNTS = {
 };
 
 const WAR_ROOM = '1472061788857045075';
-const GATEWAY_URL = process.env.OPENCLAW_GATEWAY_HTTP_URL || 'http://51.20.10.68:18789';
-const GATEWAY_TOKEN = process.env.OPENCLAW_GATEWAY_TOKEN || '';
+const GATEWAY_URL = process.env.GATEWAY_HTTP_URL || 'http://51.20.10.68:18789';
+const GATEWAY_TOKEN = process.env.GATEWAY_TOKEN || '';
 
 async function dispatchAgent(agentName, message) {
   const config = AGENT_ACCOUNTS[agentName];

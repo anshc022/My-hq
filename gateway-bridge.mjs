@@ -10,7 +10,7 @@ const BRIDGE_API = process.env.BRIDGE_API || 'https://hq.pranshuchourasia.in/api
 const HEARTBEAT_API = process.env.HEARTBEAT_API || 'https://hq.pranshuchourasia.in/api/node-heartbeat';
 
 // Device identity for challenge-response auth
-const STATE_DIR = process.env.OPENCLAW_STATE_DIR || path.join(process.env.HOME || '/home/ubuntu', '.openclaw');
+const STATE_DIR = process.env.STATE_DIR || path.join(process.env.HOME || '/home/ubuntu', '.openclaw');
 const DEVICE_JSON_PATH = path.join(STATE_DIR, 'identity', 'device.json');
 const DEVICE_AUTH_PATH = path.join(STATE_DIR, 'identity', 'device-auth.json');
 
@@ -207,7 +207,7 @@ function sendConnectFrame() {
     maxProtocol: PROTOCOL_VERSION,
     client: {
       id: clientId,
-      displayName: 'OpenClaw HQ Bridge',
+      displayName: 'Ops HQ Bridge',
       version: '2.0.0',
       platform: process.platform,
       mode: clientMode,
@@ -366,7 +366,7 @@ process.on('SIGTERM', () => {
 });
 
 // ─── Start ───
-log('🚀 OpenClaw Gateway Bridge v2');
+log('🚀 Gateway Bridge v2');
 log(`   Gateway: ${GATEWAY_URL}`);
 log(`   Bridge API: ${BRIDGE_API}`);
 connect();
