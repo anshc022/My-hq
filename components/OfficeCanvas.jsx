@@ -102,18 +102,24 @@ function isAgentBusy(agentData) {
 function getTargetPos(name, agentData, cw, ch) {
   const status = (agentData?.status || '').toLowerCase();
   const isBusy = isAgentBusy(agentData);
+  const room = (agentData?.current_room || 'desk').toLowerCase();
 
   if (name === 'echo' && isBusy) {
     delete wanderCooldown[name];
     delete agentIdleActivity[name];
+    // Echo goes to warroom or specified room when busy
+    const rp = ROOM_POSITIONS[room];
+    if (rp) return { x: rp.x * cw, y: rp.y * ch };
     return { x: ECHO_DEN.cx * cw, y: ECHO_DEN.cy * ch };
   }
 
   if (isBusy) {
     delete wanderCooldown[name];
     delete agentIdleActivity[name];
-    const cur = agentAnimPos[name];
-    if (cur) return { x: cur.x, y: cur.y };
+    // Move agent to their assigned room
+    const rp = ROOM_POSITIONS[room];
+    if (rp) return { x: rp.x * cw, y: rp.y * ch };
+    // If room is 'desk' or 'workspace' or 'forge', use desk positions
     const dp = DESK_POSITIONS[name];
     return dp ? { x: dp.x * cw, y: dp.y * ch } : { x: cw * 0.5, y: ch * 0.5 };
   }
