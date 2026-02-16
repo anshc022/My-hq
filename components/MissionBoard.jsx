@@ -18,7 +18,7 @@ export default function MissionBoard({ agents, nodeConnected }) {
   ];
 
   const sysInfo = [
-    { key: 'Gateway', value: '51.20.10.68:18789', icon: '🌐' },
+    { key: 'Gateway', value: 'EC2 Private', icon: '🌐' },
     { key: 'Model', value: 'Claude Opus 4.6', icon: '🧠' },
     { key: 'Engine', value: 'Agent Engine v2.0', icon: '⚙️' },
     { key: 'Runtime', value: 'Node.js v22.22.0', icon: '💚' },

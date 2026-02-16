@@ -4,8 +4,8 @@ import fs from 'fs';
 import path from 'path';
 
 // ─── Config ───
-const GATEWAY_URL = process.env.GATEWAY_URL || 'ws://51.20.10.68:18789';
-const GATEWAY_TOKEN = process.env.GATEWAY_TOKEN || '4a3f2d7df09d90a9e54f09b44f7ddb832e037ae4f31a627e';
+const GATEWAY_URL = process.env.GATEWAY_URL || 'ws://localhost:18789';
+const GATEWAY_TOKEN = process.env.GATEWAY_TOKEN || '';
 const BRIDGE_API = process.env.BRIDGE_API || 'https://hq.pranshuchourasia.in/api/gateway-bridge';
 const HEARTBEAT_API = process.env.HEARTBEAT_API || 'https://hq.pranshuchourasia.in/api/node-heartbeat';
 
