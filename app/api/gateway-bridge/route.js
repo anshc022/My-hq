@@ -540,77 +540,27 @@ async function processGatewayMessage(msg) {
           event_type: 'alert',
           title: `Echo error response (${pulseAlertCount}x): "${responseText.slice(0, 20)}"`,
         });
-        await supabase.from('ops_agents').update({
-          status: 'working',
-          current_task: `Monitoring: Echo error (${pulseAlertCount}x)`,
-          current_room: 'lab',
-          last_active_at: new Date().toISOString(),
-        }).eq('name', 'vigil');
+        // Vigil logs alert but stays idle — no status change
       }
 
       if (isSubagent) {
-        const delegation = delegationTracker.get(agent);
-        if (delegation && Date.now() - delegation.delegatedAt < MIN_DELEGATION_DURATION) {
-          await supabase.from('ops_agents').update({
-            status: 'working',
-            current_task: delegation.task || 'Working on delegated task...',
-            current_room: getWorkRoom(agent),
-            last_active_at: new Date().toISOString(),
-          }).eq('name', agent);
-        } else {
-          delegationTracker.delete(agent);
-          await supabase.from('ops_agents').update({
-            status: 'researching',
-            current_task: 'Reviewing work & syncing with team...',
-            current_room: getTalkRoom(agent),
-            last_active_at: new Date().toISOString(),
-          }).eq('name', agent);
-        }
-
-        const { data: echoData } = await supabase.from('ops_agents')
-          .select('status, current_task').eq('name', 'echo').single();
-        if (echoData?.status === 'researching' && (echoData?.current_task?.startsWith('Monitoring:') || echoData?.current_task?.startsWith('Coordinating:'))) {
-          const { data: remainingSubs } = await supabase.from('ops_agents')
-            .select('name, status')
-            .neq('name', 'echo').neq('name', agent)
-            .in('status', ['working', 'thinking', 'talking']);
-
-          if (remainingSubs && remainingSubs.length > 0) {
-            const subNames = remainingSubs.map(s => s.name).join(', ');
-            await supabase.from('ops_agents').update({
-              current_task: `Monitoring: ${subNames}`,
-              last_active_at: new Date().toISOString(),
-            }).eq('name', 'echo');
-          } else {
-            activeAgents.delete('echo');
-            await supabase.from('ops_agents').update({
-              status: 'idle', current_task: null, current_room: 'desk',
-              last_active_at: new Date().toISOString(),
-            }).eq('name', 'echo');
-          }
-        }
+        // Sub-agent finished — go idle immediately
+        delegationTracker.delete(agent);
+        delegatedAgents.delete(agent);
+        activeAgents.delete(agent);
+        await supabase.from('ops_agents').update({
+          status: 'idle',
+          current_task: null,
+          current_room: 'desk',
+          last_active_at: new Date().toISOString(),
+        }).eq('name', agent);
       } else {
-        const { data: activeSubs } = await supabase.from('ops_agents')
-          .select('name, status')
-          .neq('name', 'echo')
-          .in('status', ['working', 'thinking', 'talking', 'researching']);
-
-        if (activeSubs && activeSubs.length > 0) {
-          const subNames = activeSubs.map(s => s.name).join(', ');
-          await supabase.from('ops_agents').update({
-            status: 'researching',
-            current_task: `Monitoring: ${subNames}`,
-            current_room: 'warroom',
-            last_active_at: new Date().toISOString(),
-          }).eq('name', agent);
-          activeAgents.set(agent, { startedAt: Date.now(), runId: null });
-        } else {
-          activeAgents.delete(agent);
-          await supabase.from('ops_agents').update({
-            status: 'idle', current_task: null, current_room: 'desk',
-            last_active_at: new Date().toISOString(),
-          }).eq('name', agent);
-        }
+        // Echo finished — go idle
+        activeAgents.delete(agent);
+        await supabase.from('ops_agents').update({
+          status: 'idle', current_task: null, current_room: 'desk',
+          last_active_at: new Date().toISOString(),
+        }).eq('name', agent);
       }
 
       if (agent === 'echo') {
@@ -647,42 +597,13 @@ async function processGatewayMessage(msg) {
       const clean = text.replace(/\*\*/g, '').replace(/[#`]/g, '').replace(/\n+/g, ' ').trim();
       const preview = clean.length > 120 ? clean.slice(0, 120) + '...' : clean;
 
-      if (agent === 'echo') {
-        await detectDelegationFromText(text);
-
-        const activeDelegations = [];
-        for (const [name, info] of delegationTracker) {
-          if (Date.now() - info.delegatedAt < MIN_DELEGATION_DURATION) {
-            activeDelegations.push(name);
-            await supabase.from('ops_agents').update({
-              last_active_at: new Date().toISOString(),
-            }).eq('name', name).neq('status', 'idle');
-          }
-        }
-
-        if (activeDelegations.length > 0) {
-          await supabase.from('ops_agents').update({
-            status: 'researching',
-            current_task: `Coordinating: ${activeDelegations.join(', ')}`,
-            current_room: 'warroom',
-            last_active_at: new Date().toISOString(),
-          }).eq('name', 'echo');
-        } else {
-          await supabase.from('ops_agents').update({
-            status: 'talking',
-            current_task: preview,
-            current_room: getTalkRoom(agent),
-            last_active_at: new Date().toISOString(),
-          }).eq('name', agent);
-        }
-      } else {
-        await supabase.from('ops_agents').update({
-          status: 'talking',
-          current_task: preview,
-          current_room: getTalkRoom(agent),
-          last_active_at: new Date().toISOString(),
-        }).eq('name', agent);
-      }
+      // All agents — set to talking with preview (no text-based delegation guessing)
+      await supabase.from('ops_agents').update({
+        status: 'talking',
+        current_task: preview,
+        current_room: getTalkRoom(agent),
+        last_active_at: new Date().toISOString(),
+      }).eq('name', agent);
 
       return { type: 'assistant_stream', agent };
     }
