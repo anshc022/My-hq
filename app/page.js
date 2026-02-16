@@ -121,30 +121,25 @@ export default function Home() {
   }, []);
 
   return (
-    <div style={{ minHeight: '100vh' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <StatsBar agents={agents} nodeConnected={nodeConnected} />
 
-      <div style={{ padding: '12px 16px', maxWidth: 1400, margin: '0 auto' }}>
+      <main className="hq-container" style={{ flex: 1 }}>
         {/* Canvas */}
-        <div className="fade-in">
+        <div className="fade-in" style={{ marginTop: 4 }}>
           <OfficeCanvas agents={agents} nodeConnected={nodeConnected} events={events} />
         </div>
 
         {/* Agent Cards */}
-        <div style={{ marginTop: 12 }} className="fade-in">
+        <div style={{ marginTop: 16 }} className="fade-in">
           <div className="section-title">
             <span>👥</span> AGENTS
           </div>
           <AgentPanel agents={agents} />
         </div>
 
-        {/* Grid: Events + Chat + Mission */}
-        <div className="hq-grid" style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: 12,
-          marginTop: 14,
-        }}>
+        {/* Grid: Events + Mission Control */}
+        <div className="hq-grid">
           <div className="fade-in">
             <div className="section-title">
               <span>📡</span> EVENT FEED
@@ -160,25 +155,49 @@ export default function Home() {
           </div>
         </div>
 
-        <div style={{ marginTop: 12 }} className="fade-in">
+        {/* Gateway Log */}
+        <div style={{ marginTop: 16 }} className="fade-in">
           <div className="section-title">
             <span>💬</span> GATEWAY LOG
           </div>
           <ChatLog messages={messages} />
         </div>
+      </main>
 
-        {/* Footer */}
+      {/* Footer */}
+      <footer style={{
+        textAlign: 'center',
+        padding: '24px 20px 16px',
+        fontFamily: 'var(--font-mono)',
+        borderTop: '1px solid rgba(255,255,255,0.03)',
+        marginTop: 24,
+      }}>
         <div style={{
-          textAlign: 'center',
-          padding: '20px 0 12px',
-          fontFamily: 'var(--font-mono)',
           fontSize: 10,
-          color: '#333',
+          color: 'var(--text-muted)',
+          letterSpacing: 2,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 12,
+        }}>
+          <span style={{ color: 'var(--accent)', fontWeight: 600 }}>OPENCLAW</span>
+          <span style={{ color: 'rgba(255,255,255,0.08)' }}>•</span>
+          <span>HQ DASHBOARD</span>
+          <span style={{ color: 'rgba(255,255,255,0.08)' }}>•</span>
+          <span>FASAL SEVA</span>
+          <span style={{ color: 'rgba(255,255,255,0.08)' }}>•</span>
+          <span>{agents?.length || 6} AGENTS</span>
+        </div>
+        <div style={{
+          fontSize: 9,
+          color: 'rgba(255,255,255,0.1)',
+          marginTop: 6,
           letterSpacing: 1,
         }}>
-          OPENCLAW HQ V2 — FASAL SEVA DEV TEAM — 6 AGENTS
+          CLAWATHON 2026
         </div>
-      </div>
+      </footer>
     </div>
   );
 }

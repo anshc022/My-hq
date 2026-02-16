@@ -12,91 +12,102 @@ export default function MissionBoard({ agents, nodeConnected }) {
   const errors = agents?.filter(a => (a.status || '').toLowerCase() === 'error').length || 0;
 
   const stats = [
-    { label: 'AGENTS', value: total, color: '#4a6aff' },
-    { label: 'ACTIVE', value: active, color: '#2ecc71' },
-    { label: 'IDLE', value: idle, color: '#888' },
-    { label: 'SLEEPING', value: sleeping, color: '#666' },
-    { label: 'ERRORS', value: errors, color: errors > 0 ? '#e74c3c' : '#333' },
+    { label: 'TOTAL', value: total, color: '#5b7bff', icon: '🤖' },
+    { label: 'ACTIVE', value: active, color: '#34d399', icon: '⚡' },
+    { label: 'IDLE', value: idle, color: '#888', icon: '💤' },
+    { label: 'ERRORS', value: errors, color: errors > 0 ? '#f87171' : '#333', icon: '⚠️' },
+  ];
+
+  const sysInfo = [
+    { key: 'Gateway', value: '51.20.10.68:18789', icon: '🌐' },
+    { key: 'Model', value: 'Claude Opus 4.6', icon: '🧠' },
+    { key: 'Engine', value: 'OpenClaw v2026.2.15', icon: '⚙️' },
+    { key: 'Runtime', value: 'Node.js v22.22.0', icon: '💚' },
+    { key: 'Node', value: nodeConnected ? 'Connected' : 'Disconnected', icon: nodeConnected ? '✅' : '❌' },
   ];
 
   return (
-    <div style={{
-      background: 'rgba(10,10,20,0.8)',
-      border: '1px solid #1a1a2e',
-      borderRadius: 8,
-      padding: 14,
-    }}>
+    <div className="glass-card" style={{ padding: 16 }}>
+      {/* Header */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
-        gap: 8,
-        marginBottom: 10,
+        justifyContent: 'space-between',
+        marginBottom: 14,
         fontFamily: 'var(--font-mono)',
       }}>
-        <span style={{ fontSize: 14 }}>📊</span>
-        <span style={{ fontSize: 12, fontWeight: 700, color: '#ccc', letterSpacing: 1 }}>SYSTEM STATUS</span>
-        <span style={{
-          marginLeft: 'auto',
-          fontSize: 9,
-          padding: '2px 8px',
-          borderRadius: 4,
-          background: nodeConnected ? 'rgba(46,204,113,0.15)' : 'rgba(231,76,60,0.15)',
-          color: nodeConnected ? '#2ecc71' : '#e74c3c',
-          fontWeight: 600,
-          textTransform: 'uppercase',
-          letterSpacing: 1,
-        }}>
-          {nodeConnected ? '● ONLINE' : '○ OFFLINE'}
+        <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', letterSpacing: 1.5 }}>SYSTEM STATUS</span>
+        <span className={`status-badge ${nodeConnected ? 'online' : 'offline'}`}>
+          <span style={{
+            width: 5,
+            height: 5,
+            borderRadius: '50%',
+            background: nodeConnected ? '#34d399' : '#f87171',
+            display: 'inline-block',
+            boxShadow: nodeConnected ? '0 0 6px rgba(52,211,153,0.6)' : 'none',
+          }} />
+          {nodeConnected ? 'ONLINE' : 'OFFLINE'}
         </span>
       </div>
 
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+      {/* Stats cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 16 }}>
         {stats.map(s => (
           <div key={s.label} style={{
-            flex: 1,
-            minWidth: 65,
-            background: 'rgba(20,20,40,0.5)',
-            border: `1px solid ${s.color}22`,
-            borderRadius: 6,
-            padding: '8px 10px',
+            background: 'rgba(255,255,255,0.02)',
+            border: '1px solid rgba(255,255,255,0.04)',
+            borderRadius: 'var(--radius-sm)',
+            padding: '10px 8px',
             textAlign: 'center',
+            transition: 'border-color 0.2s',
           }}>
-            <div style={{ fontSize: 18, fontWeight: 800, color: s.color, fontFamily: 'var(--font-mono)' }}>{s.value}</div>
-            <div style={{ fontSize: 8, color: '#666', letterSpacing: 1, fontFamily: 'var(--font-mono)', marginTop: 2 }}>{s.label}</div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: s.color, fontFamily: 'var(--font-mono)', lineHeight: 1 }}>{s.value}</div>
+            <div style={{ fontSize: 8, color: 'var(--text-muted)', letterSpacing: 1.5, fontFamily: 'var(--font-mono)', marginTop: 4 }}>{s.label}</div>
           </div>
         ))}
       </div>
 
+      {/* System info */}
       <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8,
-        marginBottom: 6,
-        fontFamily: 'var(--font-mono)',
+        background: 'rgba(255,255,255,0.015)',
+        border: '1px solid rgba(255,255,255,0.03)',
+        borderRadius: 'var(--radius-sm)',
+        padding: '10px 12px',
       }}>
-        <span style={{ fontSize: 12 }}>🤖</span>
-        <span style={{ fontSize: 10, fontWeight: 600, color: '#888', letterSpacing: 1 }}>SYSTEM INFO</span>
-      </div>
-
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'auto 1fr',
-        gap: '3px 12px',
-        fontFamily: 'var(--font-mono)',
-        fontSize: 10,
-      }}>
-        {[
-          ['Gateway', '51.20.10.68:18789'],
-          ['Model', 'claude-opus-4.6'],
-          ['Engine', 'OpenClaw v2026.2.15'],
-          ['Runtime', 'Node.js v22.22.0'],
-          ['Node', nodeConnected ? 'Connected' : 'Disconnected'],
-        ].map(([k, v]) => (
-          <div key={k} style={{ display: 'contents' }}>
-            <span style={{ color: '#555' }}>{k}</span>
-            <span style={{ color: '#999' }}>{v}</span>
-          </div>
-        ))}
+        <div style={{
+          fontSize: 9,
+          fontWeight: 600,
+          color: 'var(--text-muted)',
+          letterSpacing: 1.5,
+          marginBottom: 8,
+          fontFamily: 'var(--font-mono)',
+        }}>
+          SYSTEM INFO
+        </div>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'auto 1fr',
+          gap: '5px 14px',
+          fontFamily: 'var(--font-mono)',
+          fontSize: 10,
+        }}>
+          {sysInfo.map(({ key, value, icon }) => (
+            <div key={key} style={{ display: 'contents' }}>
+              <span style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 10 }}>{icon}</span>
+                {key}
+              </span>
+              <span style={{
+                color: key === 'Node'
+                  ? (nodeConnected ? '#34d399' : '#f87171')
+                  : 'var(--text-secondary)',
+                fontWeight: key === 'Node' ? 600 : 400,
+              }}>
+                {value}
+              </span>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
