@@ -5,7 +5,7 @@
 ![6 Agents • 1 Dashboard](https://img.shields.io/badge/Agents-6-blue?style=for-the-badge)
 ![Claude Opus 4.6](https://img.shields.io/badge/Model-Opus%204.6-purple?style=for-the-badge)
 ![Built in 23hrs](https://img.shields.io/badge/Built%20In-23%20Hours-green?style=for-the-badge)
-![Hackathon](https://img.shields.io/badge/Clawathon-2026-orange?style=for-the-badge)
+![Hackathon](https://img.shields.io/badge/Claude%20Code%20Hackathon-2026-orange?style=for-the-badge)
 
 **Live Demo:** [hq.pranshuchourasia.in](https://hq.pranshuchourasia.in)
 
