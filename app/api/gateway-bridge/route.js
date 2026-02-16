@@ -383,9 +383,11 @@ async function processGatewayMessage(msg) {
       });
 
       if (isConnected) {
+        // Forge stays idle at desk — silent monitoring, only activates when needed
         await supabase.from('ops_agents').update({
-          status: 'monitoring',
-          current_task: 'Monitoring EC2 + Node',
+          status: 'idle',
+          current_task: null,
+          current_room: 'desk',
           last_active_at: new Date().toISOString(),
         }).eq('name', 'forge');
       } else {
@@ -420,9 +422,11 @@ async function processGatewayMessage(msg) {
         });
         activeAgents.set('forge', { startedAt: Date.now(), runId: null });
       } else {
+        // Normal heartbeat — don't touch Forge status, just update timestamp silently
+        // Only update last_active_at if Forge is currently idle (don't interrupt active work)
         await supabase.from('ops_agents').update({
           last_active_at: new Date().toISOString(),
-        }).eq('name', 'forge');
+        }).eq('name', 'forge').eq('status', 'idle');
       }
       return { type: 'heartbeat', status };
     }
