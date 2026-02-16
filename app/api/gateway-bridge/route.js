@@ -63,6 +63,19 @@ async function detectNativeSpawn(sourceAgent, toolName, toolData) {
     const task = toolData?.task || toolData?.label || 'Sub-agent task';
     if (targetAgentId && AGENT_MAP[targetAgentId]) {
       const displayName = AGENT_MAP[targetAgentId];
+
+      // Track this spawn so Echo stays working until all subs finish
+      if (sourceAgent === 'echo') {
+        echoSpawnTracker.spawn(displayName, task.slice(0, 70));
+        // Update Echo to show coordination status
+        await supabase.from('ops_agents').update({
+          status: 'researching',
+          current_task: echoSpawnTracker.progressText(),
+          current_room: 'warroom',
+          last_active_at: new Date().toISOString(),
+        }).eq('name', 'echo');
+      }
+
       await supabase.from('ops_agents').update({
         status: 'thinking',
         current_task: `${sourceAgent} → ${displayName}: ${task.slice(0, 55)}`,
@@ -264,6 +277,22 @@ const cooldownTimers = new Map();
 let lastPulseAlertAt = 0;
 let pulseAlertCount = 0;
 
+// ─── Spawn tracker: keeps Echo working while sub-agents run ───
+const echoSpawnTracker = {
+  activeSpawns: new Map(),   // agentName → { task, spawnedAt }
+  echoRunId: null,
+  clear() { this.activeSpawns.clear(); this.echoRunId = null; },
+  spawn(agent, task) { this.activeSpawns.set(agent, { task, spawnedAt: Date.now() }); },
+  complete(agent) { this.activeSpawns.delete(agent); },
+  hasActive() { return this.activeSpawns.size > 0; },
+  activeNames() { return [...this.activeSpawns.keys()]; },
+  progressText() {
+    const names = this.activeNames();
+    if (names.length === 0) return null;
+    return `Coordinating: ${names.join(', ')} working...`;
+  },
+};
+
 // ─── Stuck run watchdog ───
 const STUCK_TIMEOUT_MS = 120_000;
 let watchdogInterval = null;
@@ -357,11 +386,14 @@ async function cleanupStaleAgents() {
     const { data: echoData } = await supabase.from('ops_agents')
       .select('status, current_task').eq('name', 'echo').single();
     if (echoData?.status === 'researching' && (echoData?.current_task?.startsWith('Monitoring:') || echoData?.current_task?.startsWith('Coordinating:'))) {
+      // Don't idle Echo if spawn tracker still has active sub-agents
+      if (echoSpawnTracker.hasActive()) return;
       const { data: anyActive } = await supabase.from('ops_agents')
         .select('name').neq('name', 'echo')
         .in('status', ['working', 'thinking', 'talking', 'researching']);
       if (!anyActive || anyActive.length === 0) {
         activeAgents.delete('echo');
+        echoSpawnTracker.clear();
         await supabase.from('ops_agents').update({
           status: 'idle', current_task: null, current_room: 'desk',
           last_active_at: new Date().toISOString(),
@@ -455,6 +487,9 @@ async function processGatewayMessage(msg) {
       if (!isSubagent) {
         delegationTracker.clear();
         delegatedAgents.clear();
+        // New Echo run starting — clear spawn tracker from previous run
+        echoSpawnTracker.clear();
+        echoSpawnTracker.echoRunId = runId;
       }
 
       let spawner = null;
@@ -554,13 +589,65 @@ async function processGatewayMessage(msg) {
           current_room: 'desk',
           last_active_at: new Date().toISOString(),
         }).eq('name', agent);
+
+        // Update Echo's spawn tracker — sub-agent completed
+        if (echoSpawnTracker.activeSpawns.has(agent)) {
+          echoSpawnTracker.complete(agent);
+          await supabase.from('ops_events').insert({
+            agent: 'echo',
+            event_type: 'system',
+            title: `${agent} completed task`,
+          });
+
+          if (echoSpawnTracker.hasActive()) {
+            // Still waiting on other sub-agents — update Echo's progress
+            await supabase.from('ops_agents').update({
+              current_task: echoSpawnTracker.progressText(),
+              last_active_at: new Date().toISOString(),
+            }).eq('name', 'echo').in('status', ['researching', 'working']);
+          } else {
+            // All sub-agents done — Echo goes idle
+            activeAgents.delete('echo');
+            await supabase.from('ops_agents').update({
+              status: 'idle',
+              current_task: 'All delegated tasks completed',
+              current_room: 'warroom',
+              last_active_at: new Date().toISOString(),
+            }).eq('name', 'echo');
+
+            await supabase.from('ops_events').insert({
+              agent: 'echo',
+              event_type: 'complete',
+              title: 'All sub-agent tasks completed',
+            });
+
+            // Clear task text after a short delay
+            setTimeout(async () => {
+              await supabase.from('ops_agents').update({
+                current_task: null,
+                current_room: 'desk',
+              }).eq('name', 'echo').eq('status', 'idle');
+            }, 10_000);
+          }
+        }
       } else {
-        // Echo finished — go idle
+        // Echo finished its own run
         activeAgents.delete(agent);
-        await supabase.from('ops_agents').update({
-          status: 'idle', current_task: null, current_room: 'desk',
-          last_active_at: new Date().toISOString(),
-        }).eq('name', agent);
+        if (agent === 'echo' && echoSpawnTracker.hasActive()) {
+          // Echo has active sub-agents — stay in researching/coordinating mode
+          await supabase.from('ops_agents').update({
+            status: 'researching',
+            current_task: echoSpawnTracker.progressText(),
+            current_room: 'warroom',
+            last_active_at: new Date().toISOString(),
+          }).eq('name', 'echo');
+        } else {
+          // No active sub-agents — go idle
+          await supabase.from('ops_agents').update({
+            status: 'idle', current_task: null, current_room: 'desk',
+            last_active_at: new Date().toISOString(),
+          }).eq('name', agent);
+        }
       }
 
       if (agent === 'echo') {
