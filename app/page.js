@@ -51,7 +51,7 @@ export default function Home() {
 
     sb.from('ops_nodes').select('*').eq('name', 'ec2-main').single().then(({ data }) => {
       if (data) {
-        const lastSeen = new Date(data.last_heartbeat || 0).getTime();
+        const lastSeen = new Date(data.last_seen || 0).getTime();
         setNodeConnected(Date.now() - lastSeen < 120000);
       }
     });
@@ -93,7 +93,7 @@ export default function Home() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'ops_nodes' }, payload => {
         const row = payload.new;
         if (row?.name === 'ec2-main') {
-          const lastSeen = new Date(row.last_heartbeat || 0).getTime();
+          const lastSeen = new Date(row.last_seen || 0).getTime();
           setNodeConnected(Date.now() - lastSeen < 120000);
         }
       })
@@ -103,7 +103,7 @@ export default function Home() {
     const hbInterval = setInterval(() => {
       sb.from('ops_nodes').select('*').eq('name', 'ec2-main').single().then(({ data }) => {
         if (data) {
-          const lastSeen = new Date(data.last_heartbeat || 0).getTime();
+          const lastSeen = new Date(data.last_seen || 0).getTime();
           setNodeConnected(Date.now() - lastSeen < 120000);
         } else {
           setNodeConnected(false);
