@@ -6,41 +6,41 @@ const supabase = createClient(
 );
 
 // ─── Agent ID mapping (gateway agentId → display name) ───
+// V2: Names = IDs (except main → echo)
 const AGENT_MAP = {
   main: 'echo', echo: 'echo',
-  scout: 'pixel', quill: 'dash',
-  sage: 'stack', sentinel: 'probe',
-  xalt: 'ship', pulse: 'pulse',
+  flare: 'flare', bolt: 'bolt',
+  nexus: 'nexus', vigil: 'vigil',
+  forge: 'forge',
 };
 
 // Reverse map: display name → gateway agentId
 const DISPLAY_TO_GW = {
-  echo: 'main', pixel: 'scout', dash: 'quill',
-  stack: 'sage', probe: 'sentinel', ship: 'xalt', pulse: 'pulse',
+  echo: 'main', flare: 'flare', bolt: 'bolt',
+  nexus: 'nexus', vigil: 'vigil', forge: 'forge',
 };
 
-// ─── Each agent has their own work room (so they spread out on the canvas) ───
+// Each agent has their own work room
 const AGENT_WORK_ROOM = {
-  echo:  'meeting',   // Content Strategist → war room (planning)
-  pixel: 'research',  // Art Director → content studio
-  dash:  'research',  // Copywriter → content studio
-  stack: 'board',     // Growth Hacker → analytics lab
-  probe: 'board',     // Analytics → analytics lab
-  ship:  'research',  // Publisher → content studio
-  pulse: 'board',     // Community Mgr → community hub
+  echo:  'warroom',
+  flare: 'workspace',
+  bolt:  'workspace',
+  nexus: 'lab',
+  vigil: 'lab',
+  forge: 'forge',
 };
 
 const AGENT_TALK_ROOM = {
-  echo:  'meeting',   // leads content planning
-  pixel: 'meeting',   // shows visual concepts
-  dash:  'meeting',   // discusses captions
-  stack: 'meeting',   // shares analytics
-  probe: 'board',     // reports metrics
-  ship:  'board',     // posting status
+  echo:  'warroom',
+  flare: 'warroom',
+  bolt:  'warroom',
+  nexus: 'warroom',
+  vigil: 'warroom',
+  forge: 'warroom',
 };
 
-function getWorkRoom(agent) { return AGENT_WORK_ROOM[agent] || 'research'; }
-function getTalkRoom(agent) { return AGENT_TALK_ROOM[agent] || 'social'; }
+function getWorkRoom(agent) { return AGENT_WORK_ROOM[agent] || 'workspace'; }
+function getTalkRoom(agent) { return AGENT_TALK_ROOM[agent] || 'warroom'; }
 
 // Extract agent display name from gateway event payload
 function extractAgent(payload) {
@@ -54,15 +54,10 @@ function extractAgent(payload) {
 }
 
 // ─── Native spawn detection ───
-// When ANY agent calls sessions_spawn / sessions_send, detect which
-// agent is being contacted and mark them as "thinking" on the dashboard.
-// Full mesh: all agents can collaborate with each other.
-
 async function detectNativeSpawn(sourceAgent, toolName, toolData) {
   if (!toolName) return;
   const name = toolName.toLowerCase();
 
-  // sessions_spawn — an agent is spawning another agent
   if (name === 'sessions_spawn') {
     const targetAgentId = toolData?.agentId || toolData?.agent_id;
     const task = toolData?.task || toolData?.label || 'Sub-agent task';
@@ -84,11 +79,9 @@ async function detectNativeSpawn(sourceAgent, toolName, toolData) {
     return;
   }
 
-  // sessions_send — an agent is sending a message to another agent's session
   if (name === 'sessions_send') {
     const sessionKey = toolData?.sessionKey || toolData?.session_key || '';
     const msg = toolData?.message || '';
-    // Extract agentId from sessionKey: "agent:<agentId>:..."
     const m = sessionKey.match(/^agent:([^:]+)/);
     if (m && AGENT_MAP[m[1]]) {
       const displayName = AGENT_MAP[m[1]];
@@ -104,19 +97,16 @@ async function detectNativeSpawn(sourceAgent, toolName, toolData) {
     return;
   }
 
-  // agents_list — Echo is checking available agents (just log)
   if (name === 'agents_list') {
     await supabase.from('ops_events').insert({
-      agent: 'echo',
+      agent: sourceAgent,
       event_type: 'system',
       title: 'Checking available agents',
     });
     return;
   }
 
-  // ─── Exec / Node tools — Echo is using the node (Pulse's domain) ───
-  // When Echo runs commands on the user's PC, show Pulse as working
-  // so the connection line appears between Echo ↔ Pulse on the canvas.
+  // Exec/Node tools — show Forge as working (infra domain)
   const EXEC_TOOLS = [
     'exec_run', 'exec', 'shell', 'terminal',
     'fs_read', 'fs_write', 'fs_delete', 'fs_list', 'fs_mkdir',
@@ -130,52 +120,38 @@ async function detectNativeSpawn(sourceAgent, toolName, toolData) {
     await supabase.from('ops_agents').update({
       status: 'working',
       current_task: `Node exec: ${preview}`,
-      current_room: getWorkRoom('pulse'),
+      current_room: 'forge',
       last_active_at: new Date().toISOString(),
-    }).eq('name', 'pulse');
+    }).eq('name', 'forge');
 
     await supabase.from('ops_events').insert({
-      agent: 'pulse',
+      agent: 'forge',
       event_type: 'task',
-      title: `Echo → Node: ${preview}`,
+      title: `${sourceAgent} → Node: ${preview}`,
     });
-    return;
   }
 }
 
-// ─── Delegation detection from Echo's assistant text ───
-// The gateway doesnt expose sub-agent events separately.
-// When Echo says "Delegating to **Dash** (Quill)" we parse it to light up agents.
-// Also detects: "Stack is working", "assigned to Probe", team mobilization lists etc.
-const delegatedAgents = new Set(); // track which agents we've already activated this batch
-const delegationTracker = new Map(); // displayName → { delegatedAt, task } — protected minimum active time
-const MIN_DELEGATION_DURATION = 60_000; // 60s — sub-agents stay "working" at least this long
+// ─── Delegation detection from Echo's text ───
+const delegatedAgents = new Set();
+const delegationTracker = new Map();
+const MIN_DELEGATION_DURATION = 60_000;
 
 async function detectDelegationFromText(text) {
   if (!text) return;
   const lower = text.toLowerCase();
 
-  // Pattern 1: "Delegating to **Dash** (Quill)" or "Delegating to **Stack**"
-  // Pattern 2: "- **Dash** (Quill) → task description"
-  // Pattern 3: "Dash — task" or "Dash: task" or "Stack has completed"
   const AGENT_KEYWORDS = {
-    'dash': 'dash', 'quill': 'dash',
-    'stack': 'stack', 'sage': 'stack',
-    'probe': 'probe', 'sentinel': 'probe',
-    'pixel': 'pixel', 'scout': 'pixel',
-    'ship': 'ship', 'xalt': 'ship',
-    'pulse': 'pulse',
+    flare: 'flare', bolt: 'bolt',
+    nexus: 'nexus', vigil: 'vigil',
+    forge: 'forge',
   };
 
-  // Completion signals — "has completed", "finished", "done with"
   const isCompletion = lower.includes('has completed') || lower.includes('finished') ||
     lower.includes('completed the') || lower.includes('done with') ||
     lower.includes('has delivered') || lower.includes('is done') ||
     lower.includes('result:') || lower.includes('report:');
 
-  // Delegation signals — active work being assigned or referenced
-  // Echo uses many phrasings: "Dash is going for...", "Stack will check...",
-  // "I've asked Probe to...", "relaunched the task", "upgrades in progress"
   const isDelegation = lower.includes('delegat') || lower.includes('team mobilized') ||
     lower.includes('assigning') || lower.includes('task') ||
     lower.includes('spawning') || lower.includes('is working') ||
@@ -186,18 +162,20 @@ async function detectDelegationFromText(text) {
     lower.includes('is redesign') || lower.includes('is writing') ||
     lower.includes('is fixing') || lower.includes('is running') ||
     lower.includes('is generating') || lower.includes('is analyzing') ||
+    lower.includes('is testing') || lower.includes('is deploying') ||
+    lower.includes('is designing') || lower.includes('is reviewing') ||
     lower.includes('relaunched') || lower.includes('re-launched') ||
     lower.includes('asked') || lower.includes('told') ||
     lower.includes('overhaul') || lower.includes('upgrade');
 
-  // Fallback: if Echo mentions any agent name with action context, treat as delegation
-  const AGENT_NAMES_IN_TEXT = ['dash', 'stack', 'probe', 'pixel', 'ship', 'pulse', 'quill', 'sage', 'sentinel', 'scout', 'xalt'];
+  const AGENT_NAMES_IN_TEXT = ['flare', 'bolt', 'nexus', 'vigil', 'forge'];
   const mentionsAgent = AGENT_NAMES_IN_TEXT.some(n => lower.includes(n));
   const hasActionContext = lower.includes(' is ') || lower.includes(' will ') ||
     lower.includes(' has ') || lower.includes('going') || lower.includes('working') ||
     lower.includes('updat') || lower.includes('creat') || lower.includes('build') ||
     lower.includes('fix') || lower.includes('check') || lower.includes('design') ||
-    lower.includes('writ') || lower.includes('generat') || lower.includes('deploy');
+    lower.includes('writ') || lower.includes('generat') || lower.includes('deploy') ||
+    lower.includes('test') || lower.includes('review');
 
   if (!isDelegation && !isCompletion && !(mentionsAgent && hasActionContext)) return;
 
@@ -208,8 +186,6 @@ async function detectDelegationFromText(text) {
     if (lower.includes(keyword) && !foundAgents.has(displayName)) {
       foundAgents.add(displayName);
 
-      // Extract the task snippet after the agent name
-      // Patterns: "**Stack** is checking...", "Stack → do something", "Stack: task", "Stack — fixing"
       const taskPatterns = [
         new RegExp('\\*\\*' + keyword + '\\*\\*\\s*(?:\\([^)]*\\))?\\s*(?:is|will|has been|was)\\s+(.{5,100})', 'i'),
         new RegExp(keyword + '\\s*[:\\→—]+\\s*(.{5,100})', 'i'),
@@ -220,7 +196,6 @@ async function detectDelegationFromText(text) {
         const m = text.match(pat);
         if (m) {
           task = m[1].replace(/\*\*/g, '').replace(/[#`\n]/g, ' ').replace(/\s+/g, ' ').trim();
-          // Trim at sentence boundary
           const sentEnd = task.match(/^(.{10,70}?)[.!\n]/);
           if (sentEnd) task = sentEnd[1];
           break;
@@ -228,13 +203,12 @@ async function detectDelegationFromText(text) {
       }
 
       if (isCompletion) {
-        // ── Completion: show agent as 'talking' with their result ──
-        const completionMsg = task || 'Task completed ✓';
+        const completionMsg = task || 'Task completed';
         const cleanMsg = completionMsg.length > 70 ? completionMsg.slice(0, 70) + '...' : completionMsg;
 
         await supabase.from('ops_agents').update({
           status: 'talking',
-          current_task: `✓ ${cleanMsg}`,
+          current_task: `Done: ${cleanMsg}`,
           current_room: getTalkRoom(displayName),
           last_active_at: now,
         }).eq('name', displayName);
@@ -245,12 +219,10 @@ async function detectDelegationFromText(text) {
           title: `Completed: ${cleanMsg.slice(0, 60)}`,
         });
 
-        // Keep visible for 20s then auto-clear
         activeAgents.set(displayName, { startedAt: Date.now(), runId: null });
-        delegatedAgents.delete(displayName); // allow re-delegation later
-        delegationTracker.delete(displayName); // clear protection on completion
+        delegatedAgents.delete(displayName);
+        delegationTracker.delete(displayName);
       } else if (!delegatedAgents.has(displayName)) {
-        // ── Delegation: mark agent as 'working' on assigned task ──
         delegatedAgents.add(displayName);
         const cleanTask = (task || 'Working on delegated task...').slice(0, 70);
 
@@ -267,41 +239,33 @@ async function detectDelegationFromText(text) {
           title: `Echo delegated: ${cleanTask.slice(0, 60)}`,
         });
 
-        // Track delegation with timestamp — sub-agent protected for MIN_DELEGATION_DURATION
         activeAgents.set(displayName, { startedAt: Date.now(), runId: null });
         delegationTracker.set(displayName, { delegatedAt: Date.now(), task: cleanTask });
       }
     }
   }
 
-  // ── Switch Echo to coordinator mode when sub-agents are actively delegated ──
   if (foundAgents.size > 0 && !isCompletion) {
     const workingNames = [...foundAgents].join(', ');
     await supabase.from('ops_agents').update({
       status: 'researching',
       current_task: `Coordinating: ${workingNames}`,
-      current_room: 'meeting',
+      current_room: 'warroom',
       last_active_at: now,
     }).eq('name', 'echo');
     activeAgents.set('echo', { startedAt: Date.now(), runId: null });
   }
 }
 
-// ─── Track active runs (per agent, per request) ───
-const activeRuns = new Map(); // runId → { agent, text, startedAt, toolCalls, chatLogged, recovered }
-
-// ─── Track which agents are currently active (for collaboration detection) ───
-const activeAgents = new Map(); // displayName → { startedAt, runId }
-
-// ─── Cooldown timers — keep agents visually active after finishing ───
-const cooldownTimers = new Map(); // displayName → timeoutId
-
-// ─── Pulse alert rate-limiting (avoid spam) ───
+// ─── Track active runs ───
+const activeRuns = new Map();
+const activeAgents = new Map();
+const cooldownTimers = new Map();
 let lastPulseAlertAt = 0;
 let pulseAlertCount = 0;
 
-// ─── Stuck run watchdog — REAL: just marks agent as timed out, no fake conversations ───
-const STUCK_TIMEOUT_MS = 120_000; // 2 minutes
+// ─── Stuck run watchdog ───
+const STUCK_TIMEOUT_MS = 120_000;
 let watchdogInterval = null;
 
 function startWatchdog() {
@@ -313,9 +277,6 @@ function startWatchdog() {
       const age = now - run.startedAt;
       if (age > STUCK_TIMEOUT_MS) {
         run.recovered = true;
-        console.log(`[Watchdog] Run ${runId} timed out after ${Math.round(age / 1000)}s`);
-
-        // Return the stuck agent to idle — no fake recovery drama
         await supabase.from('ops_agents').update({
           status: 'idle',
           current_task: null,
@@ -336,98 +297,19 @@ function startWatchdog() {
 }
 startWatchdog();
 
-// ─── Room command detection ───
-// Detects messages like "Echo come to coffee room", "everyone go to standup", etc.
-const ROOM_ALIASES = {
-  'desk': ['desk', 'desks', 'dev floor', 'devfloor', 'work'],
-  'meeting': ['meeting', 'standup', 'stand up', 'stand-up', 'huddle', 'social', 'chat', 'chat room', 'lounge'],
-  'research': ['research', 'lab', 'code lab', 'codelab'],
-  'board': ['board', 'sprint', 'sprint board', 'sprintboard', 'kanban', 'break', 'coffee'],
-};
-
-const AGENT_NAME_MAP = {
-  echo: 'echo', pixel: 'pixel', dash: 'dash', stack: 'stack',
-  probe: 'probe', ship: 'ship',
-  // also accept old internal IDs
-  scout: 'pixel', quill: 'dash', sage: 'stack', sentinel: 'probe', xalt: 'ship',
-};
-
-const ALL_KEYWORDS = ['everyone', 'all', 'team', 'all agents', 'everybody', 'guys', 'y\'all', 'yall'];
-
-async function detectRoomCommand(text) {
-  if (!text) return null;
-  const lower = text.toLowerCase().trim();
-
-  // Check if it looks like a room command
-  const movePatterns = /(?:come|go|move|head|get|walk|report)\s+(?:to|over\s+to|into|in)?\s*/i;
-  const goToPattern = /(?:go\s+to|come\s+to|move\s+to|head\s+to|report\s+to|get\s+to|walk\s+to)\s+/i;
-
-  if (!movePatterns.test(lower) && !goToPattern.test(lower)) return null;
-
-  // Find target room
-  let targetRoom = null;
-  for (const [roomId, aliases] of Object.entries(ROOM_ALIASES)) {
-    for (const alias of aliases) {
-      if (lower.includes(alias)) {
-        targetRoom = roomId;
-        break;
-      }
-    }
-    if (targetRoom) break;
-  }
-  if (!targetRoom) return null;
-
-  // Find target agents
-  let targetAgents = [];
-
-  // Check for "everyone/all" first
-  if (ALL_KEYWORDS.some(k => lower.includes(k))) {
-    targetAgents = ['echo', 'pixel', 'dash', 'stack', 'probe', 'ship'];
-  } else {
-    // Check for specific agent names
-    for (const [name, id] of Object.entries(AGENT_NAME_MAP)) {
-      if (lower.includes(name)) {
-        if (!targetAgents.includes(id)) targetAgents.push(id);
-      }
-    }
-  }
-
-  if (targetAgents.length === 0) return null;
-
-  // Execute the move
-  for (const agentId of targetAgents) {
-    await supabase
-      .from('ops_agents')
-      .update({ current_room: targetRoom })
-      .eq('name', agentId);
-  }
-
-  return { agents: targetAgents, room: targetRoom };
-}
-
 // ─── Stale agent cleanup ───
-// On Vercel serverless, setTimeout doesn't survive across invocations.
-// Instead, at the start of each request we check for agents stuck in
-// busy status for too long and reset them.
-//
-// Two tiers:
-//   - 'researching' (cooldown phase after work): clean after 45s
-//   - 'working'/'talking'/'thinking' (might be in a real run): clean after 5 min
-const COOLDOWN_MS = 45_000;        // researching = post-work cooldown
-const ACTIVE_TIMEOUT_MS = 300_000; // working/talking/thinking = real work
+const COOLDOWN_MS = 45_000;
+const ACTIVE_TIMEOUT_MS = 300_000;
 let lastCleanupAt = 0;
 let lastDelegationClearAt = 0;
 
 async function cleanupStaleAgents() {
-  // Only run at most once every 8 seconds to avoid hammering DB
   if (Date.now() - lastCleanupAt < 8_000) return;
   lastCleanupAt = Date.now();
 
-  // Clear delegation tracker every 2 minutes (not every request)
   if (Date.now() - lastDelegationClearAt > 120_000) {
     lastDelegationClearAt = Date.now();
     delegatedAgents.clear();
-    // Also clear expired delegations from protection tracker
     for (const [name, info] of delegationTracker) {
       if (Date.now() - info.delegatedAt > MIN_DELEGATION_DURATION) {
         delegationTracker.delete(name);
@@ -435,37 +317,31 @@ async function cleanupStaleAgents() {
     }
   }
 
-  // Tier 1: agents in post-work "researching" cooldown — clean after 45s
   const cooldownCutoff = new Date(Date.now() - COOLDOWN_MS).toISOString();
   const { data: staleResearching } = await supabase
     .from('ops_agents')
     .select('name, status, last_active_at')
     .eq('status', 'researching')
     .lt('last_active_at', cooldownCutoff)
-    .neq('name', 'echo')
-    .neq('name', 'pulse');
+    .neq('name', 'echo');
 
-  // Tier 2: agents stuck in active work — clean after 5 min (real timeout)
   const activeCutoff = new Date(Date.now() - ACTIVE_TIMEOUT_MS).toISOString();
   const { data: staleActive } = await supabase
     .from('ops_agents')
     .select('name, status, last_active_at')
     .in('status', ['working', 'talking', 'thinking'])
     .lt('last_active_at', activeCutoff)
-    .neq('name', 'echo')
-    .neq('name', 'pulse');
+    .neq('name', 'echo');
 
   const allStale = [...(staleResearching || []), ...(staleActive || [])];
   if (allStale.length > 0) {
     for (const agent of allStale) {
-      // Protect recently-delegated agents from going idle
       const delegation = delegationTracker.get(agent.name);
       if (delegation && Date.now() - delegation.delegatedAt < MIN_DELEGATION_DURATION) {
-        // Refresh last_active_at to keep them visible
         await supabase.from('ops_agents').update({
           last_active_at: new Date().toISOString(),
         }).eq('name', agent.name);
-        continue; // Still within protected window — skip cleanup
+        continue;
       }
       delegationTracker.delete(agent.name);
       activeAgents.delete(agent.name);
@@ -478,12 +354,11 @@ async function cleanupStaleAgents() {
       }).eq('name', agent.name);
     }
 
-    // If Echo is monitoring and all subs are now idle, idle Echo too
     const { data: echoData } = await supabase.from('ops_agents')
       .select('status, current_task').eq('name', 'echo').single();
     if (echoData?.status === 'researching' && (echoData?.current_task?.startsWith('Monitoring:') || echoData?.current_task?.startsWith('Coordinating:'))) {
       const { data: anyActive } = await supabase.from('ops_agents')
-        .select('name').neq('name', 'echo').neq('name', 'pulse')
+        .select('name').neq('name', 'echo')
         .in('status', ['working', 'thinking', 'talking', 'researching']);
       if (!anyActive || anyActive.length === 0) {
         activeAgents.delete('echo');
@@ -496,19 +371,15 @@ async function cleanupStaleAgents() {
   }
 }
 
-// ─── Process REAL OpenClaw gateway events ───
-// Only the agent that ACTUALLY receives the gateway event gets updated.
-// No fake collaborators, no simulated inter-agent messages.
-// OpenClaw routes ONE message to ONE agent — that's the reality.
+// ─── Process gateway events ───
 async function processGatewayMessage(msg) {
   try {
-    // Handle bridge-level events — Pulse monitors infra
     if (msg.type === 'node:connected' || msg.type === 'node:disconnected') {
       const isConnected = msg.type === 'node:connected';
       await supabase.from('ops_events').insert({
-        agent: 'pulse',
+        agent: 'forge',
         event_type: isConnected ? 'system' : 'alert',
-        title: isConnected ? 'Node connected — monitoring active' : `⚠️ Node disconnected! (${msg.message || 'unknown'})`,
+        title: isConnected ? 'Node connected — monitoring active' : `Node disconnected! (${msg.message || 'unknown'})`,
       });
 
       if (isConnected) {
@@ -516,47 +387,42 @@ async function processGatewayMessage(msg) {
           status: 'monitoring',
           current_task: 'Monitoring EC2 + Node',
           last_active_at: new Date().toISOString(),
-        }).eq('name', 'pulse');
+        }).eq('name', 'forge');
       } else {
-        // Node disconnected = Pulse goes into alert/fix mode
         await supabase.from('ops_agents').update({
           status: 'working',
-          current_task: '⚠️ Node offline — investigating...',
-          current_room: getWorkRoom('pulse'),
+          current_task: 'Node offline — investigating...',
+          current_room: 'forge',
           last_active_at: new Date().toISOString(),
-        }).eq('name', 'pulse');
-        activeAgents.set('pulse', { startedAt: Date.now(), runId: null });
+        }).eq('name', 'forge');
+        activeAgents.set('forge', { startedAt: Date.now(), runId: null });
       }
       return { type: msg.type };
     }
 
-    // Handle heartbeat events — Pulse tracks system health
     if (msg.type === 'event' && msg.event === 'heartbeat') {
       const hb = msg.payload || {};
       const status = hb.status || hb.data?.status;
       const reason = hb.reason || hb.data?.reason || '';
 
-      // If heartbeat shows an issue, activate Pulse
       if (status === 'error' || status === 'failed' || reason.includes('error')) {
         await supabase.from('ops_agents').update({
           status: 'working',
-          current_task: `🔧 Fixing: ${reason.slice(0, 50)}`,
-          current_room: getWorkRoom('pulse'),
+          current_task: `Fixing: ${reason.slice(0, 50)}`,
+          current_room: 'forge',
           last_active_at: new Date().toISOString(),
-        }).eq('name', 'pulse');
+        }).eq('name', 'forge');
 
         await supabase.from('ops_events').insert({
-          agent: 'pulse',
+          agent: 'forge',
           event_type: 'alert',
           title: `Heartbeat error: ${reason.slice(0, 60)}`,
         });
-        activeAgents.set('pulse', { startedAt: Date.now(), runId: null });
-      }
-      // Normal heartbeat — just update last_active
-      else {
+        activeAgents.set('forge', { startedAt: Date.now(), runId: null });
+      } else {
         await supabase.from('ops_agents').update({
           last_active_at: new Date().toISOString(),
-        }).eq('name', 'pulse');
+        }).eq('name', 'forge');
       }
       return { type: 'heartbeat', status };
     }
@@ -568,9 +434,9 @@ async function processGatewayMessage(msg) {
     const agent = extractAgent(payload) || 'echo';
     const runId = payload.runId;
 
-    // ── lifecycle:start — ONE agent starts processing a request ──
+    // lifecycle:start
     if (eventName === 'agent' && payload.stream === 'lifecycle' && payload.data?.phase === 'start') {
-      const isSubagent = agent !== 'echo'; // any non-echo agent is a sub-agent
+      const isSubagent = agent !== 'echo';
 
       if (runId) {
         activeRuns.set(runId, {
@@ -580,32 +446,24 @@ async function processGatewayMessage(msg) {
         });
       }
 
-      // Track this agent as active
       activeAgents.set(agent, { startedAt: Date.now(), runId });
 
-      // Reset delegation tracking for new Echo run (fresh start)
       if (!isSubagent) {
         delegationTracker.clear();
         delegatedAgents.clear();
       }
 
-      // ── Collaboration detection from lifecycle events ──
-      // When a sub-agent starts while another agent is already active,
-      // they're collaborating (one spawned the other). Mark collaboration.
       let spawner = null;
       if (isSubagent) {
-        // Find who likely spawned this agent (the most recent active agent)
         for (const [otherAgent, info] of activeAgents.entries()) {
           if (otherAgent !== agent && (Date.now() - info.startedAt) < 120_000) {
             spawner = otherAgent;
-            break; // First found active agent is likely the spawner
+            break;
           }
         }
 
-        // If another sub-agent is in cooldown (researching), extend it by refreshing last_active_at
         for (const [cooldownAgent] of cooldownTimers.entries()) {
           if (cooldownAgent !== agent) {
-            // Refresh their last_active_at so the cleanup timer restarts from now
             await supabase.from('ops_agents').update({
               status: 'researching',
               current_task: `Syncing with ${agent}...`,
@@ -615,7 +473,6 @@ async function processGatewayMessage(msg) {
         }
 
         if (spawner) {
-          // Make sure the spawner is also showing as active on dashboard
           await supabase.from('ops_agents').update({
             status: 'working',
             last_active_at: new Date().toISOString(),
@@ -649,12 +506,11 @@ async function processGatewayMessage(msg) {
       return { type: 'lifecycle_start', agent, isSubagent, spawner };
     }
 
-    // ── lifecycle:end — ONE agent finishes processing ──
+    // lifecycle:end
     if (eventName === 'agent' && payload.stream === 'lifecycle' && payload.data?.phase === 'end') {
       const run = runId ? activeRuns.get(runId) : null;
       const isSubagent = agent !== 'echo';
 
-      // Save the final real response as a message
       if (run?.text) {
         await supabase.from('ops_messages').insert({
           from_agent: agent,
@@ -663,49 +519,34 @@ async function processGatewayMessage(msg) {
         });
       }
 
-      // ── Detect anomalies and alert Pulse (rate-limited) ──
       const runDuration = run ? (Date.now() - run.startedAt) : 0;
       const responseText = run?.text || '';
       const isErrorResponse = responseText === 'NO...' || responseText === 'NO' || (responseText.length < 5 && responseText.length > 0);
-      const isSuspiciouslyFast = runDuration > 0 && runDuration < 3000 && !run?.toolCalls.length && responseText.length > 5;
 
-      // Reset Pulse alert counter when Echo gives a real response
       if (agent === 'echo' && !isErrorResponse && responseText.length >= 10) {
         pulseAlertCount = 0;
       }
 
-      // Rate-limit Pulse alerts: max one every 5 minutes for Echo errors
       const now5 = Date.now();
-      const PULSE_ALERT_COOLDOWN = 300_000; // 5 minutes
-      if (agent === 'echo' && (isErrorResponse || isSuspiciouslyFast) && (now5 - lastPulseAlertAt > PULSE_ALERT_COOLDOWN)) {
+      if (agent === 'echo' && isErrorResponse && (now5 - lastPulseAlertAt > 300_000)) {
         lastPulseAlertAt = now5;
         pulseAlertCount++;
-
         await supabase.from('ops_events').insert({
-          agent: 'pulse',
+          agent: 'vigil',
           event_type: 'alert',
-          title: isErrorResponse
-            ? `⚠️ Echo error response (${pulseAlertCount}x): "${responseText.slice(0, 20)}"`
-            : `⚠️ Echo run too fast (${Math.round(runDuration / 1000)}s, no tools)`,
+          title: `Echo error response (${pulseAlertCount}x): "${responseText.slice(0, 20)}"`,
         });
-
-        // Briefly light up Pulse to show it noticed
         await supabase.from('ops_agents').update({
           status: 'working',
-          current_task: `Monitoring: Echo ${isErrorResponse ? 'error' : 'fast exit'} (${pulseAlertCount}x)`,
-          current_room: getWorkRoom('pulse'),
+          current_task: `Monitoring: Echo error (${pulseAlertCount}x)`,
+          current_room: 'lab',
           last_active_at: new Date().toISOString(),
-        }).eq('name', 'pulse');
+        }).eq('name', 'vigil');
       }
 
-      // ── Cooldown phase: keep agent visually active for overlap & connection lines ──
-      // Sub-agents transition to "researching" for 30s before going idle.
-      // Cleanup happens via cleanupStaleAgents() on the next request.
       if (isSubagent) {
-        // Check if this agent is still within protected delegation window
         const delegation = delegationTracker.get(agent);
         if (delegation && Date.now() - delegation.delegatedAt < MIN_DELEGATION_DURATION) {
-          // Stay WORKING — don't downgrade to researching yet
           await supabase.from('ops_agents').update({
             status: 'working',
             current_task: delegation.task || 'Working on delegated task...',
@@ -714,16 +555,14 @@ async function processGatewayMessage(msg) {
           }).eq('name', agent);
         } else {
           delegationTracker.delete(agent);
-          // Mark as 'researching' — cleanup will clear it after COOLDOWN_MS
           await supabase.from('ops_agents').update({
             status: 'researching',
-            current_task: `Reviewing work & syncing with team...`,
+            current_task: 'Reviewing work & syncing with team...',
             current_room: getTalkRoom(agent),
             last_active_at: new Date().toISOString(),
           }).eq('name', agent);
         }
 
-        // Check if Echo is monitoring sub-agents — update the list or idle Echo
         const { data: echoData } = await supabase.from('ops_agents')
           .select('status, current_task').eq('name', 'echo').single();
         if (echoData?.status === 'researching' && (echoData?.current_task?.startsWith('Monitoring:') || echoData?.current_task?.startsWith('Coordinating:'))) {
@@ -733,26 +572,20 @@ async function processGatewayMessage(msg) {
             .in('status', ['working', 'thinking', 'talking']);
 
           if (remainingSubs && remainingSubs.length > 0) {
-            // Update Echo's task with remaining active sub-agents
             const subNames = remainingSubs.map(s => s.name).join(', ');
             await supabase.from('ops_agents').update({
               current_task: `Monitoring: ${subNames}`,
               last_active_at: new Date().toISOString(),
             }).eq('name', 'echo');
           } else {
-            // All sub-agents done — Echo goes idle
             activeAgents.delete('echo');
             await supabase.from('ops_agents').update({
-              status: 'idle',
-              current_task: null,
-              current_room: 'desk',
+              status: 'idle', current_task: null, current_room: 'desk',
               last_active_at: new Date().toISOString(),
             }).eq('name', 'echo');
           }
         }
       } else {
-        // Echo: check if sub-agents are still working before going idle
-        // If any sub-agent is active, keep Echo in 'researching' so connection lines persist
         const { data: activeSubs } = await supabase.from('ops_agents')
           .select('name, status')
           .neq('name', 'echo')
@@ -763,32 +596,27 @@ async function processGatewayMessage(msg) {
           await supabase.from('ops_agents').update({
             status: 'researching',
             current_task: `Monitoring: ${subNames}`,
-            current_room: 'meeting',
+            current_room: 'warroom',
             last_active_at: new Date().toISOString(),
           }).eq('name', agent);
           activeAgents.set(agent, { startedAt: Date.now(), runId: null });
         } else {
           activeAgents.delete(agent);
           await supabase.from('ops_agents').update({
-            status: 'idle',
-            current_task: null,
-            current_room: 'desk',
+            status: 'idle', current_task: null, current_room: 'desk',
             last_active_at: new Date().toISOString(),
           }).eq('name', agent);
         }
       }
 
-      // If Echo finished, also reset Pulse (in case exec tools were used)
       if (agent === 'echo') {
-        const { data: pulseData } = await supabase.from('ops_agents')
-          .select('status, current_task').eq('name', 'pulse').single();
-        if (pulseData?.current_task?.startsWith('Node exec:')) {
+        const { data: forgeData } = await supabase.from('ops_agents')
+          .select('status, current_task').eq('name', 'forge').single();
+        if (forgeData?.current_task?.startsWith('Node exec:')) {
           await supabase.from('ops_agents').update({
-            status: 'idle',
-            current_task: null,
-            current_room: 'desk',
+            status: 'idle', current_task: null, current_room: 'desk',
             last_active_at: new Date().toISOString(),
-          }).eq('name', 'pulse');
+          }).eq('name', 'forge');
         }
       }
 
@@ -802,33 +630,26 @@ async function processGatewayMessage(msg) {
       return { type: 'lifecycle_end', agent, isSubagent };
     }
 
-    // ── assistant — Streaming response (accumulate text, update ONLY this agent) ──
+    // assistant — streaming response
     if (eventName === 'agent' && payload.stream === 'assistant') {
       const text = payload.data?.text || '';
       if (!text) return null;
 
-      // Accumulate text for this run
       if (runId) {
         const run = activeRuns.get(runId);
-        if (run) run.text = text; // gateway sends full accumulated text
+        if (run) run.text = text;
       }
 
-      // Strip markdown formatting for clean display
       const clean = text.replace(/\*\*/g, '').replace(/[#`]/g, '').replace(/\n+/g, ' ').trim();
       const preview = clean.length > 120 ? clean.slice(0, 120) + '...' : clean;
 
       if (agent === 'echo') {
-        // ── Delegation detection from Echo's response text ──
-        // Gateway doesn't expose sub-agent events separately.
-        // Parse Echo's text to light up sub-agents on the dashboard.
         await detectDelegationFromText(text);
 
-        // Check if any sub-agents are actively delegated
         const activeDelegations = [];
         for (const [name, info] of delegationTracker) {
           if (Date.now() - info.delegatedAt < MIN_DELEGATION_DURATION) {
             activeDelegations.push(name);
-            // Refresh sub-agent timestamps to prevent cleanup
             await supabase.from('ops_agents').update({
               last_active_at: new Date().toISOString(),
             }).eq('name', name).neq('status', 'idle');
@@ -836,17 +657,13 @@ async function processGatewayMessage(msg) {
         }
 
         if (activeDelegations.length > 0) {
-          // ── Echo = COORDINATOR: sub-agents do the real work ──
-          // Echo only takes commands and updates the user.
-          // Sub-agents visually show as working with their tasks.
           await supabase.from('ops_agents').update({
             status: 'researching',
             current_task: `Coordinating: ${activeDelegations.join(', ')}`,
-            current_room: 'meeting',
+            current_room: 'warroom',
             last_active_at: new Date().toISOString(),
           }).eq('name', 'echo');
         } else {
-          // No active delegations — Echo is responding directly
           await supabase.from('ops_agents').update({
             status: 'talking',
             current_task: preview,
@@ -855,7 +672,6 @@ async function processGatewayMessage(msg) {
           }).eq('name', agent);
         }
       } else {
-        // Non-echo agent: normal talking update
         await supabase.from('ops_agents').update({
           status: 'talking',
           current_task: preview,
@@ -867,7 +683,7 @@ async function processGatewayMessage(msg) {
       return { type: 'assistant_stream', agent };
     }
 
-    // ── tool-call — ONLY this agent is using a tool ──
+    // tool-call
     if (eventName === 'agent' && payload.stream === 'tool-call') {
       const toolName = payload.data?.name || payload.data?.tool || 'unknown';
 
@@ -889,14 +705,11 @@ async function processGatewayMessage(msg) {
         title: `Tool: ${toolName}`,
       });
 
-      // Detect native agent-to-agent tools (sessions_spawn, sessions_send, agents_list)
-      // Any agent can now collaborate with any other agent
       await detectNativeSpawn(agent, toolName, payload.data?.arguments || payload.data?.input || payload.data);
-
       return { type: 'tool_call', agent, tool: toolName };
     }
 
-    // ── tool-result — Tool returned a result ──
+    // tool-result
     if (eventName === 'agent' && payload.stream === 'tool-result') {
       await supabase.from('ops_events').insert({
         agent,
@@ -906,7 +719,7 @@ async function processGatewayMessage(msg) {
       return { type: 'tool_result', agent };
     }
 
-    // ── chat — User message received (store REAL user message) ──
+    // chat — user message
     if (eventName === 'chat') {
       const run = runId ? activeRuns.get(runId) : null;
       if (run?.chatLogged) return null;
@@ -914,17 +727,6 @@ async function processGatewayMessage(msg) {
 
       const text = payload.data?.text || payload.text || payload.content || '';
 
-      // Check for room movement commands
-      const roomCmd = await detectRoomCommand(text);
-      if (roomCmd) {
-        await supabase.from('ops_events').insert({
-          agent: 'system',
-          event_type: 'move',
-          title: `${roomCmd.agents.join(', ')} → ${roomCmd.room}`,
-        });
-      }
-
-      // Store the user's REAL message
       if (text) {
         await supabase.from('ops_messages').insert({
           from_agent: 'user',
@@ -953,7 +755,7 @@ async function processGatewayMessage(msg) {
 export async function GET() {
   return Response.json({
     status: 'ready',
-    gateway: process.env.OPENCLAW_GATEWAY_URL || 'ws://localhost:18789',
+    gateway: process.env.OPENCLAW_GATEWAY_URL || 'ws://51.20.10.68:18789',
     agents: [...new Set(Object.values(AGENT_MAP))],
     activeRuns: activeRuns.size,
     timestamp: new Date().toISOString(),
@@ -971,9 +773,7 @@ export async function POST(request) {
     }
 
     if (Array.isArray(body.events)) {
-      // Clean up stale 'researching' agents on each batch
       await cleanupStaleAgents();
-
       const results = [];
       for (const evt of body.events) {
         const r = await processGatewayMessage(evt);

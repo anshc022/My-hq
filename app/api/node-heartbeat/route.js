@@ -1,5 +1,4 @@
-// Node heartbeat — backed by Supabase ops_nodes table
-// Works correctly on Vercel serverless (no in-memory state)
+// Node heartbeat — tracks connected nodes via Supabase ops_nodes
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
@@ -7,13 +6,12 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-const OFFLINE_THRESHOLD = 35; // seconds
+const OFFLINE_THRESHOLD = 35;
 
 export async function GET() {
-  // Fetch both node status AND pulse agent status in parallel
-  const [nodesRes, pulseRes] = await Promise.all([
+  const [nodesRes, forgeRes] = await Promise.all([
     supabase.from('ops_nodes').select('*'),
-    supabase.from('ops_agents').select('*').eq('name', 'pulse').single(),
+    supabase.from('ops_agents').select('*').eq('name', 'forge').single(),
   ]);
 
   const rows = nodesRes.data || [];
@@ -33,13 +31,12 @@ export async function GET() {
 
   const anyOnline = list.some(n => n.status === 'online');
 
-  // If no nodes online, mark pulse agent as idle
-  if (!anyOnline && pulseRes.data?.status === 'working') {
+  if (!anyOnline && forgeRes.data?.status === 'working') {
     await supabase.from('ops_agents').update({
       status: 'idle',
       current_task: null,
       last_active_at: new Date().toISOString(),
-    }).eq('name', 'pulse');
+    }).eq('name', 'forge');
   }
 
   return Response.json({
@@ -56,7 +53,6 @@ export async function POST(request) {
     const name = body.name || 'unknown';
     const hostname = body.hostname || name;
 
-    // Upsert: insert or update last_seen
     const { error } = await supabase.from('ops_nodes').upsert(
       { name, hostname, last_seen: new Date().toISOString() },
       { onConflict: 'name' }
@@ -64,12 +60,11 @@ export async function POST(request) {
 
     if (error) return Response.json({ ok: false, error: error.message }, { status: 500 });
 
-    // Update pulse agent — mark as working with the node's hostname as current_task
     await supabase.from('ops_agents').update({
       status: 'working',
       current_task: `Node: ${hostname} online`,
       last_active_at: new Date().toISOString(),
-    }).eq('name', 'pulse');
+    }).eq('name', 'forge');
 
     return Response.json({ ok: true, status: 'registered', name });
   } catch (err) {

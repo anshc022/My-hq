@@ -1,163 +1,103 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { AGENTS } from '@/lib/agents';
 
-export default function MissionBoard() {
-  const [health, setHealth] = useState(null);
-  const [uptime, setUptime] = useState(0);
+export default function MissionBoard({ agents, nodeConnected }) {
+  const total = agents?.length || 0;
+  const active = agents?.filter(a => {
+    const s = (a.status || '').toLowerCase();
+    return s === 'working' || s === 'talking' || s === 'thinking' || s === 'researching' || s === 'posting';
+  }).length || 0;
+  const idle = agents?.filter(a => (a.status || '').toLowerCase() === 'idle').length || 0;
+  const sleeping = agents?.filter(a => (a.status || '').toLowerCase() === 'sleeping').length || 0;
+  const errors = agents?.filter(a => (a.status || '').toLowerCase() === 'error').length || 0;
 
-  const fetchHealth = useCallback(async () => {
-    try {
-      const res = await fetch('/api/gateway-bridge');
-      const data = await res.json();
-      setHealth(data);
-    } catch { setHealth(null); }
-  }, []);
-
-  useEffect(() => {
-    fetchHealth();
-    const iv = setInterval(fetchHealth, 15000);
-    return () => clearInterval(iv);
-  }, [fetchHealth]);
-
-  // Uptime counter
-  useEffect(() => {
-    const iv = setInterval(() => setUptime(p => p + 1), 1000);
-    return () => clearInterval(iv);
-  }, []);
-
-  const formatUptime = (s) => {
-    const h = Math.floor(s / 3600);
-    const m = Math.floor((s % 3600) / 60);
-    const sec = s % 60;
-    return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;
-  };
-
-  const isOnline = !!health;
+  const stats = [
+    { label: 'AGENTS', value: total, color: '#4a6aff' },
+    { label: 'ACTIVE', value: active, color: '#2ecc71' },
+    { label: 'IDLE', value: idle, color: '#888' },
+    { label: 'SLEEPING', value: sleeping, color: '#666' },
+    { label: 'ERRORS', value: errors, color: errors > 0 ? '#e74c3c' : '#333' },
+  ];
 
   return (
-    <div style={styles.panel}>
-      <h3 style={styles.title}>SYSTEM HEALTH</h3>
-
-      {/* Connection Status */}
-      <div style={styles.statusRow}>
-        <span style={{ color: isOnline ? '#2ecc71' : '#e74c3c', fontSize: 18 }}>
-          {isOnline ? '●' : '○'}
+    <div style={{
+      background: 'rgba(10,10,20,0.8)',
+      border: '1px solid #1a1a2e',
+      borderRadius: 8,
+      padding: 14,
+    }}>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        marginBottom: 10,
+        fontFamily: 'var(--font-mono)',
+      }}>
+        <span style={{ fontSize: 14 }}>📊</span>
+        <span style={{ fontSize: 12, fontWeight: 700, color: '#ccc', letterSpacing: 1 }}>SYSTEM STATUS</span>
+        <span style={{
+          marginLeft: 'auto',
+          fontSize: 9,
+          padding: '2px 8px',
+          borderRadius: 4,
+          background: nodeConnected ? 'rgba(46,204,113,0.15)' : 'rgba(231,76,60,0.15)',
+          color: nodeConnected ? '#2ecc71' : '#e74c3c',
+          fontWeight: 600,
+          textTransform: 'uppercase',
+          letterSpacing: 1,
+        }}>
+          {nodeConnected ? '● ONLINE' : '○ OFFLINE'}
         </span>
-        <div>
-          <div style={{ color: isOnline ? '#2ecc71' : '#e74c3c', fontSize: 13, fontFamily: 'monospace', fontWeight: 'bold' }}>
-            {isOnline ? 'CONNECTED' : 'OFFLINE'}
-          </div>
-          <div style={{ color: '#555', fontSize: 10, fontFamily: 'monospace' }}>
-            AWS EC2 Gateway
-          </div>
-        </div>
       </div>
 
-      {/* Metrics */}
-      <div style={styles.metrics}>
-        <div style={styles.metric}>
-          <span style={styles.metricLabel}>Gateway</span>
-          <span style={styles.metricValue}>ws://13.60.27.149</span>
-        </div>
-        <div style={styles.metric}>
-          <span style={styles.metricLabel}>Model</span>
-          <span style={{ ...styles.metricValue, color: '#9b59b6' }}>gemini-3-pro</span>
-        </div>
-        <div style={styles.metric}>
-          <span style={styles.metricLabel}>Session</span>
-          <span style={styles.metricValue}>{formatUptime(uptime)}</span>
-        </div>
-        <div style={styles.metric}>
-          <span style={styles.metricLabel}>Bridge</span>
-          <span style={{ ...styles.metricValue, color: isOnline ? '#2ecc71' : '#e74c3c' }}>
-            {isOnline ? 'Active' : 'Down'}
-          </span>
-        </div>
-        <div style={styles.metric}>
-          <span style={styles.metricLabel}>Discord</span>
-          <span style={{ ...styles.metricValue, color: '#7289da' }}>echo⚡</span>
-        </div>
-        <div style={styles.metric}>
-          <span style={styles.metricLabel}>Agents</span>
-          <span style={styles.metricValue}>6 registered</span>
-        </div>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+        {stats.map(s => (
+          <div key={s.label} style={{
+            flex: 1,
+            minWidth: 65,
+            background: 'rgba(20,20,40,0.5)',
+            border: `1px solid ${s.color}22`,
+            borderRadius: 6,
+            padding: '8px 10px',
+            textAlign: 'center',
+          }}>
+            <div style={{ fontSize: 18, fontWeight: 800, color: s.color, fontFamily: 'var(--font-mono)' }}>{s.value}</div>
+            <div style={{ fontSize: 8, color: '#666', letterSpacing: 1, fontFamily: 'var(--font-mono)', marginTop: 2 }}>{s.label}</div>
+          </div>
+        ))}
       </div>
 
-      {/* Live indicator */}
-      <div style={styles.liveBar}>
-        <span style={styles.liveDot} />
-        <span style={{ color: '#555', fontSize: 10, fontFamily: 'monospace' }}>
-          Real-time monitoring active
-        </span>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        marginBottom: 6,
+        fontFamily: 'var(--font-mono)',
+      }}>
+        <span style={{ fontSize: 12 }}>🤖</span>
+        <span style={{ fontSize: 10, fontWeight: 600, color: '#888', letterSpacing: 1 }}>SYSTEM INFO</span>
+      </div>
+
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'auto 1fr',
+        gap: '3px 12px',
+        fontFamily: 'var(--font-mono)',
+        fontSize: 10,
+      }}>
+        {[
+          ['Gateway', '51.20.10.68:18789'],
+          ['Model', 'claude-opus-4.6'],
+          ['Engine', 'OpenClaw v2026.2.15'],
+          ['Runtime', 'Node.js v22.22.0'],
+          ['Node', nodeConnected ? 'Connected' : 'Disconnected'],
+        ].map(([k, v]) => (
+          <div key={k} style={{ display: 'contents' }}>
+            <span style={{ color: '#555' }}>{k}</span>
+            <span style={{ color: '#999' }}>{v}</span>
+          </div>
+        ))}
       </div>
     </div>
   );
 }
-
-const styles = {
-  panel: {
-    background: '#111',
-    borderRadius: 8,
-    padding: 10,
-    border: '1px solid #333',
-    boxSizing: 'border-box',
-  },
-  title: {
-    color: '#888',
-    fontSize: 12,
-    letterSpacing: 2,
-    margin: '0 0 12px',
-    fontFamily: 'monospace',
-  },
-  statusRow: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 14,
-    padding: '8px 10px',
-    background: '#0a0a0a',
-    borderRadius: 6,
-    border: '1px solid #222',
-  },
-  metrics: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 6,
-  },
-  metric: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: '4px 0',
-    borderBottom: '1px solid #1a1a1a',
-  },
-  metricLabel: {
-    color: '#666',
-    fontSize: 11,
-    fontFamily: 'monospace',
-  },
-  metricValue: {
-    color: '#ccc',
-    fontSize: 11,
-    fontFamily: 'monospace',
-    fontWeight: 'bold',
-  },
-  liveBar: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 12,
-    padding: '6px 8px',
-    background: '#0a1a0a',
-    borderRadius: 4,
-    border: '1px solid #1a3a1a',
-  },
-  liveDot: {
-    width: 6,
-    height: 6,
-    borderRadius: '50%',
-    background: '#2ecc71',
-    animation: 'pulse 2s infinite',
-    flexShrink: 0,
-  },
-};

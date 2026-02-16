@@ -2,80 +2,56 @@
 import { AGENTS } from '@/lib/agents';
 
 export default function ChatLog({ messages }) {
-  return (
-    <div style={styles.panel}>
-      <h3 style={styles.title}>GATEWAY LOG</h3>
-      <div style={styles.list}>
-        {(messages || []).length === 0 && (
-          <div style={styles.empty}>No gateway messages yet...</div>
-        )}
-        {(messages || []).slice(-20).reverse().map(m => {
-          const isUser = m.from_agent === 'user';
-          const agentKey = isUser ? m.to_agent : m.from_agent;
-          const agentInfo = AGENTS[agentKey] || {};
-          const direction = isUser ? '▸' : '◂';
-          const label = isUser ? 'User' : (agentInfo.label || agentKey);
-          const color = isUser ? '#60a5fa' : (agentInfo.color || '#888');
-
-          return (
-            <div key={m.id} style={styles.row}>
-              <span style={{ ...styles.dir, color: isUser ? '#60a5fa' : '#22c55e' }}>{direction}</span>
-              <span style={{ color, fontWeight: 600, fontSize: 11, minWidth: 40 }}>{label}</span>
-              <span style={styles.msg}>{(m.message || '').slice(0, 150)}</span>
-            </div>
-          );
-        })}
+  if (!messages || messages.length === 0) {
+    return (
+      <div style={{
+        background: 'rgba(10,10,20,0.8)',
+        border: '1px solid #1a1a2e',
+        borderRadius: 8,
+        padding: '14px 16px',
+        fontFamily: 'var(--font-mono)',
+        fontSize: 12,
+        color: '#444',
+        fontStyle: 'italic',
+        minHeight: 100,
+      }}>
+        No messages yet...
       </div>
+    );
+  }
+
+  return (
+    <div style={{
+      background: 'rgba(10,10,20,0.8)',
+      border: '1px solid #1a1a2e',
+      borderRadius: 8,
+      padding: '8px 10px',
+      maxHeight: 280,
+      overflowY: 'auto',
+      fontFamily: 'var(--font-mono)',
+      fontSize: 12,
+    }}>
+      {messages.map((msg, i) => {
+        const cfg = AGENTS[msg.agent] || {};
+        const ts = msg.created_at ? new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '';
+        return (
+          <div key={msg.id || i} style={{
+            padding: '5px 6px',
+            borderBottom: '1px solid rgba(255,255,255,0.03)',
+            display: 'flex',
+            gap: 8,
+            alignItems: 'flex-start',
+          }}>
+            <span style={{ color: '#555', fontSize: 10, flexShrink: 0, minWidth: 56 }}>{ts}</span>
+            <span style={{ color: cfg.color || '#888', fontWeight: 600, flexShrink: 0, minWidth: 50 }}>
+              {cfg.icon || ''} {cfg.label || msg.agent || '?'}
+            </span>
+            <span style={{ color: '#bbb', wordBreak: 'break-word' }}>
+              {(msg.content || msg.detail || '').slice(0, 300)}
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 }
-
-const styles = {
-  panel: {
-    background: '#111',
-    borderRadius: 8,
-    padding: 12,
-    border: '1px solid #333',
-    flex: 1,
-    minWidth: 0,
-  },
-  title: {
-    color: '#888',
-    fontSize: 12,
-    letterSpacing: 2,
-    margin: '0 0 10px',
-    fontFamily: 'monospace',
-  },
-  list: {
-    maxHeight: 200,
-    overflowY: 'auto',
-  },
-  empty: {
-    color: '#555',
-    fontSize: 12,
-    fontFamily: 'monospace',
-    fontStyle: 'italic',
-    padding: 10,
-  },
-  row: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 5,
-    padding: '4px 0',
-    borderBottom: '1px solid #1a1a1a',
-    fontSize: 12,
-    fontFamily: 'monospace',
-    flexWrap: 'wrap',
-  },
-  dir: {
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  msg: {
-    color: '#aaa',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
-    flex: 1,
-  },
-};

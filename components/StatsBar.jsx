@@ -1,64 +1,50 @@
 'use client';
 
-export default function StatsBar({ agents, events }) {
-  const active = (agents || []).filter(a => a.status !== 'idle' && a.status !== 'sleeping').length;
-  const total = (agents || []).length;
-  const evtCount = (events || []).length;
+export default function StatsBar({ agents, nodeConnected }) {
+  const total = agents?.length || 0;
+  const active = agents?.filter(a => {
+    const s = (a.status || '').toLowerCase();
+    return s !== 'idle' && s !== 'sleeping';
+  }).length || 0;
 
   return (
-    <div style={styles.bar}>
-      <div style={styles.left}>
-        <span style={styles.logo}>Pranshu'S HQ</span>
-        <span style={styles.live}>LIVE</span>
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: '8px 16px',
+      background: 'rgba(10,10,20,0.9)',
+      borderBottom: '1px solid #1a1a2e',
+      fontFamily: 'var(--font-mono)',
+      fontSize: 11,
+      gap: 12,
+      flexWrap: 'wrap',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontSize: 14, fontWeight: 900, color: '#4a6aff', letterSpacing: 2 }}>OPENCLAW</span>
+        <span style={{ fontSize: 10, color: '#555', letterSpacing: 1 }}>HQ v2</span>
       </div>
-      <div style={styles.right}>
-        <span style={styles.stat}>Agents: {active}/{total}</span>
-        <span style={styles.stat}>Events: {evtCount}</span>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span style={{
+            width: 6, height: 6, borderRadius: '50%',
+            background: '#2ecc71',
+            boxShadow: '0 0 6px #2ecc71',
+            animation: 'pulse 2s infinite',
+          }} />
+          <span style={{ color: '#2ecc71', fontSize: 9, fontWeight: 700, letterSpacing: 1 }}>LIVE</span>
+        </span>
+        <span style={{ color: '#666' }}>|</span>
+        <span style={{ color: '#aaa' }}>{active}/{total} active</span>
+        <span style={{ color: '#666' }}>|</span>
+        <span style={{
+          color: nodeConnected ? '#2ecc71' : '#e74c3c',
+          fontSize: 10,
+        }}>
+          NODE {nodeConnected ? '●' : '○'}
+        </span>
       </div>
     </div>
   );
 }
-
-const styles = {
-  bar: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    padding: '10px 16px',
-    background: '#111',
-    borderBottom: '1px solid #222',
-    gap: 8,
-  },
-  left: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 12,
-  },
-  logo: {
-    color: '#2ecc71',
-    fontSize: 16,
-    fontWeight: 'bold',
-    fontFamily: 'monospace',
-    letterSpacing: 2,
-  },
-  live: {
-    color: '#2ecc71',
-    fontSize: 10,
-    fontWeight: 'bold',
-    fontFamily: 'monospace',
-    padding: '2px 8px',
-    borderRadius: 4,
-    border: '1px solid #2ecc71',
-    animation: 'pulse 2s infinite',
-  },
-  right: {
-    display: 'flex',
-    gap: 16,
-  },
-  stat: {
-    color: '#888',
-    fontSize: 12,
-    fontFamily: 'monospace',
-  },
-};

@@ -1,90 +1,183 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
+import { useEffect, useState, useRef } from 'react';
+import { createClient } from '@supabase/supabase-js';
 import OfficeCanvas from '@/components/OfficeCanvas';
 import AgentPanel from '@/components/AgentPanel';
-import EventFeed from '@/components/EventFeed';
 import ChatLog from '@/components/ChatLog';
+import EventFeed from '@/components/EventFeed';
 import MissionBoard from '@/components/MissionBoard';
 import StatsBar from '@/components/StatsBar';
+import { AGENTS } from '@/lib/agents';
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 export default function Home() {
-  const [agents, setAgents] = useState([]);
+  const [agents, setAgents] = useState(
+    Object.keys(AGENTS).map(name => ({ name, status: 'idle', current_task: null }))
+  );
   const [events, setEvents] = useState([]);
   const [messages, setMessages] = useState([]);
   const [nodeConnected, setNodeConnected] = useState(false);
-
-
-  const fetchAll = useCallback(async () => {
-    const [a, e, m] = await Promise.all([
-      supabase.from('ops_agents').select('*').order('name'),
-      supabase.from('ops_events').select('*').order('created_at', { ascending: false }).limit(50),
-      supabase.from('ops_messages').select('*').order('created_at', { ascending: false }).limit(30),
-    ]);
-    if (a.data) setAgents(a.data);
-    if (e.data) setEvents(e.data.reverse());
-    if (m.data) setMessages(m.data.reverse());
-  }, []);
+  const supabaseRef = useRef(null);
 
   useEffect(() => {
-    fetchAll();
+    if (!SUPABASE_URL || !SUPABASE_ANON) return;
+    const sb = createClient(SUPABASE_URL, SUPABASE_ANON);
+    supabaseRef.current = sb;
 
-    const channel = supabase.channel('hq-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'ops_agents' }, (payload) => {
-        if (payload.eventType === 'UPDATE') {
-          setAgents(prev => prev.map(a => a.name === payload.new.name ? payload.new : a));
-        }
-      })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'ops_events' }, (payload) => {
-        setEvents(prev => [...prev, payload.new]);
-      })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'ops_messages' }, (payload) => {
-        setMessages(prev => [...prev, payload.new]);
+    // Initial fetch
+    sb.from('ops_agents').select('*').then(({ data }) => {
+      if (data && data.length > 0) {
+        setAgents(prev => {
+          const merged = [...prev];
+          data.forEach(row => {
+            const idx = merged.findIndex(a => a.name === row.name);
+            if (idx >= 0) merged[idx] = { ...merged[idx], ...row };
+            else merged.push(row);
+          });
+          return merged;
+        });
+      }
+    });
+
+    sb.from('ops_events').select('*').order('created_at', { ascending: false }).limit(50).then(({ data }) => {
+      if (data) setEvents(data.reverse());
+    });
+
+    sb.from('ops_messages').select('*').order('created_at', { ascending: false }).limit(50).then(({ data }) => {
+      if (data) setMessages(data.reverse());
+    });
+
+    sb.from('ops_nodes').select('*').eq('name', 'ec2-main').single().then(({ data }) => {
+      if (data) {
+        const lastSeen = new Date(data.last_heartbeat || 0).getTime();
+        setNodeConnected(Date.now() - lastSeen < 120000);
+      }
+    });
+
+    // Realtime subscriptions
+    const agentChannel = sb.channel('agents-rt')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'ops_agents' }, payload => {
+        const row = payload.new;
+        if (!row?.name) return;
+        setAgents(prev => {
+          const idx = prev.findIndex(a => a.name === row.name);
+          if (idx >= 0) {
+            const updated = [...prev];
+            updated[idx] = { ...updated[idx], ...row };
+            return updated;
+          }
+          return [...prev, row];
+        });
       })
       .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [fetchAll]);
+    const eventChannel = sb.channel('events-rt')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'ops_events' }, payload => {
+        if (payload.new) {
+          setEvents(prev => [...prev.slice(-99), payload.new]);
+        }
+      })
+      .subscribe();
 
-  // Poll node-heartbeat for real-time node connection status
-  useEffect(() => {
-    const checkNode = async () => {
-      try {
-        const res = await fetch('/api/node-heartbeat');
-        const data = await res.json();
-        setNodeConnected(data?.anyOnline === true);
-      } catch {
-        setNodeConnected(false);
-      }
+    const msgChannel = sb.channel('messages-rt')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'ops_messages' }, payload => {
+        if (payload.new) {
+          setMessages(prev => [...prev.slice(-99), payload.new]);
+        }
+      })
+      .subscribe();
+
+    const nodeChannel = sb.channel('nodes-rt')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'ops_nodes' }, payload => {
+        const row = payload.new;
+        if (row?.name === 'ec2-main') {
+          const lastSeen = new Date(row.last_heartbeat || 0).getTime();
+          setNodeConnected(Date.now() - lastSeen < 120000);
+        }
+      })
+      .subscribe();
+
+    // Heartbeat poll
+    const hbInterval = setInterval(() => {
+      sb.from('ops_nodes').select('*').eq('name', 'ec2-main').single().then(({ data }) => {
+        if (data) {
+          const lastSeen = new Date(data.last_heartbeat || 0).getTime();
+          setNodeConnected(Date.now() - lastSeen < 120000);
+        } else {
+          setNodeConnected(false);
+        }
+      });
+    }, 30000);
+
+    return () => {
+      sb.removeChannel(agentChannel);
+      sb.removeChannel(eventChannel);
+      sb.removeChannel(msgChannel);
+      sb.removeChannel(nodeChannel);
+      clearInterval(hbInterval);
     };
-    checkNode();
-    const iv = setInterval(checkNode, 5000);
-    return () => clearInterval(iv);
   }, []);
 
-
-
   return (
-    <div className="hq-page">
-      <StatsBar agents={agents} events={events} />
+    <div style={{ minHeight: '100vh' }}>
+      <StatsBar agents={agents} nodeConnected={nodeConnected} />
 
-      <div className="hq-main">
-        <div className="hq-sidebar-left">
+      <div style={{ padding: '12px 16px', maxWidth: 1400, margin: '0 auto' }}>
+        {/* Canvas */}
+        <div className="fade-in">
+          <OfficeCanvas agents={agents} nodeConnected={nodeConnected} events={events} />
+        </div>
+
+        {/* Agent Cards */}
+        <div style={{ marginTop: 12 }} className="fade-in">
+          <div className="section-title">
+            <span>👥</span> AGENTS
+          </div>
           <AgentPanel agents={agents} />
         </div>
-        <div className="hq-center">
-          <OfficeCanvas agents={agents} nodeConnected={nodeConnected} />
-        </div>
-        <div className="hq-sidebar-right">
-          <MissionBoard />
-        </div>
-      </div>
 
-      <div className="hq-bottom">
-        <EventFeed events={events} />
-        <ChatLog messages={messages} />
+        {/* Grid: Events + Chat + Mission */}
+        <div className="hq-grid" style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gap: 12,
+          marginTop: 14,
+        }}>
+          <div className="fade-in">
+            <div className="section-title">
+              <span>📡</span> EVENT FEED
+            </div>
+            <EventFeed events={events} />
+          </div>
+
+          <div className="fade-in">
+            <div className="section-title">
+              <span>📊</span> MISSION CONTROL
+            </div>
+            <MissionBoard agents={agents} nodeConnected={nodeConnected} />
+          </div>
+        </div>
+
+        <div style={{ marginTop: 12 }} className="fade-in">
+          <div className="section-title">
+            <span>💬</span> GATEWAY LOG
+          </div>
+          <ChatLog messages={messages} />
+        </div>
+
+        {/* Footer */}
+        <div style={{
+          textAlign: 'center',
+          padding: '20px 0 12px',
+          fontFamily: 'var(--font-mono)',
+          fontSize: 10,
+          color: '#333',
+          letterSpacing: 1,
+        }}>
+          OPENCLAW HQ V2 — FASAL SEVA DEV TEAM — 6 AGENTS
+        </div>
       </div>
     </div>
   );

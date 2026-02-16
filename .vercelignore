@@ -1,27 +1,4 @@
-# EC2 scripts (not part of the Next.js app)
-/ec2/
-
-# Background processes (run on EC2, not Vercel)
-gateway-bridge.mjs
-discord-dispatch.mjs
-dispatch-server.js
-
-# Shell/Python scripts
-*.sh
-*.py
-*.ps1
-
-# Data files
-*.json
-!package.json
-!jsconfig.json
-!tsconfig.json
-
-# Soul files
-/souls/
-
-# Bridge keys
-.bridge-keys.json
-
-# Temp config
-tmp-*.json
+.next
+node_modules
+*.pem
+.env*

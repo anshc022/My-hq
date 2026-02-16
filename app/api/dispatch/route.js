@@ -5,26 +5,24 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-// Agent→Discord account mapping
+// Agent→Discord account mapping (V2: names = IDs)
 const AGENT_ACCOUNTS = {
-  echo:     { accountId: 'default',  agentId: 'main' },
-  scout:    { accountId: 'pixel',    agentId: 'scout' },
-  quill:    { accountId: 'dash',     agentId: 'quill' },
-  sage:     { accountId: 'stack',    agentId: 'sage' },
-  sentinel: { accountId: 'probe',    agentId: 'sentinel' },
-  xalt:     { accountId: 'ship',     agentId: 'xalt' },
+  echo:  { accountId: 'default', agentId: 'main' },
+  flare: { accountId: 'flare',  agentId: 'flare' },
+  bolt:  { accountId: 'bolt',   agentId: 'bolt' },
+  nexus: { accountId: 'nexus',  agentId: 'nexus' },
+  vigil: { accountId: 'vigil',  agentId: 'vigil' },
+  forge: { accountId: 'forge',  agentId: 'forge' },
 };
 
-const WAR_ROOM = '1469627420893122652';
-const GATEWAY_URL = process.env.OPENCLAW_GATEWAY_HTTP_URL || 'http://13.60.27.149:18789';
+const WAR_ROOM = '1472061788857045075';
+const GATEWAY_URL = process.env.OPENCLAW_GATEWAY_HTTP_URL || 'http://51.20.10.68:18789';
 const GATEWAY_TOKEN = process.env.OPENCLAW_GATEWAY_TOKEN || '';
 
-// Send a task to a specific agent, delivered through their own Discord bot
 async function dispatchAgent(agentName, message) {
   const config = AGENT_ACCOUNTS[agentName];
   if (!config) throw new Error(`Unknown agent: ${agentName}`);
 
-  // Use Gateway HTTP API to run an agent turn
   const res = await fetch(`${GATEWAY_URL}/api/agent`, {
     method: 'POST',
     headers: {
@@ -43,15 +41,12 @@ async function dispatchAgent(agentName, message) {
   });
 
   if (!res.ok) {
-    // Fallback: try SSH-based dispatch
-    console.log(`[Dispatch] Gateway API failed (${res.status}), agent ${agentName} may not have HTTP agent endpoint`);
     return { status: 'gateway-api-unavailable', agent: agentName };
   }
 
   return await res.json();
 }
 
-// POST - Dispatch messages to agents
 export async function POST(request) {
   try {
     const body = await request.json();
@@ -61,12 +56,10 @@ export async function POST(request) {
       return Response.json({ ok: false, error: 'Need agents[] and message' }, { status: 400 });
     }
 
-    // Dispatch to each agent in parallel
     const results = await Promise.allSettled(
       agents.map(a => dispatchAgent(a, message))
     );
 
-    // Log event
     await supabase.from('ops_events').insert({
       agent: 'system',
       event_type: 'dispatch',
@@ -79,8 +72,7 @@ export async function POST(request) {
       results: results.map((r, i) => ({
         agent: agents[i],
         status: r.status,
-        value: r.value,
-        reason: r.reason?.message,
+        value: r.status === 'fulfilled' ? r.value : { error: r.reason?.message },
       })),
     });
   } catch (err) {

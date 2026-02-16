@@ -2,85 +2,76 @@
 import { AGENTS } from '@/lib/agents';
 
 export default function EventFeed({ events }) {
-  return (
-    <div style={styles.panel}>
-      <h3 style={styles.title}>EVENTS</h3>
-      <div style={styles.list}>
-        {(events || []).length === 0 && (
-          <div style={styles.empty}>Waiting for events...</div>
-        )}
-        {(events || []).slice(-30).reverse().map(e => {
-          const config = AGENTS[e.agent] || {};
-          const time = new Date(e.created_at).toLocaleTimeString('en-US', {
-            hour: '2-digit', minute: '2-digit', hour12: false,
-          });
-          return (
-            <div key={e.id} style={styles.row}>
-              <span style={styles.time}>{time}</span>
-              <span style={{ color: config.color || '#888' }}>{config.icon || '?'}</span>
-              <span style={styles.agent}>{config.label || e.agent}</span>
-              <span style={styles.text}>{e.title || e.detail}</span>
-            </div>
-          );
-        })}
+  if (!events || events.length === 0) {
+    return (
+      <div style={{
+        background: 'rgba(10,10,20,0.7)',
+        border: '1px solid #1a1a2e',
+        borderRadius: 8,
+        padding: '14px 16px',
+        fontFamily: 'var(--font-mono)',
+        fontSize: 12,
+        color: '#444',
+        fontStyle: 'italic',
+        minHeight: 80,
+      }}>
+        No events yet...
       </div>
+    );
+  }
+
+  return (
+    <div style={{
+      background: 'rgba(10,10,20,0.7)',
+      border: '1px solid #1a1a2e',
+      borderRadius: 8,
+      padding: '6px 8px',
+      maxHeight: 220,
+      overflowY: 'auto',
+      fontFamily: 'var(--font-mono)',
+      fontSize: 11,
+    }}>
+      {events.slice(-30).reverse().map((evt, i) => {
+        const cfg = AGENTS[evt.agent] || {};
+        const ts = evt.created_at ? new Date(evt.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '';
+        const typeColor = evt.type === 'error' ? '#e74c3c' :
+                          evt.type === 'lifecycle' ? '#3498db' :
+                          evt.type === 'tool-call' ? '#9b59b6' :
+                          evt.type === 'delegation' ? '#f1c40f' :
+                          evt.type === 'chat' ? '#2ecc71' : '#555';
+        return (
+          <div key={evt.id || i} style={{
+            padding: '4px 4px',
+            borderBottom: '1px solid rgba(255,255,255,0.02)',
+            display: 'flex',
+            gap: 6,
+            alignItems: 'center',
+          }}>
+            <span style={{ color: '#444', fontSize: 9, flexShrink: 0, minWidth: 52 }}>{ts}</span>
+            <span style={{
+              background: typeColor + '22',
+              color: typeColor,
+              fontSize: 9,
+              padding: '1px 5px',
+              borderRadius: 3,
+              fontWeight: 600,
+              textTransform: 'uppercase',
+              letterSpacing: 0.5,
+              flexShrink: 0,
+              minWidth: 55,
+              textAlign: 'center',
+            }}>
+              {evt.type || 'event'}
+            </span>
+            <span style={{ color: cfg.color || '#666', fontWeight: 600, flexShrink: 0 }}>
+              {cfg.icon || ''} {cfg.label || evt.agent || ''}
+            </span>
+            <span style={{ color: '#999', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {evt.title || evt.detail || ''}
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 }
-
-const styles = {
-  panel: {
-    background: '#111',
-    borderRadius: 8,
-    padding: 12,
-    border: '1px solid #333',
-    flex: 1,
-    minWidth: 0,
-  },
-  title: {
-    color: '#888',
-    fontSize: 12,
-    letterSpacing: 2,
-    margin: '0 0 10px',
-    fontFamily: 'monospace',
-  },
-  list: {
-    maxHeight: 350,
-    overflowY: 'auto',
-    overflowX: 'hidden',
-  },
-  empty: {
-    color: '#555',
-    fontSize: 12,
-    fontFamily: 'monospace',
-    fontStyle: 'italic',
-    padding: 10,
-  },
-  row: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 6,
-    padding: '4px 0',
-    borderBottom: '1px solid #1a1a1a',
-    fontSize: 12,
-    fontFamily: 'monospace',
-  },
-  time: {
-    color: '#555',
-    fontSize: 10,
-    minWidth: 42,
-    flexShrink: 0,
-  },
-  agent: {
-    color: '#ccc',
-    fontWeight: 'bold',
-    minWidth: 60,
-    flexShrink: 0,
-  },
-  text: {
-    color: '#aaa',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
-  },
-};
