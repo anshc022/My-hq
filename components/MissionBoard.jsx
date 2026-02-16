@@ -8,14 +8,13 @@ export default function MissionBoard({ agents, nodeConnected }) {
     return s === 'working' || s === 'talking' || s === 'thinking' || s === 'researching' || s === 'posting';
   }).length || 0;
   const idle = agents?.filter(a => (a.status || '').toLowerCase() === 'idle').length || 0;
-  const sleeping = agents?.filter(a => (a.status || '').toLowerCase() === 'sleeping').length || 0;
   const errors = agents?.filter(a => (a.status || '').toLowerCase() === 'error').length || 0;
 
   const stats = [
-    { label: 'TOTAL', value: total, color: '#5b7bff', icon: '🤖' },
-    { label: 'ACTIVE', value: active, color: '#34d399', icon: '⚡' },
-    { label: 'IDLE', value: idle, color: '#888', icon: '💤' },
-    { label: 'ERRORS', value: errors, color: errors > 0 ? '#f87171' : '#333', icon: '⚠️' },
+    { label: 'TOTAL', value: total, cls: 'text-accent' },
+    { label: 'ACTIVE', value: active, cls: 'text-success' },
+    { label: 'IDLE', value: idle, cls: 'text-zinc-500' },
+    { label: 'ERRORS', value: errors, cls: errors > 0 ? 'text-danger' : 'text-zinc-700' },
   ];
 
   const sysInfo = [
@@ -27,82 +26,45 @@ export default function MissionBoard({ agents, nodeConnected }) {
   ];
 
   return (
-    <div className="glass-card" style={{ padding: 16 }}>
+    <div className="bg-card border border-white/[0.05] rounded-xl p-4 font-mono">
       {/* Header */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: 14,
-        fontFamily: 'var(--font-mono)',
-      }}>
-        <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', letterSpacing: 1.5 }}>SYSTEM STATUS</span>
-        <span className={`status-badge ${nodeConnected ? 'online' : 'offline'}`}>
-          <span style={{
-            width: 5,
-            height: 5,
-            borderRadius: '50%',
-            background: nodeConnected ? '#34d399' : '#f87171',
-            display: 'inline-block',
-            boxShadow: nodeConnected ? '0 0 6px rgba(52,211,153,0.6)' : 'none',
-          }} />
+      <div className="flex items-center justify-between mb-3.5">
+        <span className="text-[11px] font-semibold text-subtle tracking-[0.12em]">SYSTEM STATUS</span>
+        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-semibold tracking-wider border ${
+          nodeConnected
+            ? 'bg-success/10 text-success border-success/20'
+            : 'bg-danger/10 text-danger border-danger/20'
+        }`}>
+          <span className={`w-1.5 h-1.5 rounded-full ${nodeConnected ? 'bg-success shadow-[0_0_6px] shadow-success/60' : 'bg-danger'}`} />
           {nodeConnected ? 'ONLINE' : 'OFFLINE'}
         </span>
       </div>
 
-      {/* Stats cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 16 }}>
+      {/* Stats */}
+      <div className="grid grid-cols-4 gap-2 mb-4">
         {stats.map(s => (
-          <div key={s.label} style={{
-            background: 'rgba(255,255,255,0.02)',
-            border: '1px solid rgba(255,255,255,0.04)',
-            borderRadius: 'var(--radius-sm)',
-            padding: '10px 8px',
-            textAlign: 'center',
-            transition: 'border-color 0.2s',
-          }}>
-            <div style={{ fontSize: 22, fontWeight: 800, color: s.color, fontFamily: 'var(--font-mono)', lineHeight: 1 }}>{s.value}</div>
-            <div style={{ fontSize: 8, color: 'var(--text-muted)', letterSpacing: 1.5, fontFamily: 'var(--font-mono)', marginTop: 4 }}>{s.label}</div>
+          <div key={s.label} className="bg-white/[0.02] border border-white/[0.04] rounded-lg py-2.5 px-2 text-center">
+            <div className={`text-xl font-extrabold leading-none ${s.cls}`}>{s.value}</div>
+            <div className="text-[8px] text-muted tracking-[0.12em] mt-1">{s.label}</div>
           </div>
         ))}
       </div>
 
-      {/* System info */}
-      <div style={{
-        background: 'rgba(255,255,255,0.015)',
-        border: '1px solid rgba(255,255,255,0.03)',
-        borderRadius: 'var(--radius-sm)',
-        padding: '10px 12px',
-      }}>
-        <div style={{
-          fontSize: 9,
-          fontWeight: 600,
-          color: 'var(--text-muted)',
-          letterSpacing: 1.5,
-          marginBottom: 8,
-          fontFamily: 'var(--font-mono)',
-        }}>
-          SYSTEM INFO
-        </div>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'auto 1fr',
-          gap: '5px 14px',
-          fontFamily: 'var(--font-mono)',
-          fontSize: 10,
-        }}>
+      {/* System Info */}
+      <div className="bg-white/[0.015] border border-white/[0.03] rounded-lg px-3 py-2.5">
+        <div className="text-[9px] font-semibold text-muted tracking-[0.12em] mb-2">SYSTEM INFO</div>
+        <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-[10px]">
           {sysInfo.map(({ key, value, icon }) => (
-            <div key={key} style={{ display: 'contents' }}>
-              <span style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ fontSize: 10 }}>{icon}</span>
+            <div key={key} className="contents">
+              <span className="text-muted flex items-center gap-1.5">
+                <span className="text-[10px]">{icon}</span>
                 {key}
               </span>
-              <span style={{
-                color: key === 'Node'
-                  ? (nodeConnected ? '#34d399' : '#f87171')
-                  : 'var(--text-secondary)',
-                fontWeight: key === 'Node' ? 600 : 400,
-              }}>
+              <span className={
+                key === 'Node'
+                  ? (nodeConnected ? 'text-success font-semibold' : 'text-danger font-semibold')
+                  : 'text-subtle'
+              }>
                 {value}
               </span>
             </div>

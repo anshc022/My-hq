@@ -10,88 +10,60 @@ export default function StatsBar({ agents, nodeConnected }) {
 
   const [time, setTime] = useState('');
   useEffect(() => {
-    const tick = () => setTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }));
+    const tick = () =>
+      setTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }));
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
   }, []);
 
   return (
-    <header style={{
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      padding: '10px 20px',
-      background: 'rgba(6,6,16,0.92)',
-      backdropFilter: 'blur(16px)',
-      WebkitBackdropFilter: 'blur(16px)',
-      borderBottom: '1px solid rgba(255,255,255,0.04)',
-      fontFamily: 'var(--font-mono)',
-      fontSize: 11,
-      gap: 16,
-      flexWrap: 'wrap',
-      position: 'sticky',
-      top: 0,
-      zIndex: 100,
-    }}>
+    <header className="sticky top-0 z-50 flex items-center justify-between px-5 py-2.5 bg-bg/90 backdrop-blur-xl border-b border-white/[0.04] font-mono text-[11px]">
       {/* Logo */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div style={{
-          width: 28,
-          height: 28,
-          borderRadius: 8,
-          background: 'linear-gradient(135deg, #5b7bff, #3b5bdf)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: 14,
-          boxShadow: '0 2px 12px rgba(91,123,255,0.3)',
-        }}>
+      <div className="flex items-center gap-3">
+        <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-accent to-blue-700 flex items-center justify-center text-sm shadow-lg shadow-accent/20">
           ⚡
         </div>
-        <div>
-          <span style={{ fontSize: 13, fontWeight: 700, color: '#fff', letterSpacing: 2 }}>OPENCLAW</span>
-          <span style={{ fontSize: 9, color: 'var(--text-muted)', letterSpacing: 1, marginLeft: 6 }}>HQ</span>
+        <div className="flex items-baseline gap-1.5">
+          <span className="text-[13px] font-bold text-white tracking-[0.15em]">OPENCLAW</span>
+          <span className="text-[9px] text-muted tracking-widest">HQ</span>
         </div>
       </div>
 
-      {/* Status indicators */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-        {/* Live */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-          <span className="live-dot" style={{ background: '#34d399', boxShadow: '0 0 8px rgba(52,211,153,0.5)' }} />
-          <span style={{ color: '#34d399', fontSize: 9, fontWeight: 600, letterSpacing: 1.5 }}>LIVE</span>
+      {/* Right side indicators */}
+      <div className="flex items-center gap-4">
+        {/* Live pulse */}
+        <div className="flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-success shadow-[0_0_8px] shadow-success/50" style={{ animation: 'pulse-slow 2s ease-in-out infinite' }} />
+          <span className="text-success text-[9px] font-semibold tracking-[0.15em]">LIVE</span>
         </div>
 
-        <span style={{ color: 'rgba(255,255,255,0.08)', fontSize: 14, fontWeight: 300 }}>|</span>
+        <span className="text-white/[0.06] text-lg font-light">|</span>
 
-        {/* Agents */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <span style={{ color: active > 0 ? '#34d399' : 'var(--text-muted)', fontWeight: 600, fontSize: 12 }}>{active}</span>
-          <span style={{ color: 'var(--text-muted)', fontSize: 10 }}>/</span>
-          <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{total}</span>
-          <span style={{ color: 'var(--text-muted)', fontSize: 9, letterSpacing: 1, marginLeft: 2 }}>AGENTS</span>
+        {/* Agent count */}
+        <div className="flex items-center gap-1">
+          <span className={`font-semibold text-xs ${active > 0 ? 'text-success' : 'text-muted'}`}>{active}</span>
+          <span className="text-muted text-[10px]">/</span>
+          <span className="text-subtle text-xs">{total}</span>
+          <span className="text-muted text-[9px] tracking-widest ml-0.5">AGENTS</span>
         </div>
 
-        <span style={{ color: 'rgba(255,255,255,0.08)', fontSize: 14, fontWeight: 300 }}>|</span>
+        <span className="text-white/[0.06] text-lg font-light">|</span>
 
-        {/* Node */}
-        <div className={`status-badge ${nodeConnected ? 'online' : 'offline'}`}>
-          <span style={{
-            width: 5,
-            height: 5,
-            borderRadius: '50%',
-            background: nodeConnected ? '#34d399' : '#f87171',
-            display: 'inline-block',
-            boxShadow: nodeConnected ? '0 0 6px rgba(52,211,153,0.6)' : 'none',
-          }} />
+        {/* Node status */}
+        <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-semibold tracking-wider border ${
+          nodeConnected
+            ? 'bg-success/10 text-success border-success/20'
+            : 'bg-danger/10 text-danger border-danger/20'
+        }`}>
+          <span className={`w-1.5 h-1.5 rounded-full ${nodeConnected ? 'bg-success shadow-[0_0_6px] shadow-success/60' : 'bg-danger'}`} />
           NODE
         </div>
 
-        <span style={{ color: 'rgba(255,255,255,0.08)', fontSize: 14, fontWeight: 300 }}>|</span>
+        <span className="text-white/[0.06] text-lg font-light">|</span>
 
         {/* Clock */}
-        <span style={{ color: 'var(--text-muted)', fontSize: 10, fontVariantNumeric: 'tabular-nums', letterSpacing: 1 }}>{time}</span>
+        <span className="text-muted text-[10px] tabular tracking-wider">{time}</span>
       </div>
     </header>
   );

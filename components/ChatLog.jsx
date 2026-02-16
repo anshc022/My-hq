@@ -13,59 +13,25 @@ export default function ChatLog({ messages }) {
 
   if (!messages || messages.length === 0) {
     return (
-      <div className="glass-card" style={{
-        padding: '20px',
-        fontFamily: 'var(--font-mono)',
-        fontSize: 11,
-        color: 'var(--text-muted)',
-        minHeight: 120,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 8,
-      }}>
-        <span style={{ fontSize: 16, opacity: 0.4 }}>💬</span>
+      <div className="bg-card border border-white/[0.05] rounded-xl p-5 flex items-center justify-center gap-2 text-muted font-mono text-[11px] min-h-[120px]">
+        <span className="text-base opacity-40">💬</span>
         No messages yet...
       </div>
     );
   }
 
   return (
-    <div ref={scrollRef} className="glass-card" style={{
-      padding: '6px 8px',
-      maxHeight: 300,
-      overflowY: 'auto',
-      fontFamily: 'var(--font-mono)',
-      fontSize: 11,
-    }}>
+    <div ref={scrollRef} className="bg-card border border-white/[0.05] rounded-xl p-1.5 max-h-[320px] overflow-y-auto font-mono text-[11px]">
       {messages.map((msg, i) => {
         const cfg = AGENTS[msg.agent] || {};
         const ts = msg.created_at ? new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '';
         return (
-          <div key={msg.id || i} style={{
-            padding: '7px 8px',
-            borderBottom: '1px solid rgba(255,255,255,0.02)',
-            display: 'flex',
-            gap: 10,
-            alignItems: 'flex-start',
-            borderRadius: 6,
-            transition: 'background 0.15s',
-          }}
-          onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
-          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-          >
-            <span style={{ color: 'var(--text-muted)', fontSize: 9, flexShrink: 0, minWidth: 52, marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>{ts}</span>
-            <span style={{
-              color: cfg.color || '#888',
-              fontWeight: 700,
-              flexShrink: 0,
-              minWidth: 56,
-              fontSize: 10,
-              marginTop: 1,
-            }}>
+          <div key={msg.id || i} className="flex items-start gap-2.5 px-2 py-2 rounded-md hover:bg-white/[0.02] transition-colors">
+            <span className="text-muted text-[9px] tabular shrink-0 w-[52px] mt-0.5">{ts}</span>
+            <span className="font-bold shrink-0 min-w-[56px] text-[10px] mt-px" style={{ color: cfg.color || '#888' }}>
               {cfg.icon || ''} {cfg.label || msg.agent || '?'}
             </span>
-            <span style={{ color: 'var(--text-secondary)', wordBreak: 'break-word', lineHeight: 1.5, fontSize: 11 }}>
+            <span className="text-subtle break-words leading-relaxed text-[11px]">
               {(msg.content || msg.detail || '').slice(0, 300)}
             </span>
           </div>

@@ -121,83 +121,64 @@ export default function Home() {
   }, []);
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div className="min-h-screen flex flex-col">
       <StatsBar agents={agents} nodeConnected={nodeConnected} />
 
-      <main className="hq-container" style={{ flex: 1 }}>
+      <main className="flex-1 max-w-[1440px] mx-auto w-full px-4 md:px-5 py-4 space-y-5">
         {/* Canvas */}
-        <div className="fade-in" style={{ marginTop: 4 }}>
+        <div className="mt-1">
           <OfficeCanvas agents={agents} nodeConnected={nodeConnected} events={events} />
         </div>
 
         {/* Agent Cards */}
-        <div style={{ marginTop: 16 }} className="fade-in">
-          <div className="section-title">
-            <span>👥</span> AGENTS
-          </div>
+        <section>
+          <SectionTitle icon="👥" label="AGENTS" />
           <AgentPanel agents={agents} />
-        </div>
+        </section>
 
         {/* Grid: Events + Mission Control */}
-        <div className="hq-grid">
-          <div className="fade-in">
-            <div className="section-title">
-              <span>📡</span> EVENT FEED
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <section>
+            <SectionTitle icon="📡" label="EVENT FEED" />
             <EventFeed events={events} />
-          </div>
+          </section>
 
-          <div className="fade-in">
-            <div className="section-title">
-              <span>📊</span> MISSION CONTROL
-            </div>
+          <section>
+            <SectionTitle icon="📊" label="MISSION CONTROL" />
             <MissionBoard agents={agents} nodeConnected={nodeConnected} />
-          </div>
+          </section>
         </div>
 
         {/* Gateway Log */}
-        <div style={{ marginTop: 16 }} className="fade-in">
-          <div className="section-title">
-            <span>💬</span> GATEWAY LOG
-          </div>
+        <section>
+          <SectionTitle icon="💬" label="GATEWAY LOG" />
           <ChatLog messages={messages} />
-        </div>
+        </section>
       </main>
 
       {/* Footer */}
-      <footer style={{
-        textAlign: 'center',
-        padding: '24px 20px 16px',
-        fontFamily: 'var(--font-mono)',
-        borderTop: '1px solid rgba(255,255,255,0.03)',
-        marginTop: 24,
-      }}>
-        <div style={{
-          fontSize: 10,
-          color: 'var(--text-muted)',
-          letterSpacing: 2,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 12,
-        }}>
-          <span style={{ color: 'var(--accent)', fontWeight: 600 }}>OPENCLAW</span>
-          <span style={{ color: 'rgba(255,255,255,0.08)' }}>•</span>
+      <footer className="text-center py-5 px-5 border-t border-white/[0.03] mt-6 font-mono">
+        <div className="text-[10px] text-muted tracking-[0.15em] flex items-center justify-center gap-3">
+          <span className="text-accent font-semibold">OPENCLAW</span>
+          <span className="text-white/[0.06]">•</span>
           <span>HQ DASHBOARD</span>
-          <span style={{ color: 'rgba(255,255,255,0.08)' }}>•</span>
+          <span className="text-white/[0.06]">•</span>
           <span>FASAL SEVA</span>
-          <span style={{ color: 'rgba(255,255,255,0.08)' }}>•</span>
+          <span className="text-white/[0.06]">•</span>
           <span>{agents?.length || 6} AGENTS</span>
         </div>
-        <div style={{
-          fontSize: 9,
-          color: 'rgba(255,255,255,0.1)',
-          marginTop: 6,
-          letterSpacing: 1,
-        }}>
-          CLAWATHON 2026
-        </div>
+        <div className="text-[9px] text-white/[0.08] mt-1.5 tracking-widest">CLAWATHON 2026</div>
       </footer>
+    </div>
+  );
+}
+
+function SectionTitle({ icon, label }) {
+  return (
+    <div className="flex items-center gap-2 mb-2.5 font-mono text-[11px] font-semibold text-subtle tracking-[0.15em] uppercase">
+      <span className="text-[13px] saturate-[0.7]">{icon}</span>
+      {label}
+      <span className="flex-1 h-px bg-gradient-to-r from-white/[0.06] to-transparent" />
     </div>
   );
 }
