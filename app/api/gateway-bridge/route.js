@@ -597,13 +597,11 @@ async function processGatewayMessage(msg) {
       const clean = text.replace(/\*\*/g, '').replace(/[#`]/g, '').replace(/\n+/g, ' ').trim();
       const preview = clean.length > 120 ? clean.slice(0, 120) + '...' : clean;
 
-      // All agents — set to talking with preview (no text-based delegation guessing)
+      // Update task preview only — don't change status (avoids race with lifecycle.end)
       await supabase.from('ops_agents').update({
-        status: 'talking',
         current_task: preview,
-        current_room: getTalkRoom(agent),
         last_active_at: new Date().toISOString(),
-      }).eq('name', agent);
+      }).eq('name', agent).in('status', ['working', 'thinking', 'talking']);
 
       return { type: 'assistant_stream', agent };
     }

@@ -60,12 +60,7 @@ export async function POST(request) {
 
     if (error) return Response.json({ ok: false, error: error.message }, { status: 500 });
 
-    await supabase.from('ops_agents').update({
-      status: 'working',
-      current_task: `Node: ${hostname} online`,
-      last_active_at: new Date().toISOString(),
-    }).eq('name', 'forge');
-
+    // Don't touch Forge status — node heartbeat just registers the node
     return Response.json({ ok: true, status: 'registered', name });
   } catch (err) {
     return Response.json({ ok: false, error: err.message }, { status: 400 });
