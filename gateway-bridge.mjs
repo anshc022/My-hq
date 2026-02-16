@@ -133,6 +133,14 @@ function resolveAgent(data) {
 
   // Check payload fields for agent identity (new event frame format)
   const payload = data.payload || {};
+
+  // Check sessionKey first — most reliable for embedded events (format: agent:main:discord:...)
+  const sessionKey = payload.sessionKey || data.sessionKey || '';
+  if (sessionKey) {
+    const parts = sessionKey.split(':');
+    if (parts[0] === 'agent' && AGENT_MAP[parts[1]]) return AGENT_MAP[parts[1]];
+  }
+
   const account = data.account || data.agent || data.session_account ||
     payload.account || payload.agent || payload.agentId || '';
   const accountLower = account.toLowerCase();
@@ -146,6 +154,9 @@ function resolveAgent(data) {
     const target = (data.target_account || data.to || payload.target_account || payload.to || '').toLowerCase();
     if (AGENT_MAP[target]) return AGENT_MAP[target];
   }
+
+  // Check data.agentId
+  if (payload.data?.agentId && AGENT_MAP[payload.data.agentId]) return AGENT_MAP[payload.data.agentId];
 
   // Fallback: check if any known agent name appears in the data
   const str = JSON.stringify(data).toLowerCase();
@@ -293,11 +304,12 @@ function connect() {
 
     const agent = resolveAgent(data);
 
-    // Log interesting events
+    // Log ALL events (verbose for debugging)
     const evtType = data.event || data.type || '?';
-    if (agent) {
-      log(`📨 [${agent}] ${evtType}: ${(data.payload?.content || data.payload?.text || data.content || data.text || '').slice(0, 80)}`);
-    }
+    const evtStream = data.payload?.stream || '';
+    const evtPhase = data.payload?.data?.phase || '';
+    const preview = (data.payload?.content || data.payload?.text || data.payload?.data?.text || data.content || data.text || '').slice(0, 80);
+    log(`📨 [${agent || '?'}] ${evtType}${evtStream ? '/' + evtStream : ''}${evtPhase ? '.' + evtPhase : ''}: ${preview || JSON.stringify(data).slice(0, 120)}`);
 
     // Forward everything to the bridge API
     forwardToAPI({

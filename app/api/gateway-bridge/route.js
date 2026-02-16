@@ -719,13 +719,22 @@ async function processGatewayMessage(msg) {
       return { type: 'tool_result', agent };
     }
 
-    // chat — user message
+    // chat — user message or chat final/delta
     if (eventName === 'chat') {
       const run = runId ? activeRuns.get(runId) : null;
       if (run?.chatLogged) return null;
       if (run) run.chatLogged = true;
 
-      const text = payload.data?.text || payload.text || payload.content || '';
+      // Extract text from various chat event formats
+      let text = payload.data?.text || payload.text || '';
+      if (!text && payload.message?.content) {
+        const content = payload.message.content;
+        if (typeof content === 'string') text = content;
+        else if (Array.isArray(content)) {
+          text = content.filter(c => c.type === 'text').map(c => c.text).join('');
+        }
+      }
+      if (!text && typeof payload.content === 'string') text = payload.content;
 
       if (text) {
         await supabase.from('ops_messages').insert({
