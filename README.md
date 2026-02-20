@@ -1,4 +1,4 @@
-# ⚡ Ops HQ — 6 AI Agents Walk Into an Office...
+# ⚡ OpenClaw + K2 — 6 AI Agents Walk Into an Office...
 
 > *"What if your AI dev team had a mission control... but make it pixel art and slightly unhinged?"*
 
@@ -20,7 +20,7 @@
 ---
 
 <p align="center">
-  <img src="https://github.com/anshc022/My-hq/blob/main/demo.gif?raw=true" alt="Ops HQ Demo" width="800" />
+  <img src="https://github.com/anshc022/My-hq/blob/main/demo.gif?raw=true" alt="OpenClaw + K2 Demo" width="800" />
   <br/>
   <i>^ 6 AI agents doing more work in 10 seconds than me in a week</i>
 </p>
@@ -225,7 +225,7 @@ GATEWAY_TOKEN=your_gateway_token
 
 ## 🤖 K2-Think-V2 + EC2 Setup
 
-Ops HQ runs on **[LLM360/K2-Think-V2](https://huggingface.co/LLM360/K2-Think-V2)** — an open-source reasoning model served through HuggingFace Inference Providers.
+OpenClaw + K2 runs on **[LLM360/K2-Think-V2](https://huggingface.co/LLM360/K2-Think-V2)** — an open-source reasoning model served through HuggingFace Inference Providers.
 
 ### 1. Get Your HuggingFace Token
 
@@ -399,7 +399,7 @@ MIT — do whatever you want with it. Fork it. Clone it. Give your agents better
 <p align="center">
   <img src="https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif" width="250" />
   <br/>
-  <b>OPS HQ</b> — because even AI agents deserve a cool office 🏢
+  <b>OpenClaw + K2</b> — because even AI agents deserve a cool office 🏢
   <br/>
   <i>now stop reading and go watch the demo</i>
 </p>
