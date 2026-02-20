@@ -13,7 +13,6 @@
 ![K2 API](https://img.shields.io/badge/API-build--api.k2think.ai-yellow?style=for-the-badge)
 ![Built in 23hrs](https://img.shields.io/badge/Built%20In-23%20Hours-green?style=for-the-badge)
 ![Sleep](https://img.shields.io/badge/Sleep-0%20Hours-red?style=for-the-badge)
-![Hackathon](https://img.shields.io/badge/Claude%20Code%20Hackathon-2026-orange?style=for-the-badge)
 
 ### 🔴 [LIVE DEMO](https://hq.pranshuchourasia.in) — yes, the agents are probably working right now
 
@@ -29,7 +28,7 @@
 
 ## 🤔 The Problem
 
-You spin up 6 Claude Opus 4.6 agents. They're coding, reviewing, deploying, testing — doing actual work. Meanwhile you?
+You spin up 6 AI agents. They're coding, reviewing, deploying, testing — doing actual work. Meanwhile you?
 
 <p align="center">
   <img src="https://media.giphy.com/media/HteV6g0QTNxp6/giphy.gif" width="300" />
@@ -387,16 +386,8 @@ The whole loop takes seconds. It's like watching ants building a colony, except 
 - Echo has a special room called **"Echo's Den"** in the top-right corner. He earned it.
 - When ALL agents are idle, they literally wander around the office like NPCs waiting for a quest.
 - The duplicate-suppression protocol is called `ANNOUNCE_SKIP`. When a sub-agent has already posted, it yells "ANNOUNCE_SKIP" to avoid saying the same thing twice. It works perfectly. Every time.
-- This entire dashboard was built using Claude Code. The AI built its own surveillance system. *What could go wrong?*
+- This entire dashboard was built with AI assistance. The AI built its own surveillance system. *What could go wrong?*
 - The model powering all agents is **K2-Think-V2** from LLM360 — open-source reasoning, served via K2's own API at `build-api.k2think.ai`.
-
----
-
-## 🏆 Built For
-
-**"Built with Opus 4.6: a Claude Code Hackathon"** by Anthropic
-
-Built in 23 hours. Fueled by caffeine and the fear of deadlines.
 
 ---
 
