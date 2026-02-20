@@ -396,8 +396,6 @@ The whole loop takes seconds. It's like watching ants building a colony, except 
 
 **"Built with Opus 4.6: a Claude Code Hackathon"** by Anthropic
 
-Team **TRISHULx** — [@pranshuchourasia](https://github.com/anshc022)
-
 Built in 23 hours. Fueled by caffeine and the fear of deadlines.
 
 ---
