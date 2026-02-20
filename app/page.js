@@ -169,7 +169,7 @@ export default function Home() {
           <span className="text-white/[0.06]">•</span>
           <span>{agents?.length || 6} AGENTS</span>
         </div>
-        <div className="text-[9px] text-white/[0.08] mt-1.5 tracking-widest">CLAUDE CODE HACKATHON 2026</div>
+        <div className="text-[9px] text-white/[0.08] mt-1.5 tracking-widest">POWERED BY OPENCLAW + K2</div>
       </footer>
     </div>
   );
