@@ -9,7 +9,8 @@
 </p>
 
 ![6 Agents • 1 Dashboard](https://img.shields.io/badge/Agents-6-blue?style=for-the-badge)
-![Claude Opus 4.6](https://img.shields.io/badge/Model-Opus%204.6-purple?style=for-the-badge)
+![K2 Model](https://img.shields.io/badge/Model-K2--Think--V2-purple?style=for-the-badge)
+![HuggingFace](https://img.shields.io/badge/Provider-HuggingFace-yellow?style=for-the-badge)
 ![Built in 23hrs](https://img.shields.io/badge/Built%20In-23%20Hours-green?style=for-the-badge)
 ![Sleep](https://img.shields.io/badge/Sleep-0%20Hours-red?style=for-the-badge)
 ![Hackathon](https://img.shields.io/badge/Claude%20Code%20Hackathon-2026-orange?style=for-the-badge)
@@ -78,7 +79,7 @@ When the Tech Lead delegates work, you literally watch agents wake up, walk to t
 | 🛡️ **Vigil** | QA | *"it works on your machine? cool. it doesn't work on mine"* | Breaks things professionally |
 | 🔥 **Forge** | DevOps | *"deployed to prod on a Friday"* | CI/CD, containers, and questionable deployment schedules |
 
-All 6 run on **Claude Opus 4.6**. The same model that built this dashboard is also the brain inside every agent.
+All 6 run on **[K2-Think-V2](https://huggingface.co/LLM360/K2-Think-V2)** via HuggingFace Inference. Open-source reasoning model powering every agent.
 
 <p align="center">
   <img src="https://media.giphy.com/media/3o7btNhMBytxAM6YBa/giphy.gif" width="250" />
@@ -150,7 +151,7 @@ Ed25519 challenge-response authentication. Not just a `Bearer token` — actual 
 ┌──────────────┐     WebSocket      ┌──────────────┐
 │   Gateway    │◄──────────────────►│    Bridge     │
 │   (EC2)      │   Protocol v3      │   (EC2)      │
-│  6 Opus 4.6  │   Ed25519 Auth     │  Node.js     │
+│  6 K2 Agents │   Ed25519 Auth     │  Node.js     │
 │   Agents     │                    │              │
 └──────────────┘                    └──────┬───────┘
                                           │ HTTPS POST
@@ -185,7 +186,7 @@ Ed25519 challenge-response authentication. Not just a `Bearer token` — actual 
 | Backend | Next.js API Routes (Vercel) | serverless = no servers to break |
 | Database | Supabase Realtime | instant updates, zero polling |
 | Bridge | Node.js WebSocket (EC2) | catches every agent heartbeat |
-| AI Model | Claude Opus 4.6 × 6 | six brains are better than one |
+| AI Model | [K2-Think-V2](https://huggingface.co/LLM360/K2-Think-V2) × 6 | open-source reasoning via HuggingFace |
 | Auth | Ed25519 Protocol v3 | because security is not optional |
 | Canvas | HTML5 Canvas, 1500 LOC | hand-crafted pixel art engine |
 | Hosting | Vercel + AWS EC2 | the classic combo |
@@ -219,6 +220,103 @@ SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 GATEWAY_URL=ws://your-server:18789
 GATEWAY_TOKEN=your_gateway_token
 ```
+
+---
+
+## 🤖 K2-Think-V2 + EC2 Setup
+
+Ops HQ runs on **[LLM360/K2-Think-V2](https://huggingface.co/LLM360/K2-Think-V2)** — an open-source reasoning model served through HuggingFace Inference Providers.
+
+### 1. Get Your HuggingFace Token
+
+1. Go to [HuggingFace → Settings → Tokens](https://huggingface.co/settings/tokens/new?ownUserPermissions=inference.serverless.write&tokenType=fineGrained)
+2. Create a **fine-grained token** with the **"Make calls to Inference Providers"** permission
+3. Copy your token — you'll need it in the next step
+
+### 2. EC2 Instance Setup
+
+```bash
+# SSH into your EC2 instance
+ssh -i your-key.pem ubuntu@your-ec2-ip
+
+# Install OpenClaw CLI
+curl -fsSL https://docs.openclaw.ai/install.sh | bash
+
+# Run onboarding with HuggingFace provider
+openclaw onboard --non-interactive \
+  --mode local \
+  --auth-choice huggingface-api-key \
+  --huggingface-api-key "$HF_TOKEN"
+```
+
+### 3. Set the K2 Model in Config
+
+Edit `~/.openclaw/config.json` on your EC2:
+
+```jsonc
+{
+  "auth": {
+    "profiles": {
+      "huggingface:api-key": {
+        "provider": "huggingface",
+        "mode": "api-key"
+      }
+    }
+  },
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "huggingface/LLM360/K2-Think-V2"
+      },
+      "models": {
+        "huggingface/LLM360/K2-Think-V2": { "alias": "K2" }
+      }
+    }
+  }
+}
+```
+
+### 4. Environment Variables (EC2)
+
+Make sure your HF token is available to the Gateway process:
+
+```bash
+# Add to ~/.openclaw/.env
+echo 'HF_TOKEN=hf_your_token_here' >> ~/.openclaw/.env
+
+# Or export globally
+export HUGGINGFACE_HUB_TOKEN=hf_your_token_here
+```
+
+### 5. Start the Gateway
+
+```bash
+# Start OpenClaw Gateway (runs all 6 agents)
+openclaw gateway start
+
+# Verify agents are alive
+openclaw status
+```
+
+### 6. Connect the Bridge
+
+```bash
+# Start the WebSocket bridge (connects Gateway → Vercel dashboard)
+node gateway-bridge.mjs
+```
+
+The bridge connects to the Gateway via WebSocket (Protocol v3, Ed25519 auth), catches every agent event, and forwards it to your Vercel-hosted dashboard via HTTPS POST.
+
+### Why K2-Think-V2?
+
+| Feature | Detail |
+|---------|--------|
+| **Model** | [LLM360/K2-Think-V2](https://huggingface.co/LLM360/K2-Think-V2) |
+| **Type** | Open-source reasoning model |
+| **Provider** | HuggingFace Inference (OpenAI-compatible API) |
+| **Auth** | Single HF token for all 6 agents |
+| **Cost** | [HF pricing](https://huggingface.co/docs/inference-providers/pricing) — free tier available |
+| **Docs** | [OpenClaw × HuggingFace setup](https://docs.openclaw.ai/providers/huggingface) |
 
 ---
 
@@ -277,7 +375,8 @@ The whole loop takes seconds. It's like watching ants building a colony, except 
 - Echo has a special room called **"Echo's Den"** in the top-right corner. He earned it.
 - When ALL agents are idle, they literally wander around the office like NPCs waiting for a quest.
 - The duplicate-suppression protocol is called `ANNOUNCE_SKIP`. When a sub-agent has already posted, it yells "ANNOUNCE_SKIP" to avoid saying the same thing twice. It works perfectly. Every time.
-- This entire dashboard was built using Claude Code (Opus 4.6). The AI built its own surveillance system. *What could go wrong?*
+- This entire dashboard was built using Claude Code. The AI built its own surveillance system. *What could go wrong?*
+- The model powering all agents is **K2-Think-V2** from LLM360 — open-source reasoning, served via HuggingFace Inference.
 
 ---
 
