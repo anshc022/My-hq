@@ -163,7 +163,9 @@ export default function Home() {
           <span className="text-white/[0.06]">•</span>
           <span>HQ DASHBOARD</span>
           <span className="text-white/[0.06]">•</span>
-          <span>FASAL SEVA</span>
+          <span className="text-purple-400/60">OpenClaw</span>
+          <span className="text-white/[0.06]">+</span>
+          <span className="text-cyan-400/60">K2</span>
           <span className="text-white/[0.06]">•</span>
           <span>{agents?.length || 6} AGENTS</span>
         </div>

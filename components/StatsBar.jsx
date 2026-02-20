@@ -28,6 +28,11 @@ export default function StatsBar({ agents, nodeConnected }) {
           <span className="text-[13px] font-bold text-white tracking-[0.15em]">OPS</span>
           <span className="text-[9px] text-muted tracking-widest">HQ</span>
         </div>
+        <div className="hidden sm:flex items-center gap-1.5 ml-2 px-2 py-0.5 rounded-full bg-white/[0.03] border border-white/[0.06]">
+          <span className="text-[8px] text-purple-400 font-semibold tracking-wider">OpenClaw</span>
+          <span className="text-white/[0.1]">+</span>
+          <span className="text-[8px] text-cyan-400 font-semibold tracking-wider">K2</span>
+        </div>
       </div>
 
       {/* Right side indicators */}
