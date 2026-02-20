@@ -57,17 +57,7 @@ When the Tech Lead delegates work, you literally watch agents wake up, walk to t
 
 ---
 
-## 🎬 Demo
-
-<p align="center">
-
-[![Demo Video](https://img.shields.io/badge/▶%20Watch%20Demo-YouTube-red?style=for-the-badge&logo=youtube)](https://youtu.be/yufhnd9oqJE)
-
-</p>
-
----
-
-## 🏢 Meet the Squad
+##  Meet the Squad
 
 | Agent | Role | Vibe | What They Actually Do |
 |-------|------|------|----------------------|
