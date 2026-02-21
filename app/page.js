@@ -2,7 +2,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import OfficeCanvas from '@/components/OfficeCanvas';
-import AgentPanel from '@/components/AgentPanel';
 import AgentsWorking from '@/components/AgentsWorking';
 import ChatLog from '@/components/ChatLog';
 import EventFeed from '@/components/EventFeed';
@@ -135,12 +134,6 @@ export default function Home() {
         <div className="mt-1 animate-fade-in">
           <OfficeCanvas agents={agents} nodeConnected={nodeConnected} events={events} />
         </div>
-
-        {/* Agent Cards */}
-        <section className="animate-slide-up" style={{ animationDelay: '100ms' }}>
-          <SectionTitle icon="👥" label="AGENTS" count={agents?.length} />
-          <AgentPanel agents={agents} />
-        </section>
 
         {/* Grid: Events + Mission Control */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
