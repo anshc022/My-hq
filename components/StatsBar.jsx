@@ -9,12 +9,9 @@ export default function StatsBar({ agents, nodeConnected }) {
   }).length || 0;
 
   const [time, setTime] = useState('');
-  const [date, setDate] = useState('');
   useEffect(() => {
     const tick = () => {
-      const now = new Date();
-      setTime(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }));
-      setDate(now.toLocaleDateString([], { month: 'short', day: 'numeric' }));
+      setTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }));
     };
     tick();
     const id = setInterval(tick, 1000);
@@ -22,69 +19,53 @@ export default function StatsBar({ agents, nodeConnected }) {
   }, []);
 
   return (
-    <header className="sticky top-0 z-50 font-mono">
-      {/* Gradient border bottom */}
-      <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-accent/30 to-transparent" />
-
-      <div className="flex items-center justify-between px-5 py-2.5 bg-bg/80 backdrop-blur-2xl">
+    <header className="sticky top-0 z-50 font-mono bg-bg border-b-[3px] border-[var(--color-border)]">
+      <div className="flex items-center justify-between px-5 py-3">
         {/* Logo */}
         <div className="flex items-center gap-3">
-          <div className="relative w-8 h-8 rounded-xl bg-gradient-to-br from-accent via-blue-600 to-purple-700 flex items-center justify-center text-sm shadow-lg shadow-accent/25">
-            <span className="relative z-10">⚡</span>
-            <div className="absolute inset-0 rounded-xl bg-accent/20 blur-md" />
+          <div className="w-9 h-9 bg-[var(--color-accent)] border-2 border-white flex items-center justify-center text-base font-black neo-shadow-sm">
+            ⚡
           </div>
-          <div className="flex items-baseline gap-1.5">
-            <span className="text-[14px] font-extrabold tracking-[0.15em] gradient-text">OPS</span>
-            <span className="text-[9px] text-muted tracking-widest font-medium">HQ</span>
+          <div className="flex items-baseline gap-1">
+            <span className="text-[16px] font-black tracking-[0.2em] text-white">OPS</span>
+            <span className="text-[10px] text-[var(--color-neo-yellow)] font-extrabold tracking-widest">HQ</span>
           </div>
-          <div className="hidden sm:flex items-center gap-1.5 ml-2 px-2.5 py-1 rounded-full bg-white/[0.03] border border-white/[0.06] backdrop-blur-sm">
-            <span className="text-[8px] text-purple-400 font-bold tracking-wider">OpenClaw</span>
-            <span className="text-white/[0.15] text-[6px]">+</span>
-            <span className="text-[8px] text-cyan-400 font-bold tracking-wider">K2</span>
+          <div className="hidden sm:flex items-center gap-1 ml-2 px-3 py-1 bg-[var(--color-surface)] border-2 border-[var(--color-border)] neo-shadow-sm">
+            <span className="text-[9px] text-[var(--color-neo-purple)] font-black tracking-wider">OPENCLAW</span>
+            <span className="text-white/30 text-[8px] font-black">+</span>
+            <span className="text-[9px] text-[var(--color-neo-blue)] font-black tracking-wider">K2</span>
           </div>
         </div>
 
-        {/* Right side indicators */}
-        <div className="flex items-center gap-3.5">
-          {/* Live pulse */}
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-success/[0.06] border border-success/10">
-            <span className="relative w-2 h-2">
-              <span className="absolute inset-0 rounded-full bg-success animate-ping opacity-40" />
-              <span className="relative block w-2 h-2 rounded-full bg-success shadow-[0_0_10px] shadow-success/60" />
-            </span>
-            <span className="text-success text-[9px] font-bold tracking-[0.15em]">LIVE</span>
+        {/* Right side */}
+        <div className="flex items-center gap-3">
+          {/* Live */}
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-[var(--color-neo-green)] border-2 border-white neo-shadow-sm">
+            <span className="w-2 h-2 bg-black" style={{ animation: 'blink 1s step-end infinite' }} />
+            <span className="text-black text-[9px] font-black tracking-[0.2em]">LIVE</span>
           </div>
-
-          <div className="w-px h-4 bg-white/[0.06]" />
 
           {/* Agent count */}
-          <div className="flex items-center gap-1.5">
-            <div className="flex items-baseline gap-0.5">
-              <span className={`font-extrabold text-sm tabular ${active > 0 ? 'text-success' : 'text-muted'}`}>{active}</span>
-              <span className="text-white/10 text-[10px] font-light">/</span>
-              <span className="text-subtle text-xs tabular">{total}</span>
-            </div>
-            <span className="text-muted text-[8px] tracking-[0.2em] font-medium">AGENTS</span>
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-[var(--color-surface)] border-2 border-[var(--color-border)]">
+            <span className={`font-black text-base tabular ${active > 0 ? 'text-[var(--color-neo-green)]' : 'text-[var(--color-muted)]'}`}>{active}</span>
+            <span className="text-white/30 text-sm font-light">/</span>
+            <span className="text-white/70 text-sm tabular font-bold">{total}</span>
+            <span className="text-[var(--color-muted)] text-[8px] tracking-[0.2em] font-black">AGENTS</span>
           </div>
-
-          <div className="w-px h-4 bg-white/[0.06]" />
 
           {/* Node status */}
-          <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-bold tracking-wider border transition-all duration-300 ${
+          <div className={`flex items-center gap-2 px-3 py-1.5 border-2 neo-shadow-sm ${
             nodeConnected
-              ? 'bg-success/[0.08] text-success border-success/20 shadow-[0_0_12px] shadow-success/10'
-              : 'bg-danger/[0.08] text-danger border-danger/20 shadow-[0_0_12px] shadow-danger/10'
+              ? 'bg-[var(--color-neo-green)]/10 border-[var(--color-neo-green)] text-[var(--color-neo-green)]'
+              : 'bg-[var(--color-danger)]/10 border-[var(--color-danger)] text-[var(--color-danger)]'
           }`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${nodeConnected ? 'bg-success shadow-[0_0_6px] shadow-success/60' : 'bg-danger'}`} />
-            NODE
+            <span className={`w-2 h-2 ${nodeConnected ? 'bg-[var(--color-neo-green)]' : 'bg-[var(--color-danger)]'}`} />
+            <span className="text-[9px] font-black tracking-[0.15em]">NODE</span>
           </div>
 
-          <div className="w-px h-4 bg-white/[0.06]" />
-
           {/* Clock */}
-          <div className="flex flex-col items-end">
-            <span className="text-subtle text-[11px] tabular tracking-wider font-medium">{time}</span>
-            <span className="text-muted text-[8px] tracking-widest">{date}</span>
+          <div className="px-3 py-1.5 bg-[var(--color-surface)] border-2 border-[var(--color-border)]">
+            <span className="text-[var(--color-neo-blue)] text-[11px] tabular tracking-wider font-bold">{time}</span>
           </div>
         </div>
       </div>

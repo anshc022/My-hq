@@ -157,27 +157,23 @@ export default function Home() {
       </main>
 
       {/* Footer */}
-      <footer className="relative mt-8 font-mono overflow-hidden">
-        {/* Top border gradient */}
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-accent/20 to-transparent" />
-
-        <div className="relative text-center py-6 px-5">
-          {/* Main footer content */}
+      <footer className="relative mt-8 font-mono border-t-[3px] border-[var(--color-border)]">
+        <div className="text-center py-6 px-5">
           <div className="flex items-center justify-center gap-4 mb-2">
             <div className="flex items-center gap-2">
-              <div className="w-5 h-5 rounded-md bg-gradient-to-br from-accent/30 to-purple-700/30 flex items-center justify-center text-[10px]">⚡</div>
-              <span className="text-[11px] font-bold gradient-text tracking-wider">OPS HQ</span>
+              <div className="w-6 h-6 bg-[var(--color-accent)] border-2 border-white flex items-center justify-center text-[10px] neo-shadow-sm">⚡</div>
+              <span className="text-[11px] font-black text-white tracking-[0.2em]">OPS HQ</span>
             </div>
-            <span className="w-px h-3 bg-white/[0.06]" />
+            <span className="w-px h-4 bg-[var(--color-border)]" />
             <div className="flex items-center gap-1.5">
-              <span className="text-[9px] text-purple-400/50 font-semibold tracking-wider">OpenClaw</span>
-              <span className="text-white/[0.08] text-[7px]">+</span>
-              <span className="text-[9px] text-cyan-400/50 font-semibold tracking-wider">K2</span>
+              <span className="text-[9px] text-[var(--color-neo-purple)] font-black tracking-wider">OPENCLAW</span>
+              <span className="text-white/20 text-[7px] font-black">+</span>
+              <span className="text-[9px] text-[var(--color-neo-blue)] font-black tracking-wider">K2</span>
             </div>
-            <span className="w-px h-3 bg-white/[0.06]" />
-            <span className="text-[9px] text-muted tracking-wider">{agents?.length || 6} AGENTS</span>
+            <span className="w-px h-4 bg-[var(--color-border)]" />
+            <span className="text-[9px] text-[var(--color-muted)] tracking-wider font-bold">{agents?.length || 6} AGENTS</span>
           </div>
-          <div className="text-[8px] text-white/[0.06] tracking-[0.3em] font-medium">REAL-TIME AGENT OPERATIONS DASHBOARD</div>
+          <div className="text-[8px] text-white/10 tracking-[0.3em] font-black">REAL-TIME AGENT OPERATIONS DASHBOARD</div>
         </div>
       </footer>
     </div>
@@ -188,13 +184,13 @@ function SectionTitle({ icon, label, count }) {
   return (
     <div className="flex items-center gap-2.5 mb-3 font-mono">
       <div className="flex items-center gap-2">
-        <span className="text-[14px] saturate-[0.7]">{icon}</span>
-        <span className="text-[11px] font-bold text-subtle tracking-[0.18em] uppercase">{label}</span>
+        <span className="text-[14px]">{icon}</span>
+        <span className="text-[11px] font-black text-white tracking-[0.18em] uppercase">{label}</span>
       </div>
       {count != null && (
-        <span className="text-[9px] text-muted bg-white/[0.03] border border-white/[0.05] px-2 py-0.5 rounded-full font-medium tabular">{count}</span>
+        <span className="neo-badge text-[9px] tabular">{count}</span>
       )}
-      <span className="flex-1 h-px bg-gradient-to-r from-white/[0.06] via-white/[0.03] to-transparent" />
+      <span className="flex-1 h-px bg-[var(--color-border)] border-t-2 border-dashed border-[var(--color-border)]" />
     </div>
   );
 }

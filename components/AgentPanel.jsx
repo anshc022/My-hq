@@ -2,25 +2,26 @@
 import { useRef, useEffect } from 'react';
 import { AGENTS } from '@/lib/agents';
 
-const STATUS_DOT = {
+const STATUS_COLOR = {
   idle:        'bg-zinc-600',
-  working:     'bg-emerald-400 shadow-[0_0_10px] shadow-emerald-400/60',
-  thinking:    'bg-amber-400 shadow-[0_0_10px] shadow-amber-400/50',
-  talking:     'bg-sky-400 shadow-[0_0_10px] shadow-sky-400/50',
+  working:     'bg-[var(--color-neo-green)]',
+  thinking:    'bg-[var(--color-neo-yellow)]',
+  talking:     'bg-[var(--color-neo-blue)]',
   sleeping:    'bg-zinc-700',
-  error:       'bg-red-400 shadow-[0_0_10px] shadow-red-400/60',
-  researching: 'bg-violet-400 shadow-[0_0_10px] shadow-violet-400/50',
-  posting:     'bg-blue-400 shadow-[0_0_10px] shadow-blue-400/50',
-  monitoring:  'bg-emerald-400 shadow-[0_0_10px] shadow-emerald-400/50',
+  error:       'bg-[var(--color-danger)]',
+  researching: 'bg-[var(--color-neo-purple)]',
+  posting:     'bg-[var(--color-neo-blue)]',
+  monitoring:  'bg-[var(--color-neo-green)]',
 };
 
-const STATUS_BG = {
-  working:     'from-emerald-500/[0.06] to-transparent',
-  thinking:    'from-amber-500/[0.06] to-transparent',
-  talking:     'from-sky-500/[0.06] to-transparent',
-  researching: 'from-violet-500/[0.06] to-transparent',
-  posting:     'from-blue-500/[0.06] to-transparent',
-  error:       'from-red-500/[0.06] to-transparent',
+const STATUS_BORDER = {
+  working:     'border-[var(--color-neo-green)]',
+  thinking:    'border-[var(--color-neo-yellow)]',
+  talking:     'border-[var(--color-neo-blue)]',
+  researching: 'border-[var(--color-neo-purple)]',
+  posting:     'border-[var(--color-neo-blue)]',
+  error:       'border-[var(--color-danger)]',
+  monitoring:  'border-[var(--color-neo-green)]',
 };
 
 export default function AgentPanel({ agents }) {
@@ -56,7 +57,7 @@ export default function AgentPanel({ agents }) {
   if (!agents || agents.length === 0) {
     return (
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        <div className="text-muted font-mono text-xs p-3">Waiting for agents...</div>
+        <div className="text-[var(--color-muted)] font-mono text-xs p-3 border-2 border-dashed border-[var(--color-border)]">Waiting for agents...</div>
       </div>
     );
   }
@@ -68,56 +69,48 @@ export default function AgentPanel({ agents }) {
       {agents.map((a, idx) => {
         const cfg = AGENTS[a.name] || {};
         const status = a.status || 'idle';
-        const dotClass = STATUS_DOT[status] || STATUS_DOT.idle;
+        const dotClass = STATUS_COLOR[status] || STATUS_COLOR.idle;
         const animated = isActive(status);
-        const bgGrad = STATUS_BG[status] || '';
+        const borderColor = animated ? (STATUS_BORDER[status] || 'border-[var(--color-border)]') : 'border-[var(--color-border)]';
 
         return (
           <div
             key={a.name}
-            className="group relative glass-card rounded-xl p-3.5 overflow-hidden"
+            className={`group relative neo-card p-3.5 ${borderColor}`}
             style={{ animationDelay: `${idx * 80}ms` }}
           >
-            {/* Top accent bar */}
-            <div className="absolute top-0 inset-x-0 h-[2px]" style={{ background: `linear-gradient(90deg, transparent 10%, ${cfg.color || '#5b7bff'}80, transparent 90%)` }} />
-
-            {/* Active status background glow */}
-            {animated && bgGrad && (
-              <div className={`absolute inset-0 bg-gradient-to-b ${bgGrad} pointer-events-none transition-opacity duration-700`} />
-            )}
-
-            {/* Hover glow */}
-            <div className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ background: `radial-gradient(circle at 50% 0%, ${cfg.color || '#5b7bff'}10, transparent 70%)` }} />
+            {/* Top accent bar — solid, no gradient */}
+            <div className="absolute top-0 left-0 right-0 h-[3px]" style={{ background: cfg.color || 'var(--color-accent)' }} />
 
             {/* Header */}
             <div className="relative flex items-center gap-2.5 mb-2.5">
               <div className="relative">
-                <span className="text-lg w-9 h-9 flex items-center justify-center rounded-xl bg-white/[0.04] border border-white/[0.06] shrink-0 group-hover:bg-white/[0.06] transition-colors">{cfg.icon || '?'}</span>
-                {/* Status dot on avatar */}
-                <span className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-card ${dotClass}`} style={animated ? { animation: 'pulse-slow 1.5s ease-in-out infinite' } : {}} />
+                <span className="text-lg w-9 h-9 flex items-center justify-center bg-[var(--color-surface)] border-2 border-[var(--color-border)] shrink-0">{cfg.icon || '?'}</span>
+                {/* Status dot */}
+                <span className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 border-2 border-[var(--color-bg)] ${dotClass}`} style={animated ? { animation: 'blink 1s step-end infinite' } : {}} />
               </div>
               <div className="min-w-0">
-                <div className="text-[12px] font-extrabold tracking-wide truncate transition-colors duration-300" style={{ color: cfg.color || '#fff' }}>{cfg.label || a.name}</div>
-                <div className="text-[7px] text-white/20 tracking-[0.2em] uppercase truncate font-medium">{cfg.role || ''}</div>
+                <div className="text-[12px] font-black tracking-wide truncate" style={{ color: cfg.color || '#fff' }}>{cfg.label || a.name}</div>
+                <div className="text-[7px] text-white/30 tracking-[0.2em] uppercase truncate font-bold">{cfg.role || ''}</div>
               </div>
             </div>
 
-            {/* Status pill */}
+            {/* Status badge */}
             <div className="relative flex items-center gap-1.5 mt-1">
-              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[8px] font-bold tracking-[0.12em] uppercase border ${
+              <span className={`neo-badge text-[8px] ${
                 animated
-                  ? 'bg-white/[0.04] border-white/[0.08] text-white/50'
-                  : 'bg-white/[0.02] border-white/[0.04] text-white/25'
+                  ? 'text-white border-white/30 bg-white/5'
+                  : 'text-white/30 border-white/10 bg-transparent'
               }`}>
-                <span className={`w-[5px] h-[5px] rounded-full ${dotClass}`} />
+                <span className={`w-[5px] h-[5px] ${dotClass}`} />
                 {status}
               </span>
             </div>
 
             {/* Task */}
             {a.current_task && (
-              <div className="relative mt-2.5 text-[9px] text-white/25 font-mono truncate px-2.5 py-1.5 bg-white/[0.02] rounded-lg border border-white/[0.04]" title={a.current_task}>
-                <span className="text-accent/40 mr-1">→</span>
+              <div className="relative mt-2.5 text-[9px] text-white/40 font-mono truncate px-2 py-1.5 bg-[var(--color-surface)] border-2 border-[var(--color-border)]" title={a.current_task}>
+                <span className="text-[var(--color-accent)] mr-1 font-black">→</span>
                 {a.current_task}
               </div>
             )}
