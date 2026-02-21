@@ -18,8 +18,8 @@ export default function MissionBoard({ agents, nodeConnected }) {
   ];
 
   const sysInfo = [
-    { key: 'Gateway', value: 'EC2 Private', icon: '🌐' },
-    { key: 'Model', value: 'K2', icon: '🧠' },
+    { key: 'Gateway', value: 'EC2 51.20.7.127', icon: '🌐' },
+    { key: 'Model', value: 'Claude Opus 4.6', icon: '🧠' },
     { key: 'Engine', value: 'OpenClaw v2026.2', icon: '⚙️' },
     { key: 'Runtime', value: 'Node.js v22.22.0', icon: '💚' },
     { key: 'Node', value: nodeConnected ? 'Connected' : 'Disconnected', icon: nodeConnected ? '✅' : '❌' },
