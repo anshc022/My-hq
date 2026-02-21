@@ -1,279 +1,229 @@
 // ─── Agent face SVG avatars ───
-// Polished character avatars shared across components
+// Bold cartoon style — visible at all sizes
 
 export const AGENT_FACES = {
-  // ─── Echo — Tech Lead: blue spiky hair, headset, confident smirk ───
+  // ─── Echo — Tech Lead: blue spiky hair, headset, leader vibe ───
   echo: ({ size = 44 }) => (
     <svg width={size} height={size} viewBox="0 0 64 64" fill="none">
-      <defs>
-        <clipPath id="echo-clip"><circle cx="32" cy="32" r="32" /></clipPath>
-        <linearGradient id="echo-bg" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#1a2a5e" /><stop offset="100%" stopColor="#0d1530" />
-        </linearGradient>
-      </defs>
-      <circle cx="32" cy="32" r="32" fill="url(#echo-bg)" />
-      <g clipPath="url(#echo-clip)">
-        {/* Shoulders */}
-        <ellipse cx="32" cy="62" rx="22" ry="12" fill="#3a6fd8" />
-        <ellipse cx="32" cy="62" rx="18" ry="10" fill="#4A90D9" />
-        {/* Neck */}
-        <rect x="27" y="44" width="10" height="6" rx="3" fill="#FFD5A0" />
-        {/* Head */}
-        <ellipse cx="32" cy="34" rx="14" ry="16" fill="#FFD5A0" />
-        {/* Hair — spiky blue */}
-        <path d="M16 28 C16 16 22 10 32 10 C42 10 48 16 48 28 L46 26 C46 18 40 13 32 13 C24 13 18 18 18 26 Z" fill="#2244AA" />
-        <path d="M20 18 L17 10 L22 16 L24 8 L26 16 L30 6 L32 15 L34 6 L38 16 L40 8 L42 16 L47 10 L44 18" fill="#2244AA" />
-        <path d="M24 12 L26 5 L28 13" fill="#3355CC" opacity="0.7" />
-        <path d="M36 12 L38 5 L40 13" fill="#3355CC" opacity="0.7" />
-        {/* Eyes */}
-        <ellipse cx="26" cy="33" rx="3.5" ry="3.8" fill="#fff" />
-        <ellipse cx="38" cy="33" rx="3.5" ry="3.8" fill="#fff" />
-        <circle cx="27" cy="33.5" r="2" fill="#1a3a7a" />
-        <circle cx="39" cy="33.5" r="2" fill="#1a3a7a" />
-        <circle cx="27.5" cy="32.5" r="0.7" fill="#fff" />
-        <circle cx="39.5" cy="32.5" r="0.7" fill="#fff" />
-        {/* Eyebrows */}
-        <path d="M22 29 Q26 27 30 29" stroke="#1a2a5e" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-        <path d="M34 29 Q38 27 42 29" stroke="#1a2a5e" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-        {/* Smirk */}
-        <path d="M27 40 Q32 44 37 40" stroke="#c0392b" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-        <path d="M37 40 Q38 39 39 40" stroke="#c0392b" strokeWidth="1" fill="none" />
-        {/* Headset */}
-        <path d="M12 30 Q12 18 32 16 Q52 18 52 30" stroke="#4fc3f7" strokeWidth="3" fill="none" />
-        <rect x="9" y="27" width="5" height="8" rx="2.5" fill="#4fc3f7" />
-        <rect x="50" y="27" width="5" height="8" rx="2.5" fill="#4fc3f7" />
-        <rect x="8" y="35" width="6" height="3" rx="1" fill="#3a7bd5" />
-      </g>
+      <circle cx="32" cy="32" r="32" fill="#0f1a3d" />
+      {/* Shoulders */}
+      <ellipse cx="32" cy="64" rx="26" ry="14" fill="#2955a8" />
+      <ellipse cx="32" cy="64" rx="22" ry="12" fill="#3a6fd8" />
+      {/* Neck */}
+      <rect x="26" y="44" width="12" height="7" rx="4" fill="#f5c58a" />
+      {/* Head */}
+      <ellipse cx="32" cy="34" rx="15" ry="17" fill="#f5c58a" />
+      {/* Spiky blue hair */}
+      <path d="M14 28 C14 14 22 6 32 6 C42 6 50 14 50 28 C48 20 40 12 32 12 C24 12 16 20 14 28 Z" fill="#2955a8" />
+      <polygon points="18,16 14,4 23,14" fill="#2955a8" />
+      <polygon points="24,10 22,0 28,10" fill="#2955a8" />
+      <polygon points="30,8 30,-2 34,8" fill="#3a6fd8" />
+      <polygon points="36,8 38,0 40,10" fill="#2955a8" />
+      <polygon points="42,10 46,2 44,14" fill="#2955a8" />
+      <polygon points="46,16 50,6 48,18" fill="#3a6fd8" />
+      {/* Eyes */}
+      <ellipse cx="25" cy="32" rx="4.5" ry="5" fill="#fff" />
+      <ellipse cx="39" cy="32" rx="4.5" ry="5" fill="#fff" />
+      <circle cx="26.5" cy="33" r="3" fill="#1a3a7a" />
+      <circle cx="40.5" cy="33" r="3" fill="#1a3a7a" />
+      <circle cx="27.5" cy="31.5" r="1.2" fill="#fff" />
+      <circle cx="41.5" cy="31.5" r="1.2" fill="#fff" />
+      {/* Bold eyebrows */}
+      <path d="M20 26 Q25 23 30 26" stroke="#152a5a" strokeWidth="3" fill="none" strokeLinecap="round" />
+      <path d="M34 26 Q39 23 44 26" stroke="#152a5a" strokeWidth="3" fill="none" strokeLinecap="round" />
+      {/* Confident smirk */}
+      <path d="M26 41 Q32 46 38 41" stroke="#a03020" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+      {/* Headset */}
+      <path d="M10 30 Q10 14 32 12 Q54 14 54 30" stroke="#4fc3f7" strokeWidth="4" fill="none" />
+      <rect x="6" y="26" width="7" height="10" rx="3.5" fill="#4fc3f7" />
+      <rect x="51" y="26" width="7" height="10" rx="3.5" fill="#4fc3f7" />
+      <rect x="5" y="36" width="8" height="4" rx="2" fill="#2a8ac4" />
     </svg>
   ),
 
-  // ─── Flare — UI/UX: pink flowing hair, creative look, bright eyes ───
+  // ─── Flare — UI/UX: pink hair, big eyes, artistic ───
   flare: ({ size = 44 }) => (
     <svg width={size} height={size} viewBox="0 0 64 64" fill="none">
-      <defs>
-        <clipPath id="flare-clip"><circle cx="32" cy="32" r="32" /></clipPath>
-        <linearGradient id="flare-bg" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#4a1a3a" /><stop offset="100%" stopColor="#2a0d20" />
-        </linearGradient>
-      </defs>
-      <circle cx="32" cy="32" r="32" fill="url(#flare-bg)" />
-      <g clipPath="url(#flare-clip)">
-        {/* Shoulders */}
-        <ellipse cx="32" cy="62" rx="22" ry="12" fill="#d4477a" />
-        <ellipse cx="32" cy="62" rx="18" ry="10" fill="#FF6B9D" />
-        {/* Neck */}
-        <rect x="27" y="44" width="10" height="6" rx="3" fill="#FFDBB4" />
-        {/* Long flowing hair behind */}
-        <path d="M14 26 C14 26 12 42 14 52 C16 58 18 56 18 50 L18 28 Z" fill="#FF6B9D" />
-        <path d="M50 26 C50 26 52 42 50 52 C48 58 46 56 46 50 L46 28 Z" fill="#FF6B9D" />
-        <path d="M16 30 C14 40 15 54 18 56" stroke="#ff8ab5" strokeWidth="1" fill="none" opacity="0.5" />
-        <path d="M48 30 C50 40 49 54 46 56" stroke="#ff8ab5" strokeWidth="1" fill="none" opacity="0.5" />
-        {/* Head */}
-        <ellipse cx="32" cy="34" rx="14" ry="16" fill="#FFDBB4" />
-        {/* Hair top */}
-        <path d="M16 28 C16 14 24 9 32 9 C40 9 48 14 48 28 C48 22 42 14 32 14 C22 14 16 22 16 28 Z" fill="#FF6B9D" />
-        <path d="M18 22 C18 14 24 11 32 11 C40 11 46 14 46 22" fill="#ff8ab5" opacity="0.4" />
-        {/* Side hair */}
-        <path d="M16 28 L14 26 L16 32 L14 38 L18 34 Z" fill="#FF6B9D" />
-        <path d="M48 28 L50 26 L48 32 L50 38 L46 34 Z" fill="#FF6B9D" />
-        {/* Eyes — large expressive */}
-        <ellipse cx="25" cy="33" rx="4" ry="4.5" fill="#fff" />
-        <ellipse cx="39" cy="33" rx="4" ry="4.5" fill="#fff" />
-        <circle cx="26" cy="33.5" r="2.5" fill="#8a2a6a" />
-        <circle cx="40" cy="33.5" r="2.5" fill="#8a2a6a" />
-        <circle cx="26.8" cy="32.3" r="1" fill="#fff" />
-        <circle cx="40.8" cy="32.3" r="1" fill="#fff" />
-        <circle cx="25" cy="34.5" r="0.5" fill="#fff" opacity="0.6" />
-        <circle cx="39" cy="34.5" r="0.5" fill="#fff" opacity="0.6" />
-        {/* Eyelashes */}
-        <path d="M21 30 L19 28" stroke="#FF6B9D" strokeWidth="1" strokeLinecap="round" />
-        <path d="M22 29 L21 27" stroke="#FF6B9D" strokeWidth="0.8" strokeLinecap="round" />
-        <path d="M43 30 L45 28" stroke="#FF6B9D" strokeWidth="1" strokeLinecap="round" />
-        <path d="M42 29 L43 27" stroke="#FF6B9D" strokeWidth="0.8" strokeLinecap="round" />
-        {/* Blush */}
-        <ellipse cx="20" cy="38" rx="3" ry="2" fill="#FFB6C1" opacity="0.35" />
-        <ellipse cx="44" cy="38" rx="3" ry="2" fill="#FFB6C1" opacity="0.35" />
-        {/* Smile */}
-        <path d="M27 41 Q32 45 37 41" stroke="#e0455a" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-        {/* Eyebrows */}
-        <path d="M22 28 Q25 26 29 28" stroke="#d45a80" strokeWidth="1.2" fill="none" strokeLinecap="round" />
-        <path d="M35 28 Q39 26 42 28" stroke="#d45a80" strokeWidth="1.2" fill="none" strokeLinecap="round" />
-      </g>
+      <circle cx="32" cy="32" r="32" fill="#2e0e22" />
+      {/* Shoulders */}
+      <ellipse cx="32" cy="64" rx="24" ry="13" fill="#c44070" />
+      <ellipse cx="32" cy="64" rx="20" ry="11" fill="#ff6b9d" />
+      {/* Neck */}
+      <rect x="26" y="44" width="12" height="7" rx="4" fill="#ffd4a8" />
+      {/* Long flowing hair behind */}
+      <ellipse cx="14" cy="42" rx="6" ry="18" fill="#ff6b9d" />
+      <ellipse cx="50" cy="42" rx="6" ry="18" fill="#ff6b9d" />
+      {/* Head */}
+      <ellipse cx="32" cy="34" rx="15" ry="17" fill="#ffd4a8" />
+      {/* Hair top + sides */}
+      <path d="M14 28 C14 12 22 5 32 5 C42 5 50 12 50 28 C48 18 40 10 32 10 C24 10 16 18 14 28 Z" fill="#ff6b9d" />
+      <path d="M14 28 C12 26 10 30 12 36 L18 30 Z" fill="#ff6b9d" />
+      <path d="M50 28 C52 26 54 30 52 36 L46 30 Z" fill="#ff6b9d" />
+      {/* Bangs */}
+      <path d="M18 22 Q24 16 32 18 Q28 14 22 18 Z" fill="#ff8ab5" />
+      <path d="M46 22 Q40 16 32 18 Q36 14 42 18 Z" fill="#ff8ab5" />
+      {/* Eyes — big anime style */}
+      <ellipse cx="24" cy="32" rx="5" ry="6" fill="#fff" />
+      <ellipse cx="40" cy="32" rx="5" ry="6" fill="#fff" />
+      <circle cx="25.5" cy="33" r="3.5" fill="#7a2060" />
+      <circle cx="41.5" cy="33" r="3.5" fill="#7a2060" />
+      <circle cx="26.5" cy="31" r="1.5" fill="#fff" />
+      <circle cx="42.5" cy="31" r="1.5" fill="#fff" />
+      <circle cx="24.5" cy="34" r="0.8" fill="#fff" opacity="0.7" />
+      <circle cx="40.5" cy="34" r="0.8" fill="#fff" opacity="0.7" />
+      {/* Eyelashes — thick */}
+      <path d="M19 27 L17 24" stroke="#ff6b9d" strokeWidth="2" strokeLinecap="round" />
+      <path d="M21 26 L20 23" stroke="#ff6b9d" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M45 27 L47 24" stroke="#ff6b9d" strokeWidth="2" strokeLinecap="round" />
+      <path d="M43 26 L44 23" stroke="#ff6b9d" strokeWidth="1.5" strokeLinecap="round" />
+      {/* Blush */}
+      <ellipse cx="18" cy="38" rx="4" ry="2.5" fill="#FFB6C1" opacity="0.45" />
+      <ellipse cx="46" cy="38" rx="4" ry="2.5" fill="#FFB6C1" opacity="0.45" />
+      {/* Cute smile */}
+      <path d="M27 42 Q32 47 37 42" stroke="#d03050" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+      {/* Eyebrows */}
+      <path d="M20 25 Q24 22 29 25" stroke="#c04070" strokeWidth="2" fill="none" strokeLinecap="round" />
+      <path d="M35 25 Q40 22 44 25" stroke="#c04070" strokeWidth="2" fill="none" strokeLinecap="round" />
     </svg>
   ),
 
-  // ─── Bolt — Frontend: yellow mohawk, cool glasses, grin ───
+  // ─── Bolt — Frontend: yellow mohawk, cool glasses, big grin ───
   bolt: ({ size = 44 }) => (
     <svg width={size} height={size} viewBox="0 0 64 64" fill="none">
-      <defs>
-        <clipPath id="bolt-clip"><circle cx="32" cy="32" r="32" /></clipPath>
-        <linearGradient id="bolt-bg" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#4a3a0a" /><stop offset="100%" stopColor="#2a1e05" />
-        </linearGradient>
-      </defs>
-      <circle cx="32" cy="32" r="32" fill="url(#bolt-bg)" />
-      <g clipPath="url(#bolt-clip)">
-        {/* Shoulders */}
-        <ellipse cx="32" cy="62" rx="22" ry="12" fill="#c4a820" />
-        <ellipse cx="32" cy="62" rx="18" ry="10" fill="#F7DC6F" />
-        {/* Neck */}
-        <rect x="27" y="44" width="10" height="6" rx="3" fill="#FFE0BD" />
-        {/* Head */}
-        <ellipse cx="32" cy="35" rx="14" ry="15" fill="#FFE0BD" />
-        {/* Mohawk */}
-        <path d="M26 20 C26 6 28 2 32 2 C36 2 38 6 38 20 C38 14 36 8 32 8 C28 8 26 14 26 20 Z" fill="#F7DC6F" />
-        <path d="M28 16 C28 8 30 5 32 5 C34 5 36 8 36 16" fill="#f9e88c" opacity="0.6" />
-        {/* Hair sides */}
-        <path d="M18 28 C18 20 24 16 32 16 C40 16 46 20 46 28 C44 24 38 20 32 20 C26 20 20 24 18 28 Z" fill="#F7DC6F" />
-        {/* Glasses */}
-        <rect x="18" y="30" width="12" height="10" rx="4" stroke="#FFD700" strokeWidth="2" fill="rgba(255,215,0,0.08)" />
-        <rect x="34" y="30" width="12" height="10" rx="4" stroke="#FFD700" strokeWidth="2" fill="rgba(255,215,0,0.08)" />
-        <line x1="30" y1="35" x2="34" y2="35" stroke="#FFD700" strokeWidth="2" />
-        <line x1="18" y1="34" x2="14" y2="32" stroke="#FFD700" strokeWidth="1.5" />
-        <line x1="46" y1="34" x2="50" y2="32" stroke="#FFD700" strokeWidth="1.5" />
-        {/* Eyes behind glasses */}
-        <circle cx="24" cy="35" r="2" fill="#111" />
-        <circle cx="40" cy="35" r="2" fill="#111" />
-        <circle cx="24.8" cy="34" r="0.7" fill="#fff" />
-        <circle cx="40.8" cy="34" r="0.7" fill="#fff" />
-        {/* Big grin */}
-        <path d="M25 43 Q32 48 39 43" stroke="#c0392b" strokeWidth="1.8" fill="none" strokeLinecap="round" />
-        <path d="M27 43 Q32 46 37 43" fill="#fff" opacity="0.9" />
-      </g>
+      <circle cx="32" cy="32" r="32" fill="#2a2008" />
+      {/* Shoulders */}
+      <ellipse cx="32" cy="64" rx="24" ry="13" fill="#b89820" />
+      <ellipse cx="32" cy="64" rx="20" ry="11" fill="#f0d050" />
+      {/* Neck */}
+      <rect x="26" y="44" width="12" height="7" rx="4" fill="#ffe0b0" />
+      {/* Head */}
+      <ellipse cx="32" cy="35" rx="15" ry="16" fill="#ffe0b0" />
+      {/* Mohawk */}
+      <path d="M24 22 C24 4 28 -2 32 -2 C36 -2 40 4 40 22 Z" fill="#f0d050" />
+      <path d="M27 18 C27 6 30 0 32 0 C34 0 37 6 37 18 Z" fill="#f9e88c" opacity="0.6" />
+      {/* Hair sides */}
+      <path d="M16 30 C16 20 24 14 32 14 C40 14 48 20 48 30 C46 22 38 18 32 18 C26 18 18 22 16 30 Z" fill="#f0d050" />
+      {/* Glasses — bold thick */}
+      <rect x="16" y="28" width="14" height="12" rx="5" stroke="#ffd700" strokeWidth="3" fill="rgba(255,215,0,0.1)" />
+      <rect x="34" y="28" width="14" height="12" rx="5" stroke="#ffd700" strokeWidth="3" fill="rgba(255,215,0,0.1)" />
+      <line x1="30" y1="34" x2="34" y2="34" stroke="#ffd700" strokeWidth="3" />
+      <line x1="16" y1="33" x2="10" y2="30" stroke="#ffd700" strokeWidth="2.5" strokeLinecap="round" />
+      <line x1="48" y1="33" x2="54" y2="30" stroke="#ffd700" strokeWidth="2.5" strokeLinecap="round" />
+      {/* Eyes behind glasses */}
+      <circle cx="23" cy="34" r="3" fill="#222" />
+      <circle cx="41" cy="34" r="3" fill="#222" />
+      <circle cx="24" cy="32.5" r="1.2" fill="#fff" />
+      <circle cx="42" cy="32.5" r="1.2" fill="#fff" />
+      {/* Wide toothy grin */}
+      <path d="M23 44 Q32 52 41 44" stroke="#a03020" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+      <path d="M26 44 Q32 49 38 44" fill="#fff" />
     </svg>
   ),
 
-  // ─── Nexus — Backend: dark skin, cap, green headset, focused look ───
+  // ─── Nexus — Backend: dark skin, cap, green headset ───
   nexus: ({ size = 44 }) => (
     <svg width={size} height={size} viewBox="0 0 64 64" fill="none">
-      <defs>
-        <clipPath id="nexus-clip"><circle cx="32" cy="32" r="32" /></clipPath>
-        <linearGradient id="nexus-bg" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#0a2e1a" /><stop offset="100%" stopColor="#051a0e" />
-        </linearGradient>
-      </defs>
-      <circle cx="32" cy="32" r="32" fill="url(#nexus-bg)" />
-      <g clipPath="url(#nexus-clip)">
-        {/* Shoulders */}
-        <ellipse cx="32" cy="62" rx="22" ry="12" fill="#1a8a4a" />
-        <ellipse cx="32" cy="62" rx="18" ry="10" fill="#2ECC71" />
-        {/* Neck */}
-        <rect x="27" y="44" width="10" height="6" rx="3" fill="#C68642" />
-        {/* Head */}
-        <ellipse cx="32" cy="35" rx="14" ry="15" fill="#C68642" />
-        {/* Short dark hair under cap */}
-        <path d="M18 30 C18 22 24 18 32 18 C40 18 46 22 46 30 C44 26 38 22 32 22 C26 22 20 26 18 30 Z" fill="#1a1a1a" />
-        {/* Cap */}
-        <path d="M14 26 C14 16 22 10 32 10 C42 10 50 16 50 26 L48 26 C48 18 40 13 32 13 C24 13 16 18 16 26 Z" fill="#2c3e50" />
-        <path d="M16 25 C16 19 24 14 32 14 C40 14 48 19 48 25" fill="#34495e" opacity="0.5" />
-        {/* Cap brim */}
-        <path d="M10 26 L28 26 L26 30 L10 28 Z" fill="#2c3e50" />
-        <path d="M10 26 L28 26 L27 28 L10 27 Z" fill="#3d566e" opacity="0.4" />
-        {/* Eyes */}
-        <ellipse cx="26" cy="34" rx="3.5" ry="3.5" fill="#fff" />
-        <ellipse cx="38" cy="34" rx="3.5" ry="3.5" fill="#fff" />
-        <circle cx="27" cy="34.5" r="2" fill="#1a3020" />
-        <circle cx="39" cy="34.5" r="2" fill="#1a3020" />
-        <circle cx="27.5" cy="33.5" r="0.7" fill="#fff" />
-        <circle cx="39.5" cy="33.5" r="0.7" fill="#fff" />
-        {/* Eyebrows — focused */}
-        <path d="M22 30 Q26 28 30 30" stroke="#3a2a10" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-        <path d="M34 30 Q38 28 42 30" stroke="#3a2a10" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-        {/* Calm smile */}
-        <path d="M28 41 Q32 44 36 41" stroke="#8a5a2a" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-        {/* Headset */}
-        <path d="M50 30 L52 30 L52 38 L50 38 Z" rx="1" fill="#27ae60" />
-        <path d="M50 28 Q52 28 52 30" stroke="#27ae60" strokeWidth="2.5" fill="none" />
-      </g>
+      <circle cx="32" cy="32" r="32" fill="#061a0e" />
+      {/* Shoulders */}
+      <ellipse cx="32" cy="64" rx="24" ry="13" fill="#1a7a40" />
+      <ellipse cx="32" cy="64" rx="20" ry="11" fill="#2ecc71" />
+      {/* Neck */}
+      <rect x="26" y="44" width="12" height="7" rx="4" fill="#c68642" />
+      {/* Head */}
+      <ellipse cx="32" cy="35" rx="15" ry="16" fill="#c68642" />
+      {/* Short dark hair under cap */}
+      <path d="M18 30 C18 22 24 18 32 18 C40 18 46 22 46 30 C44 24 38 20 32 20 C26 20 20 24 18 30 Z" fill="#1a1a1a" />
+      {/* Cap */}
+      <path d="M12 26 C12 14 22 6 32 6 C42 6 52 14 52 26 C50 16 40 10 32 10 C24 10 14 16 12 26 Z" fill="#2c3e50" />
+      <path d="M16 24 C16 16 24 10 32 10 C40 10 48 16 48 24" fill="#34495e" opacity="0.5" />
+      {/* Cap brim — thick & visible */}
+      <path d="M6 26 L30 26 L28 32 L6 30 Z" fill="#2c3e50" />
+      <path d="M6 26 L30 26 L29 29 L6 28 Z" fill="#3d5a80" opacity="0.5" />
+      {/* Eyes */}
+      <ellipse cx="25" cy="34" rx="4.5" ry="4.5" fill="#fff" />
+      <ellipse cx="39" cy="34" rx="4.5" ry="4.5" fill="#fff" />
+      <circle cx="26" cy="35" r="3" fill="#1a3020" />
+      <circle cx="40" cy="35" r="3" fill="#1a3020" />
+      <circle cx="27" cy="33.5" r="1.2" fill="#fff" />
+      <circle cx="41" cy="33.5" r="1.2" fill="#fff" />
+      {/* Bold eyebrows */}
+      <path d="M20 29 Q25 26 30 29" stroke="#3a2510" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+      <path d="M34 29 Q39 26 44 29" stroke="#3a2510" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+      {/* Calm smile */}
+      <path d="M27 42 Q32 46 37 42" stroke="#7a4a20" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+      {/* Headset — thick */}
+      <rect x="50" y="28" width="6" height="10" rx="3" fill="#27ae60" />
+      <path d="M52 26 Q54 24 56 28" stroke="#27ae60" strokeWidth="3" fill="none" />
+      <rect x="50" y="38" width="5" height="3" rx="1" fill="#1e8a4a" />
     </svg>
   ),
 
-  // ─── Vigil — QA: red buzz cut, stern face, scar, shield vibe ───
+  // ─── Vigil — QA: red buzz cut, stern, scar, tough ───
   vigil: ({ size = 44 }) => (
     <svg width={size} height={size} viewBox="0 0 64 64" fill="none">
-      <defs>
-        <clipPath id="vigil-clip"><circle cx="32" cy="32" r="32" /></clipPath>
-        <linearGradient id="vigil-bg" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#3a1010" /><stop offset="100%" stopColor="#1e0808" />
-        </linearGradient>
-      </defs>
-      <circle cx="32" cy="32" r="32" fill="url(#vigil-bg)" />
-      <g clipPath="url(#vigil-clip)">
-        {/* Shoulders — armored look */}
-        <ellipse cx="32" cy="62" rx="24" ry="13" fill="#8a2020" />
-        <ellipse cx="32" cy="62" rx="20" ry="11" fill="#c0392b" />
-        <path d="M16 56 L20 52 L22 56" fill="#e74c3c" opacity="0.4" />
-        <path d="M48 56 L44 52 L42 56" fill="#e74c3c" opacity="0.4" />
-        {/* Neck — thick */}
-        <rect x="26" y="44" width="12" height="6" rx="3" fill="#D4A06A" />
-        {/* Head — slightly square jaw */}
-        <path d="M18 36 C18 20 24 14 32 14 C40 14 46 20 46 36 C46 44 42 48 32 48 C22 48 18 44 18 36 Z" fill="#D4A06A" />
-        {/* Short red buzz cut */}
-        <path d="M18 28 C18 18 24 12 32 12 C40 12 46 18 46 28 C44 22 38 16 32 16 C26 16 20 22 18 28 Z" fill="#E74C3C" />
-        <path d="M20 24 C20 18 26 14 32 14 C38 14 44 18 44 24" fill="#c0392b" opacity="0.4" />
-        {/* Eyes — intense narrow */}
-        <ellipse cx="26" cy="33" rx="3.5" ry="3" fill="#fff" />
-        <ellipse cx="38" cy="33" rx="3.5" ry="3" fill="#fff" />
-        <circle cx="26.5" cy="33.5" r="2" fill="#4a2020" />
-        <circle cx="38.5" cy="33.5" r="2" fill="#4a2020" />
-        <circle cx="27" cy="32.5" r="0.6" fill="#fff" />
-        <circle cx="39" cy="32.5" r="0.6" fill="#fff" />
-        {/* Angry eyebrows */}
-        <path d="M22 29 L30 31" stroke="#8a3020" strokeWidth="2" fill="none" strokeLinecap="round" />
-        <path d="M42 29 L34 31" stroke="#8a3020" strokeWidth="2" fill="none" strokeLinecap="round" />
-        {/* Stern mouth */}
-        <line x1="28" y1="41" x2="36" y2="41" stroke="#8a4a2a" strokeWidth="1.8" strokeLinecap="round" />
-        {/* Scar */}
-        <path d="M42 26 L44 32 L43 36" stroke="#e74c3c" strokeWidth="1.2" fill="none" opacity="0.6" strokeLinecap="round" />
-        {/* Nose */}
-        <path d="M31 36 L32 38 L33 36" stroke="#b8855a" strokeWidth="1" fill="none" strokeLinecap="round" />
-      </g>
+      <circle cx="32" cy="32" r="32" fill="#1e0808" />
+      {/* Shoulders — armored */}
+      <ellipse cx="32" cy="64" rx="28" ry="16" fill="#6a1818" />
+      <ellipse cx="32" cy="64" rx="24" ry="14" fill="#c0392b" />
+      <path d="M12 58 L18 52 L20 58" fill="#e74c3c" opacity="0.5" />
+      <path d="M52 58 L46 52 L44 58" fill="#e74c3c" opacity="0.5" />
+      {/* Neck — thick */}
+      <rect x="24" y="44" width="16" height="7" rx="5" fill="#d4a06a" />
+      {/* Head — square jaw */}
+      <path d="M16 36 C16 18 22 10 32 10 C42 10 48 18 48 36 C48 46 42 50 32 50 C22 50 16 46 16 36 Z" fill="#d4a06a" />
+      {/* Short red buzz cut */}
+      <path d="M16 28 C16 16 22 8 32 8 C42 8 48 16 48 28 C46 18 38 12 32 12 C26 12 18 18 16 28 Z" fill="#e74c3c" />
+      <path d="M20 22 C20 16 26 10 32 10 C38 10 44 16 44 22" fill="#c0392b" opacity="0.5" />
+      {/* Eyes — intense */}
+      <ellipse cx="25" cy="32" rx="4.5" ry="3.5" fill="#fff" />
+      <ellipse cx="39" cy="32" rx="4.5" ry="3.5" fill="#fff" />
+      <circle cx="26" cy="32.5" r="2.5" fill="#3a1515" />
+      <circle cx="40" cy="32.5" r="2.5" fill="#3a1515" />
+      <circle cx="27" cy="31.5" r="1" fill="#fff" />
+      <circle cx="41" cy="31.5" r="1" fill="#fff" />
+      {/* Angry eyebrows — very bold */}
+      <path d="M20 27 L30 30" stroke="#7a2515" strokeWidth="3.5" fill="none" strokeLinecap="round" />
+      <path d="M44 27 L34 30" stroke="#7a2515" strokeWidth="3.5" fill="none" strokeLinecap="round" />
+      {/* Stern mouth */}
+      <line x1="26" y1="42" x2="38" y2="42" stroke="#8a4a2a" strokeWidth="3" strokeLinecap="round" />
+      {/* Scar — thick & visible */}
+      <path d="M42 24 L45 32 L44 38" stroke="#ff4040" strokeWidth="2.5" fill="none" strokeLinecap="round" opacity="0.7" />
+      {/* Nose */}
+      <path d="M30 36 L32 39 L34 36" stroke="#b8855a" strokeWidth="2" fill="none" strokeLinecap="round" />
     </svg>
   ),
 
-  // ─── Forge — DevOps: bald, strong build, goatee, wrench vibe ───
+  // ─── Forge — DevOps: bald, strong, goatee, builder ───
   forge: ({ size = 44 }) => (
     <svg width={size} height={size} viewBox="0 0 64 64" fill="none">
-      <defs>
-        <clipPath id="forge-clip"><circle cx="32" cy="32" r="32" /></clipPath>
-        <linearGradient id="forge-bg" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#3a2210" /><stop offset="100%" stopColor="#1e1108" />
-        </linearGradient>
-      </defs>
-      <circle cx="32" cy="32" r="32" fill="url(#forge-bg)" />
-      <g clipPath="url(#forge-clip)">
-        {/* Shoulders — broad */}
-        <ellipse cx="32" cy="62" rx="24" ry="14" fill="#b85a10" />
-        <ellipse cx="32" cy="62" rx="20" ry="12" fill="#E67E22" />
-        {/* Neck — thick */}
-        <rect x="25" y="44" width="14" height="6" rx="4" fill="#FFD5A0" />
-        {/* Head — round & bald */}
-        <ellipse cx="32" cy="33" rx="15" ry="17" fill="#FFD5A0" />
-        {/* Bald top with shine */}
-        <path d="M17 30 C17 16 24 10 32 10 C40 10 47 16 47 30" fill="#FFD5A0" />
-        <ellipse cx="30" cy="16" rx="5" ry="2.5" fill="#ffe8c0" opacity="0.5" />
-        <ellipse cx="36" cy="14" rx="3" ry="1.5" fill="#fff" opacity="0.15" />
-        {/* Eyes */}
-        <ellipse cx="26" cy="32" rx="3.5" ry="3.5" fill="#fff" />
-        <ellipse cx="38" cy="32" rx="3.5" ry="3.5" fill="#fff" />
-        <circle cx="26.5" cy="32.5" r="2" fill="#4a2a10" />
-        <circle cx="38.5" cy="32.5" r="2" fill="#4a2a10" />
-        <circle cx="27" cy="31.5" r="0.7" fill="#fff" />
-        <circle cx="39" cy="31.5" r="0.7" fill="#fff" />
-        {/* Thick eyebrows */}
-        <path d="M22 28 Q26 26 30 28" stroke="#8a5a20" strokeWidth="2.5" fill="none" strokeLinecap="round" />
-        <path d="M34 28 Q38 26 42 28" stroke="#8a5a20" strokeWidth="2.5" fill="none" strokeLinecap="round" />
-        {/* Nose */}
-        <path d="M30 35 Q32 38 34 35" stroke="#d4a060" strokeWidth="1.2" fill="none" strokeLinecap="round" />
-        {/* Goatee */}
-        <path d="M28 42 Q32 48 36 42" fill="#8a6a30" opacity="0.5" />
-        <path d="M29 41 Q32 44 35 41" fill="#9a7a40" opacity="0.3" />
-        {/* Confident smile */}
-        <path d="M27 40 Q32 44 37 40" stroke="#c0392b" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-        {/* Wrench on shoulder */}
-        <rect x="48" y="50" width="3" height="14" rx="1" fill="#999" transform="rotate(-30 48 50)" />
-        <circle cx="47" cy="48" r="3" stroke="#999" strokeWidth="2" fill="none" transform="rotate(-30 48 50)" />
-      </g>
+      <circle cx="32" cy="32" r="32" fill="#1e1108" />
+      {/* Shoulders — broad */}
+      <ellipse cx="32" cy="64" rx="28" ry="16" fill="#a85010" />
+      <ellipse cx="32" cy="64" rx="24" ry="14" fill="#e67e22" />
+      {/* Neck — thick */}
+      <rect x="23" y="44" width="18" height="7" rx="5" fill="#f5c58a" />
+      {/* Head — round & bald */}
+      <ellipse cx="32" cy="32" rx="17" ry="19" fill="#f5c58a" />
+      {/* Bald top with shine */}
+      <path d="M15 28 C15 12 22 4 32 4 C42 4 49 12 49 28" fill="#f5c58a" />
+      <ellipse cx="28" cy="12" rx="7" ry="3" fill="#ffe8c0" opacity="0.5" />
+      <ellipse cx="36" cy="10" rx="4" ry="2" fill="#fff" opacity="0.2" />
+      {/* Eyes */}
+      <ellipse cx="25" cy="30" rx="4.5" ry="4.5" fill="#fff" />
+      <ellipse cx="39" cy="30" rx="4.5" ry="4.5" fill="#fff" />
+      <circle cx="26" cy="31" r="3" fill="#4a2a10" />
+      <circle cx="40" cy="31" r="3" fill="#4a2a10" />
+      <circle cx="27" cy="29.5" r="1.2" fill="#fff" />
+      <circle cx="41" cy="29.5" r="1.2" fill="#fff" />
+      {/* Thick eyebrows */}
+      <path d="M20 24 Q25 21 30 24" stroke="#7a4a15" strokeWidth="3.5" fill="none" strokeLinecap="round" />
+      <path d="M34 24 Q39 21 44 24" stroke="#7a4a15" strokeWidth="3.5" fill="none" strokeLinecap="round" />
+      {/* Nose — big and bold */}
+      <path d="M29 34 Q32 40 35 34" stroke="#d4a060" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+      {/* Goatee — filled shape */}
+      <path d="M26 42 Q32 52 38 42 Q36 46 32 48 Q28 46 26 42 Z" fill="#7a5a20" opacity="0.6" />
+      {/* Confident smile */}
+      <path d="M26 40 Q32 45 38 40" stroke="#a03020" strokeWidth="2.5" fill="none" strokeLinecap="round" />
     </svg>
   ),
 };
