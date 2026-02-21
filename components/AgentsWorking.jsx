@@ -53,7 +53,7 @@ export default function AgentsWorking({ agents, events }) {
   return (
     <div className="neo-card-static animate-fade-in" style={{ border: '2px solid #2a2a2a' }}>
       {/* Header Row */}
-      <div className="flex flex-wrap items-center justify-between gap-3 p-4 pb-0">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-3 pt-3 pb-0">
         <div className="flex items-center gap-3">
           <span className="text-xl">⚡</span>
           <h2 className="text-[15px] md:text-[17px] font-black text-white tracking-wider uppercase">
@@ -88,10 +88,10 @@ export default function AgentsWorking({ agents, events }) {
       </div>
 
       {/* Divider */}
-      <div className="mx-4 my-3 border-t-2 border-dashed border-[var(--color-border)]" />
+      <div className="mx-3 my-2 border-t-2 border-dashed border-[var(--color-border)]" />
 
       {/* Agent Cards Row */}
-      <div className="grid grid-cols-3 md:grid-cols-6 gap-3 px-4 pb-4">
+      <div className="grid grid-cols-3 md:grid-cols-6 gap-2 px-3 pb-3">
         {Object.entries(AGENTS).map(([name, config]) => {
           const agentData = (agents || []).find(a => a.name === name) || {};
           const status = (agentData.status || 'idle').toLowerCase();
@@ -103,7 +103,7 @@ export default function AgentsWorking({ agents, events }) {
           return (
             <div
               key={name}
-              className="flex flex-col items-center gap-1.5 p-3 border-2 transition-all duration-200 hover:translate-x-[-2px] hover:translate-y-[-2px]"
+              className="flex flex-col items-center gap-1 p-2 border-2 transition-all duration-200 hover:translate-x-[-2px] hover:translate-y-[-2px]"
               style={{
                 borderColor: isBusy ? statusColor : '#1a1a1a',
                 background: isBusy ? statusColor + '08' : '#0d0d0d',
@@ -114,15 +114,15 @@ export default function AgentsWorking({ agents, events }) {
               <div
                 className="relative flex items-center justify-center overflow-hidden"
                 style={{
-                  width: 48,
-                  height: 48,
+                  width: 56,
+                  height: 56,
                   borderRadius: '50%',
-                  border: `3px solid ${config.color}`,
+                  border: `2px solid ${config.color}`,
                   background: config.color + '12',
                   boxShadow: isBusy ? `0 0 14px ${config.color}35` : 'none',
                 }}
               >
-                {AGENT_FACES[name] ? AGENT_FACES[name]({ size: 44 }) : <span style={{ fontSize: 20 }}>{config.icon}</span>}
+                {AGENT_FACES[name] ? AGENT_FACES[name]({ size: 56 }) : <span style={{ fontSize: 20 }}>{config.icon}</span>}
                 {/* Status indicator dot */}
                 <span
                   className="absolute bottom-0 right-0"

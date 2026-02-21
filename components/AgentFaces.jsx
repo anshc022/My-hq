@@ -6,12 +6,12 @@ export const AGENT_FACES = {
   echo: ({ size = 44 }) => (
     <svg width={size} height={size} viewBox="0 0 64 64" fill="none">
       <defs>
-        <clipPath id="echo-clip"><circle cx="32" cy="32" r="30" /></clipPath>
+        <clipPath id="echo-clip"><circle cx="32" cy="32" r="32" /></clipPath>
         <linearGradient id="echo-bg" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#1a2a5e" /><stop offset="100%" stopColor="#0d1530" />
         </linearGradient>
       </defs>
-      <circle cx="32" cy="32" r="30" fill="url(#echo-bg)" />
+      <circle cx="32" cy="32" r="32" fill="url(#echo-bg)" />
       <g clipPath="url(#echo-clip)">
         {/* Shoulders */}
         <ellipse cx="32" cy="62" rx="22" ry="12" fill="#3a6fd8" />
@@ -51,12 +51,12 @@ export const AGENT_FACES = {
   flare: ({ size = 44 }) => (
     <svg width={size} height={size} viewBox="0 0 64 64" fill="none">
       <defs>
-        <clipPath id="flare-clip"><circle cx="32" cy="32" r="30" /></clipPath>
+        <clipPath id="flare-clip"><circle cx="32" cy="32" r="32" /></clipPath>
         <linearGradient id="flare-bg" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#4a1a3a" /><stop offset="100%" stopColor="#2a0d20" />
         </linearGradient>
       </defs>
-      <circle cx="32" cy="32" r="30" fill="url(#flare-bg)" />
+      <circle cx="32" cy="32" r="32" fill="url(#flare-bg)" />
       <g clipPath="url(#flare-clip)">
         {/* Shoulders */}
         <ellipse cx="32" cy="62" rx="22" ry="12" fill="#d4477a" />
@@ -106,12 +106,12 @@ export const AGENT_FACES = {
   bolt: ({ size = 44 }) => (
     <svg width={size} height={size} viewBox="0 0 64 64" fill="none">
       <defs>
-        <clipPath id="bolt-clip"><circle cx="32" cy="32" r="30" /></clipPath>
+        <clipPath id="bolt-clip"><circle cx="32" cy="32" r="32" /></clipPath>
         <linearGradient id="bolt-bg" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#4a3a0a" /><stop offset="100%" stopColor="#2a1e05" />
         </linearGradient>
       </defs>
-      <circle cx="32" cy="32" r="30" fill="url(#bolt-bg)" />
+      <circle cx="32" cy="32" r="32" fill="url(#bolt-bg)" />
       <g clipPath="url(#bolt-clip)">
         {/* Shoulders */}
         <ellipse cx="32" cy="62" rx="22" ry="12" fill="#c4a820" />
@@ -147,12 +147,12 @@ export const AGENT_FACES = {
   nexus: ({ size = 44 }) => (
     <svg width={size} height={size} viewBox="0 0 64 64" fill="none">
       <defs>
-        <clipPath id="nexus-clip"><circle cx="32" cy="32" r="30" /></clipPath>
+        <clipPath id="nexus-clip"><circle cx="32" cy="32" r="32" /></clipPath>
         <linearGradient id="nexus-bg" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#0a2e1a" /><stop offset="100%" stopColor="#051a0e" />
         </linearGradient>
       </defs>
-      <circle cx="32" cy="32" r="30" fill="url(#nexus-bg)" />
+      <circle cx="32" cy="32" r="32" fill="url(#nexus-bg)" />
       <g clipPath="url(#nexus-clip)">
         {/* Shoulders */}
         <ellipse cx="32" cy="62" rx="22" ry="12" fill="#1a8a4a" />
@@ -192,12 +192,12 @@ export const AGENT_FACES = {
   vigil: ({ size = 44 }) => (
     <svg width={size} height={size} viewBox="0 0 64 64" fill="none">
       <defs>
-        <clipPath id="vigil-clip"><circle cx="32" cy="32" r="30" /></clipPath>
+        <clipPath id="vigil-clip"><circle cx="32" cy="32" r="32" /></clipPath>
         <linearGradient id="vigil-bg" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#3a1010" /><stop offset="100%" stopColor="#1e0808" />
         </linearGradient>
       </defs>
-      <circle cx="32" cy="32" r="30" fill="url(#vigil-bg)" />
+      <circle cx="32" cy="32" r="32" fill="url(#vigil-bg)" />
       <g clipPath="url(#vigil-clip)">
         {/* Shoulders — armored look */}
         <ellipse cx="32" cy="62" rx="24" ry="13" fill="#8a2020" />
@@ -235,12 +235,12 @@ export const AGENT_FACES = {
   forge: ({ size = 44 }) => (
     <svg width={size} height={size} viewBox="0 0 64 64" fill="none">
       <defs>
-        <clipPath id="forge-clip"><circle cx="32" cy="32" r="30" /></clipPath>
+        <clipPath id="forge-clip"><circle cx="32" cy="32" r="32" /></clipPath>
         <linearGradient id="forge-bg" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#3a2210" /><stop offset="100%" stopColor="#1e1108" />
         </linearGradient>
       </defs>
-      <circle cx="32" cy="32" r="30" fill="url(#forge-bg)" />
+      <circle cx="32" cy="32" r="32" fill="url(#forge-bg)" />
       <g clipPath="url(#forge-clip)">
         {/* Shoulders — broad */}
         <ellipse cx="32" cy="62" rx="24" ry="14" fill="#b85a10" />
