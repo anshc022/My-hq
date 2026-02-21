@@ -568,59 +568,48 @@ function drawAgent(ctx, x, y, name, agentData, frame) {
     ctx.restore();
   }
 
-  // Idle activity bubble — big and visible
+  // Idle activity bubble
   if (!isAgentBusy(agentData) && status !== 'sleeping') {
     const act = agentIdleActivity[name];
     if (act) {
-      const bubbleY = ay - SPRITE_H / 2 - 14 * S;
+      const bubbleY = ay - SPRITE_H / 2 - 10 * S;
       const bubbleX = x;
-      const floatOff = Math.sin(frame * 0.04 + x * 0.1) * 3 * S;
-      const emojiSize = Math.round(16 * S);
+      const floatOff = Math.sin(frame * 0.04 + x * 0.1) * 2 * S;
+      const emojiSize = Math.round(11 * S);
       ctx.save();
-      const lblFs = Math.max(7, Math.round(10 * S));
-      ctx.font = `bold ${lblFs}px monospace`;
+      const lblFs = Math.max(5, Math.round(7 * S));
+      ctx.font = `${lblFs}px monospace`;
       const labelW = ctx.measureText(act.label).width;
-      const bgW = Math.max(labelW + 12 * S, emojiSize + 14 * S);
-      const bgH = Math.round(30 * S);
+      const bgW = Math.max(labelW + 8 * S, emojiSize + 10 * S);
+      const bgH = Math.round(22 * S);
       const bgX = bubbleX - bgW / 2;
       const bgY = bubbleY - bgH + floatOff;
 
-      // Bubble background
-      ctx.fillStyle = '#111118';
-      ctx.globalAlpha = 0.95;
+      ctx.fillStyle = '#0a0a0a';
+      ctx.globalAlpha = 0.9;
       ctx.fillRect(bgX, bgY, bgW, bgH);
-      ctx.strokeStyle = config.color;
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+      ctx.lineWidth = 1.5;
       ctx.strokeRect(bgX, bgY, bgW, bgH);
       ctx.globalAlpha = 1;
 
-      // Shadow
-      ctx.fillStyle = config.color;
-      ctx.globalAlpha = 0.2;
-      ctx.fillRect(bgX + 2, bgY + 2, bgW, bgH);
-      ctx.globalAlpha = 1;
-
-      // Pointer triangle
-      ctx.fillStyle = '#111118';
+      ctx.fillStyle = '#0a0a0a';
       ctx.beginPath();
-      ctx.moveTo(bubbleX - 3 * S, bgY + bgH);
-      ctx.lineTo(bubbleX + 3 * S, bgY + bgH);
-      ctx.lineTo(bubbleX, bgY + bgH + 5 * S);
+      ctx.moveTo(bubbleX - 2 * S, bgY + bgH);
+      ctx.lineTo(bubbleX + 2 * S, bgY + bgH);
+      ctx.lineTo(bubbleX, bgY + bgH + 3 * S);
       ctx.fill();
-      ctx.strokeStyle = config.color;
-      ctx.lineWidth = 2;
-      ctx.stroke();
 
       const emojiPulse = 1 + Math.sin(frame * 0.06) * 0.08;
       ctx.font = `${Math.round(emojiSize * emojiPulse)}px sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(act.emoji, bubbleX, bgY + 10 * S + floatOff * 0.2);
+      ctx.fillText(act.emoji, bubbleX, bgY + 8 * S + floatOff * 0.2);
 
-      ctx.font = `bold ${lblFs}px monospace`;
-      ctx.fillStyle = '#e0e0f0';
+      ctx.font = `${lblFs}px monospace`;
+      ctx.fillStyle = 'rgba(200, 200, 220, 0.7)';
       ctx.textAlign = 'center';
-      ctx.fillText(act.label, bubbleX, bgY + 22 * S + floatOff * 0.2);
+      ctx.fillText(act.label, bubbleX, bgY + 17 * S + floatOff * 0.2);
       ctx.restore();
     }
   }
@@ -650,7 +639,7 @@ function drawBubble(ctx, x, y, text, borderColor, S) {
   }
   if (lines.length === 0) return;
 
-  const fs = Math.max(8, Math.round(11 * S));
+  const fs = Math.max(6, Math.round(9 * S));
   ctx.font = `bold ${fs}px monospace`;
 
   let maxW = 0;
@@ -693,7 +682,7 @@ function drawBubble(ctx, x, y, text, borderColor, S) {
   ctx.fillStyle = '#0a0a0a';
   ctx.fillRect(x - 4 * S, by + bh - 1, 8 * S, 2);
 
-  ctx.fillStyle = '#f0f0ff';
+  ctx.fillStyle = '#e8e8f0';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   for (let i = 0; i < lines.length; i++) {
@@ -710,14 +699,28 @@ function drawConnections(ctx, agents, cw, ch, frame) {
   if (active.length < 2) return;
 
   ctx.save();
-  ctx.strokeStyle = 'rgba(140, 120, 200, 0.4)';
-  ctx.lineWidth = 1.5;
-  ctx.setLineDash([4, 6]);
-  ctx.lineDashOffset = -frame * 0.6;
-  ctx.globalAlpha = 0.5;
 
   const hub = active[0];
   const hubPos = getSmoothedPos(hub.name, hub, cw, ch);
+
+  // Draw glow layer first (thick, low alpha)
+  for (let i = 1; i < active.length; i++) {
+    const other = active[i];
+    const op = getSmoothedPos(other.name, other, cw, ch);
+    ctx.strokeStyle = 'rgba(124, 77, 255, 0.15)';
+    ctx.lineWidth = 6;
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.moveTo(hubPos.x, hubPos.y);
+    ctx.lineTo(op.x, op.y);
+    ctx.stroke();
+  }
+
+  // Main connection lines — bright & thick
+  ctx.strokeStyle = 'rgba(160, 130, 255, 0.8)';
+  ctx.lineWidth = 2.5;
+  ctx.setLineDash([6, 4]);
+  ctx.lineDashOffset = -frame * 0.8;
 
   for (let i = 1; i < active.length; i++) {
     const other = active[i];
@@ -728,20 +731,26 @@ function drawConnections(ctx, agents, cw, ch, frame) {
     ctx.lineTo(op.x, op.y);
     ctx.stroke();
 
-    // Traveling dot
+    // Traveling dot — bigger and brighter
     const t = (frame * 0.008) % 1;
     const dotX = hubPos.x + (op.x - hubPos.x) * t;
     const dotY = hubPos.y + (op.y - hubPos.y) * t;
-    ctx.fillStyle = '#7c4dff';
-    ctx.globalAlpha = 0.7;
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#b388ff';
+    ctx.shadowColor = '#7c4dff';
+    ctx.shadowBlur = 8;
     ctx.beginPath();
-    ctx.arc(dotX, dotY, 2.5, 0, Math.PI * 2);
+    ctx.arc(dotX, dotY, 4, 0, Math.PI * 2);
     ctx.fill();
-    ctx.globalAlpha = 0.5;
+    ctx.shadowBlur = 0;
+    ctx.setLineDash([6, 4]);
+    ctx.lineDashOffset = -frame * 0.8;
   }
 
+  // Secondary connections between other active agents
   if (active.length >= 3) {
-    ctx.globalAlpha = 0.15;
+    ctx.strokeStyle = 'rgba(140, 110, 220, 0.4)';
+    ctx.lineWidth = 1.5;
     for (let i = 1; i < active.length; i++) {
       for (let j = i + 1; j < active.length; j++) {
         const a = getSmoothedPos(active[i].name, active[i], cw, ch);
@@ -1210,33 +1219,45 @@ function drawNodeIndicator(ctx, cw, ch, frame, connected) {
     const forgePos = agentAnimPos['forge'];
     if (forgePos) {
       ctx.save();
-      ctx.setLineDash([3, 5]);
-      ctx.lineDashOffset = -frame * 0.4;
-      ctx.lineWidth = 1.5;
       const ax = forgePos.x;
       const ay2 = forgePos.y;
-      const lineGrad = ctx.createLinearGradient(nx, ny, ax, ay2);
-      lineGrad.addColorStop(0, 'rgba(230,126,34,0.5)');
-      lineGrad.addColorStop(1, 'rgba(230,126,34,0.3)');
-      ctx.strokeStyle = lineGrad;
-      ctx.globalAlpha = 0.7;
-      ctx.beginPath();
       const cpx = (nx + ax) / 2 + 20;
       const cpy = (ny + ay2) / 2 - 30;
+
+      // Glow layer
+      ctx.setLineDash([]);
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = 'rgba(230,126,34,0.12)';
+      ctx.beginPath();
       ctx.moveTo(nx, ny - 10);
       ctx.quadraticCurveTo(cpx, cpy, ax + 14, ay2 + 8);
       ctx.stroke();
 
+      // Main line — bright and thick
+      ctx.setLineDash([5, 4]);
+      ctx.lineDashOffset = -frame * 0.6;
+      ctx.lineWidth = 2.5;
+      const lineGrad = ctx.createLinearGradient(nx, ny, ax, ay2);
+      lineGrad.addColorStop(0, 'rgba(230,166,80,0.9)');
+      lineGrad.addColorStop(1, 'rgba(230,126,34,0.7)');
+      ctx.strokeStyle = lineGrad;
+      ctx.beginPath();
+      ctx.moveTo(nx, ny - 10);
+      ctx.quadraticCurveTo(cpx, cpy, ax + 14, ay2 + 8);
+      ctx.stroke();
+
+      // Traveling dot — bigger & glowing
       const t = ((frame * 0.008) % 1);
       const dotX = (1 - t) * (1 - t) * nx + 2 * (1 - t) * t * cpx + t * t * (ax + 14);
       const dotY = (1 - t) * (1 - t) * (ny - 10) + 2 * (1 - t) * t * cpy + t * t * (ay2 + 8);
-      ctx.fillStyle = '#E67E22';
-      ctx.globalAlpha = 0.8 * (1 - Math.abs(t - 0.5) * 2);
-      ctx.beginPath();
-      ctx.arc(dotX, dotY, 2, 0, Math.PI * 2);
-      ctx.fill();
       ctx.setLineDash([]);
-      ctx.globalAlpha = 1;
+      ctx.fillStyle = '#ffaa40';
+      ctx.shadowColor = '#E67E22';
+      ctx.shadowBlur = 10;
+      ctx.beginPath();
+      ctx.arc(dotX, dotY, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
       ctx.restore();
     }
   }
