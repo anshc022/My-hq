@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useCallback } from 'react';
 import { AGENTS, ROOMS, DESK_POSITIONS, ROOM_POSITIONS, STATUS_VISUALS, UNIFIED_BOX } from '@/lib/agents';
+import { AGENT_FACES } from '@/components/AgentFaces';
 
 // ─── Smooth position interpolation ───
 const agentAnimPos = {};
@@ -1448,75 +1449,66 @@ export default function OfficeCanvas({ agents, nodeConnected, events }) {
       />
       {/* Mission Bar */}
       <div style={{
-        background: '#0a0a12',
-        border: '1px solid rgba(140, 120, 200, 0.2)',
-        borderTop: '2px solid rgba(140, 120, 200, 0.3)',
-        padding: '8px 14px',
+        background: '#1a1a24',
+        borderRadius: '0 0 8px 8px',
+        padding: '8px 16px',
         display: 'flex',
         alignItems: 'center',
-        gap: 12,
-        minHeight: 36,
+        gap: 14,
+        minHeight: 40,
         overflow: 'hidden',
         marginTop: '-1px',
       }}>
-        {/* Agent avatar circles */}
-        <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-          {Object.entries(AGENTS).map(([name, cfg]) => {
+        {/* Agent face avatars — overlapping circles */}
+        <div style={{ display: 'flex', flexShrink: 0, paddingLeft: 4 }}>
+          {Object.entries(AGENTS).map(([name, cfg], idx) => {
             const agentData = (agents || []).find(a => a.name === name);
             const isBusy = agentData && ['working', 'thinking', 'talking', 'posting', 'researching'].includes((agentData.status || '').toLowerCase());
             return (
               <div key={name} style={{
-                width: 22,
-                height: 22,
+                width: 30,
+                height: 30,
                 borderRadius: '50%',
-                border: `2px solid ${isBusy ? cfg.color : 'rgba(140,120,200,0.15)'}`,
-                background: isBusy ? cfg.color + '20' : 'rgba(20,20,30,0.5)',
+                border: `2px solid ${cfg.color}`,
+                background: '#1a1a24',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: 10,
-                opacity: isBusy ? 1 : 0.5,
+                marginLeft: idx > 0 ? -6 : 0,
+                zIndex: 10 - idx,
+                overflow: 'hidden',
+                opacity: isBusy ? 1 : 0.7,
                 transition: 'all 0.3s',
+                boxShadow: isBusy ? `0 0 8px ${cfg.color}40` : 'none',
               }}>
-                {cfg.icon}
+                {AGENT_FACES[name] ? AGENT_FACES[name]({ size: 26 }) : <span style={{ fontSize: 12 }}>{cfg.icon}</span>}
               </div>
             );
           })}
         </div>
 
-        {/* Divider */}
-        <span style={{ width: 1, height: 18, background: 'rgba(140,120,200,0.15)', flexShrink: 0 }} />
-
-        {/* Mission status */}
+        {/* Mission counter */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-          <span style={{ width: 6, height: 6, borderRadius: '50%', background: activeAgents.length > 0 ? '#00e676' : '#666', boxShadow: activeAgents.length > 0 ? '0 0 6px #00e67660' : 'none' }} />
-          <span style={{ color: activeAgents.length > 0 ? '#00e676' : '#666', fontSize: 10, fontFamily: 'monospace', fontWeight: 900, letterSpacing: 1 }}>
-            ACTIVE {activeAgents.length}/{Object.keys(AGENTS).length}
+          <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#00e676', boxShadow: '0 0 6px #00e67660' }} />
+          <span style={{ color: '#00e676', fontSize: 11, fontFamily: 'monospace', fontWeight: 900, letterSpacing: 0.5 }}>
+            MISSION {activeAgents.length}/{Object.keys(AGENTS).length}
           </span>
         </div>
 
-        {/* Divider */}
-        <span style={{ width: 1, height: 18, background: 'rgba(140,120,200,0.15)', flexShrink: 0 }} />
-
-        {/* Latest mission text */}
-        <div style={{ flex: 1, overflow: 'hidden', display: 'flex', alignItems: 'center', gap: 8 }}>
+        {/* Mission title */}
+        <div style={{ flex: 1, overflow: 'hidden' }}>
           {latestMission ? (
-            <>
-              <span style={{ color: missionAgent.color || '#888', fontSize: 11, fontFamily: 'monospace', whiteSpace: 'nowrap', fontWeight: 800 }}>
-                {missionAgent.icon || '?'} {missionAgent.label || latestMission.agent}
-              </span>
-              <span style={{ color: 'rgba(200,200,220,0.6)', fontSize: 11, fontFamily: 'monospace', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {(latestMission.title || latestMission.detail || '').slice(0, 60)}
-              </span>
-            </>
+            <span style={{ color: '#fff', fontSize: 13, fontFamily: 'monospace', fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>
+              {(latestMission.title || latestMission.detail || '').slice(0, 60)}
+            </span>
           ) : (
-            <span style={{ color: '#444', fontSize: 11, fontFamily: 'monospace' }}>Waiting for agent activity...</span>
+            <span style={{ color: '#555', fontSize: 12, fontFamily: 'monospace', fontWeight: 700 }}>Waiting for agent activity...</span>
           )}
         </div>
 
         {/* Timestamp */}
         {missionTime && (
-          <span style={{ color: 'rgba(140,120,200,0.4)', fontSize: 9, fontFamily: 'monospace', flexShrink: 0, fontWeight: 700 }}>
+          <span style={{ color: 'rgba(200,200,220,0.35)', fontSize: 11, fontFamily: 'monospace', flexShrink: 0, fontWeight: 600 }}>
             {missionTime}
           </span>
         )}
