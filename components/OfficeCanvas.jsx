@@ -5,12 +5,12 @@ import { AGENT_FACES } from '@/components/AgentFaces';
 
 // ─── Smooth position interpolation ───
 const agentAnimPos = {};
-const LERP_SPEED = 0.012;
+const LERP_SPEED = 0.008;
 
 // ─── Wander system ───
 const wanderTargets = {};
 const wanderCooldown = {};
-const WANDER_LERP = 0.005;
+const WANDER_LERP = 0.002;
 const WANDER_ARRIVE_DIST = 0.02;
 
 const AGENT_SPEED_MULT = {
