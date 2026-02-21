@@ -5,23 +5,23 @@ import { AGENT_FACES } from '@/components/AgentFaces';
 
 // ─── Smooth position interpolation ───
 const agentAnimPos = {};
-const LERP_SPEED = 0.022;
+const LERP_SPEED = 0.012;
 
 // ─── Wander system ───
 const wanderTargets = {};
 const wanderCooldown = {};
-const WANDER_LERP = 0.004;
+const WANDER_LERP = 0.005;
 const WANDER_ARRIVE_DIST = 0.02;
 
 const AGENT_SPEED_MULT = {
-  echo: 1.0, flare: 0.85, bolt: 1.15,
-  nexus: 0.9, vigil: 0.95, forge: 0.8,
+  echo: 1.0, flare: 0.9, bolt: 1.05,
+  nexus: 0.95, vigil: 0.95, forge: 0.85,
 };
 
 // ─── Movement detection ───
 const agentPrevPos = {};
 const agentIsWalking = {};
-const WALK_THRESHOLD = 0.4;
+const WALK_THRESHOLD = 0.3;
 
 // Echo's Den
 const ECHO_DEN = { x: 0.80, y: 0.06, w: 0.16, h: 0.20, cx: 0.88, cy: 0.16 };
