@@ -130,12 +130,18 @@ export default function Home() {
           <AgentsWorking agents={agents} events={events} />
         </div>
 
-        {/* Canvas */}
-        <div className="mt-1 animate-fade-in">
-          <OfficeCanvas agents={agents} nodeConnected={nodeConnected} events={events} />
+        {/* Canvas + Mission Control side by side */}
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-5 mt-1 animate-fade-in">
+          <div>
+            <OfficeCanvas agents={agents} nodeConnected={nodeConnected} events={events} />
+          </div>
+          <section className="animate-slide-up" style={{ animationDelay: '100ms' }}>
+            <SectionTitle icon="📊" label="MISSION CONTROL" />
+            <MissionBoard agents={agents} nodeConnected={nodeConnected} />
+          </section>
         </div>
 
-        {/* Grid: Events + Mission Control */}
+        {/* Event Feed + Gateway Log */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <section className="animate-slide-up" style={{ animationDelay: '200ms' }}>
             <SectionTitle icon="📡" label="EVENT FEED" count={events?.length} />
@@ -143,16 +149,10 @@ export default function Home() {
           </section>
 
           <section className="animate-slide-up" style={{ animationDelay: '300ms' }}>
-            <SectionTitle icon="📊" label="MISSION CONTROL" />
-            <MissionBoard agents={agents} nodeConnected={nodeConnected} />
+            <SectionTitle icon="💬" label="GATEWAY LOG" count={messages?.length} />
+            <ChatLog messages={messages} />
           </section>
         </div>
-
-        {/* Gateway Log */}
-        <section className="animate-slide-up" style={{ animationDelay: '400ms' }}>
-          <SectionTitle icon="💬" label="GATEWAY LOG" count={messages?.length} />
-          <ChatLog messages={messages} />
-        </section>
       </main>
 
       {/* Footer */}
