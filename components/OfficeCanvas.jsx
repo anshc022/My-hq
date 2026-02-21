@@ -353,57 +353,55 @@ function drawAgent(ctx, x, y, name, agentData, frame) {
   const bob = status === 'sleeping' ? 0 : Math.sin(frame * 0.03) * 1.5 * S;
   const ay = y + bob;
 
-  // Glow
+  // Glow — minimal flat indicator instead of blur
   const pulse = 0.6 + Math.sin(frame * 0.06) * 0.4;
   ctx.save();
-  ctx.shadowColor = vis.glow;
-  ctx.shadowBlur = (status === 'idle' || status === 'sleeping' ? 4 : 14 * pulse) * S;
-  ctx.globalAlpha = status === 'idle' ? 0.25 : 0.6;
+  ctx.globalAlpha = status === 'idle' ? 0.08 : 0.15;
   ctx.fillStyle = vis.glow;
-  ctx.beginPath();
-  ctx.ellipse(x, ay + 2, 12 * S, SPRITE_H / 2 + 2, 0, 0, Math.PI * 2);
-  ctx.fill();
+  ctx.fillRect(x - 14 * S, ay - 2, 28 * S, SPRITE_H + 4);
   ctx.restore();
 
   drawPixelAgent(ctx, x, ay + SPRITE_H / 2 - 2, name, frame, status);
 
-  // Shadow
+  // Shadow — simple flat
   ctx.save();
-  ctx.globalAlpha = 0.3;
+  ctx.globalAlpha = 0.4;
   ctx.fillStyle = '#000';
-  ctx.beginPath();
-  ctx.ellipse(x, ay + SPRITE_H / 2 + 2, 10 * S, 2.5 * S, 0, 0, Math.PI * 2);
-  ctx.fill();
+  ctx.fillRect(x - 10 * S, ay + SPRITE_H / 2 + 1, 20 * S, 3 * S);
   ctx.restore();
 
-  // Status dot
+  // Status dot — square
   const dotR = 3 * S;
-  ctx.beginPath();
-  ctx.arc(x + 10 * S, ay + SPRITE_H / 2 - 3 * S, dotR, 0, Math.PI * 2);
   ctx.fillStyle = vis.glow;
-  ctx.fill();
-  ctx.strokeStyle = '#0d0d1a';
+  ctx.fillRect(x + 8 * S, ay + SPRITE_H / 2 - 5 * S, dotR * 2, dotR * 2);
+  ctx.strokeStyle = '#0a0a0a';
   ctx.lineWidth = 1 * S;
-  ctx.stroke();
+  ctx.strokeRect(x + 8 * S, ay + SPRITE_H / 2 - 5 * S, dotR * 2, dotR * 2);
 
-  // Name pill
+  // Name pill — square neo-brutal
   const label = config.label;
   const nameFs = Math.max(7, Math.round(10 * S));
-  ctx.font = `bold ${nameFs}px monospace`;
+  ctx.font = `900 ${nameFs}px monospace`;
   const lw = ctx.measureText(label).width;
-  const pillW = lw + 8 * S;
-  const pillH = Math.round(13 * S);
+  const pillW = lw + 10 * S;
+  const pillH = Math.round(14 * S);
   const pillX = x - pillW / 2;
   const pillY = ay + SPRITE_H / 2 + 4 * S;
 
+  // Hard offset shadow
   ctx.fillStyle = config.color;
-  ctx.globalAlpha = 0.85;
-  ctx.beginPath();
-  ctx.roundRect(pillX, pillY, pillW, pillH, 3 * S);
-  ctx.fill();
+  ctx.globalAlpha = 0.3;
+  ctx.fillRect(pillX + 2, pillY + 2, pillW, pillH);
   ctx.globalAlpha = 1;
 
-  ctx.fillStyle = '#fff';
+  // Pill bg
+  ctx.fillStyle = '#0a0a0a';
+  ctx.fillRect(pillX, pillY, pillW, pillH);
+  ctx.strokeStyle = config.color;
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(pillX, pillY, pillW, pillH);
+
+  ctx.fillStyle = config.color;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(label, x, pillY + pillH / 2);
@@ -418,11 +416,12 @@ function drawAgent(ctx, x, y, name, agentData, frame) {
     const rPillH = Math.round(10 * S);
     const rPillX = x - rPillW / 2;
     const rPillY = pillY + pillH + 2 * S;
-    ctx.fillStyle = 'rgba(74, 144, 217, 0.25)';
-    ctx.globalAlpha = 0.85 + Math.sin(frame * 0.06) * 0.15;
-    ctx.beginPath();
-    ctx.roundRect(rPillX, rPillY, rPillW, rPillH, 2 * S);
-    ctx.fill();
+    ctx.fillStyle = 'rgba(74, 144, 217, 0.15)';
+    ctx.globalAlpha = 0.9;
+    ctx.fillRect(rPillX, rPillY, rPillW, rPillH);
+    ctx.strokeStyle = '#4fc3f7';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(rPillX, rPillY, rPillW, rPillH);
     ctx.fillStyle = '#7cb8f0';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -480,11 +479,12 @@ function drawAgent(ctx, x, y, name, agentData, frame) {
     const aPillH = Math.round(9 * S);
     const aPillX = x - aPillW / 2;
     const aPillY = pillY + pillH + (name === 'echo' && isAgentBusy(agentData) ? 14 * S : 2 * S);
-    ctx.fillStyle = dotColor + '30';
-    ctx.globalAlpha = 0.85;
-    ctx.beginPath();
-    ctx.roundRect(aPillX, aPillY, aPillW, aPillH, 2 * S);
-    ctx.fill();
+    ctx.fillStyle = dotColor + '25';
+    ctx.globalAlpha = 0.9;
+    ctx.fillRect(aPillX, aPillY, aPillW, aPillH);
+    ctx.strokeStyle = dotColor;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(aPillX, aPillY, aPillW, aPillH);
     ctx.fillStyle = dotColor;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -525,11 +525,12 @@ function drawAgent(ctx, x, y, name, agentData, frame) {
       const sPillH = Math.round(9 * S);
       const sPillX = x - sPillW / 2;
       const sPillY = ay + 38 * S;
-      ctx.fillStyle = 'rgba(241, 196, 15, 0.2)';
-      ctx.globalAlpha = 0.7 + Math.sin(frame * 0.08) * 0.2;
-      ctx.beginPath();
-      ctx.roundRect(sPillX, sPillY, sPillW, sPillH, 2 * S);
-      ctx.fill();
+      ctx.fillStyle = 'rgba(241, 196, 15, 0.15)';
+      ctx.globalAlpha = 0.85;
+      ctx.fillRect(sPillX, sPillY, sPillW, sPillH);
+      ctx.strokeStyle = '#f1c40f';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(sPillX, sPillY, sPillW, sPillH);
       ctx.fillStyle = '#f1c40f';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
@@ -583,17 +584,15 @@ function drawAgent(ctx, x, y, name, agentData, frame) {
       const bgX = bubbleX - bgW / 2;
       const bgY = bubbleY - bgH + floatOff;
 
-      ctx.fillStyle = 'rgba(20, 20, 40, 0.75)';
-      ctx.globalAlpha = 0.85;
-      ctx.beginPath();
-      ctx.roundRect(bgX, bgY, bgW, bgH, 5 * S);
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,0.12)';
-      ctx.lineWidth = 0.5;
-      ctx.stroke();
+      ctx.fillStyle = '#0a0a0a';
+      ctx.globalAlpha = 0.9;
+      ctx.fillRect(bgX, bgY, bgW, bgH);
+      ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(bgX, bgY, bgW, bgH);
       ctx.globalAlpha = 1;
 
-      ctx.fillStyle = 'rgba(20, 20, 40, 0.75)';
+      ctx.fillStyle = '#0a0a0a';
       ctx.beginPath();
       ctx.moveTo(bubbleX - 2 * S, bgY + bgH);
       ctx.lineTo(bubbleX + 2 * S, bgY + bgH);
@@ -640,7 +639,7 @@ function drawBubble(ctx, x, y, text, borderColor, S) {
   if (lines.length === 0) return;
 
   const fs = Math.max(6, Math.round(9 * S));
-  ctx.font = `${fs}px monospace`;
+  ctx.font = `bold ${fs}px monospace`;
 
   let maxW = 0;
   for (const line of lines) {
@@ -655,24 +654,32 @@ function drawBubble(ctx, x, y, text, borderColor, S) {
   const bx = x - bw / 2;
   const by = y - bh;
 
-  ctx.fillStyle = 'rgba(15, 15, 35, 0.93)';
-  ctx.beginPath();
-  ctx.roundRect(bx, by, bw, bh, 5 * S);
-  ctx.fill();
-  ctx.strokeStyle = borderColor;
-  ctx.lineWidth = 1.2 * S;
-  ctx.stroke();
-  ctx.strokeStyle = borderColor + '33';
-  ctx.lineWidth = 3 * S;
-  ctx.stroke();
-  ctx.lineWidth = 1.2 * S;
+  // Hard offset shadow
+  ctx.fillStyle = borderColor;
+  ctx.globalAlpha = 0.3;
+  ctx.fillRect(bx + 3, by + 3, bw, bh);
+  ctx.globalAlpha = 1;
 
+  // Bubble bg — flat, square
+  ctx.fillStyle = '#0a0a0a';
+  ctx.fillRect(bx, by, bw, bh);
+  ctx.strokeStyle = borderColor;
+  ctx.lineWidth = 2 * S;
+  ctx.strokeRect(bx, by, bw, bh);
+
+  // Pointer — triangle
   ctx.beginPath();
   ctx.moveTo(x - 4 * S, by + bh);
   ctx.lineTo(x, by + bh + 5 * S);
   ctx.lineTo(x + 4 * S, by + bh);
-  ctx.fillStyle = 'rgba(15, 15, 35, 0.93)';
+  ctx.fillStyle = '#0a0a0a';
   ctx.fill();
+  ctx.strokeStyle = borderColor;
+  ctx.lineWidth = 2 * S;
+  ctx.stroke();
+  // Cover the top edge of triangle
+  ctx.fillStyle = '#0a0a0a';
+  ctx.fillRect(x - 4 * S, by + bh - 1, 8 * S, 2);
 
   ctx.fillStyle = '#e8e8f0';
   ctx.textAlign = 'center';
@@ -691,11 +698,11 @@ function drawConnections(ctx, agents, cw, ch, frame) {
   if (active.length < 2) return;
 
   ctx.save();
-  ctx.strokeStyle = '#00bcd4';
-  ctx.lineWidth = 1.5;
-  ctx.setLineDash([8, 5]);
+  ctx.strokeStyle = '#4fc3f7';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([6, 4]);
   ctx.lineDashOffset = -frame * 0.8;
-  ctx.globalAlpha = 0.55;
+  ctx.globalAlpha = 0.6;
 
   const hub = active[0];
   const hubPos = getSmoothedPos(hub.name, hub, cw, ch);
@@ -704,35 +711,31 @@ function drawConnections(ctx, agents, cw, ch, frame) {
     const other = active[i];
     const op = getSmoothedPos(other.name, other, cw, ch);
 
+    // Straight lines instead of curves for neo-brutal
     ctx.beginPath();
     ctx.moveTo(hubPos.x, hubPos.y);
-    const cpx = (hubPos.x + op.x) / 2;
-    const cpy = Math.max(hubPos.y, op.y) + 50;
-    ctx.quadraticCurveTo(cpx, cpy, op.x, op.y);
+    ctx.lineTo(op.x, op.y);
     ctx.stroke();
 
+    // Square dot traveling along
     const t = (frame * 0.008) % 1;
-    const dotX = (1 - t) * (1 - t) * hubPos.x + 2 * (1 - t) * t * cpx + t * t * op.x;
-    const dotY = (1 - t) * (1 - t) * hubPos.y + 2 * (1 - t) * t * cpy + t * t * op.y;
-    ctx.fillStyle = '#00e5ff';
+    const dotX = hubPos.x + (op.x - hubPos.x) * t;
+    const dotY = hubPos.y + (op.y - hubPos.y) * t;
+    ctx.fillStyle = '#ffea00';
     ctx.globalAlpha = 0.8;
-    ctx.beginPath();
-    ctx.arc(dotX, dotY, 3, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.globalAlpha = 0.55;
+    ctx.fillRect(dotX - 3, dotY - 3, 6, 6);
+    ctx.globalAlpha = 0.6;
   }
 
   if (active.length >= 3) {
-    ctx.globalAlpha = 0.25;
+    ctx.globalAlpha = 0.2;
     for (let i = 1; i < active.length; i++) {
       for (let j = i + 1; j < active.length; j++) {
         const a = getSmoothedPos(active[i].name, active[i], cw, ch);
         const b = getSmoothedPos(active[j].name, active[j], cw, ch);
         ctx.beginPath();
         ctx.moveTo(a.x, a.y);
-        const mx = (a.x + b.x) / 2;
-        const my = Math.max(a.y, b.y) + 35;
-        ctx.quadraticCurveTo(mx, my, b.x, b.y);
+        ctx.lineTo(b.x, b.y);
         ctx.stroke();
       }
     }
@@ -748,143 +751,75 @@ function drawRooms(ctx, cw, ch, frame) {
   const divX = UNIFIED_BOX.dividerX * cw;
   const divY = UNIFIED_BOX.dividerY * ch;
 
-  // Background
-  const bgGrad = ctx.createLinearGradient(bx, by, bx + bw * 0.3, by + bh);
-  bgGrad.addColorStop(0, 'rgba(12,14,35,0.55)');
-  bgGrad.addColorStop(0.35, 'rgba(8,8,16,0.5)');
-  bgGrad.addColorStop(0.65, 'rgba(10,16,12,0.45)');
-  bgGrad.addColorStop(1, 'rgba(20,12,8,0.5)');
-  ctx.fillStyle = bgGrad;
-  ctx.beginPath();
-  ctx.roundRect(bx, by, bw, bh, 10);
-  ctx.fill();
+  // Background — flat neo-brutal
+  ctx.fillStyle = '#0d0d0d';
+  ctx.fillRect(bx, by, bw, bh);
 
-  // Floor grid
-  ctx.save();
-  ctx.beginPath();
-  ctx.roundRect(bx, by, bw, bh, 10);
-  ctx.clip();
-  ctx.strokeStyle = 'rgba(255,255,255,0.015)';
-  ctx.lineWidth = 0.5;
-  const gridSize = 24;
-  for (let gx = 0; gx < bw + bh; gx += gridSize) {
-    ctx.beginPath();
-    ctx.moveTo(bx + gx, by);
-    ctx.lineTo(bx + gx - bh * 0.5, by + bh);
-    ctx.stroke();
+  // Floor grid — subtle dots
+  ctx.fillStyle = 'rgba(255,255,255,0.04)';
+  for (let gx = bx; gx < bx + bw; gx += 20) {
+    for (let gy = by; gy < by + bh; gy += 20) {
+      ctx.fillRect(gx, gy, 1, 1);
+    }
   }
-  for (let gy = 0; gy < bh; gy += gridSize) {
-    ctx.beginPath();
-    ctx.moveTo(bx, by + gy);
-    ctx.lineTo(bx + bw, by + gy);
-    ctx.stroke();
-  }
-  ctx.restore();
 
-  // Quadrant glows
-  const glowR = Math.min(bw, bh) * 0.32;
-  const glows = [
-    { cx: 0.25, cy: 0.25, color: '74,106,255' },
-    { cx: 0.78, cy: 0.25, color: '212,145,90' },
-    { cx: 0.25, cy: 0.75, color: '46,204,113' },
-    { cx: 0.78, cy: 0.75, color: '230,126,34' },
-  ];
-  glows.forEach(g => {
-    const gr = ctx.createRadialGradient(bx + bw * g.cx, by + bh * g.cy, 0, bx + bw * g.cx, by + bh * g.cy, glowR);
-    gr.addColorStop(0, `rgba(${g.color},0.05)`);
-    gr.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = gr;
-    ctx.beginPath();
-    ctx.roundRect(bx, by, bw, bh, 10);
-    ctx.fill();
-  });
+  // Outer border — thick solid neo-brutal
+  ctx.strokeStyle = '#4fc3f7';
+  ctx.lineWidth = 3;
+  ctx.globalAlpha = 0.8;
+  ctx.strokeRect(bx, by, bw, bh);
+  // Hard offset shadow
+  ctx.fillStyle = '#4fc3f7';
+  ctx.globalAlpha = 0.15;
+  ctx.fillRect(bx + 4, by + 4, bw, bh);
+  ctx.globalAlpha = 1;
 
-  // Outer border
-  const glowPulse = 0.35 + Math.sin(frame * 0.018) * 0.15;
-  ctx.save();
-  ctx.shadowColor = '#4a6aff';
-  ctx.shadowBlur = 8;
-  ctx.globalAlpha = glowPulse * 0.4;
-  ctx.strokeStyle = '#4a6aff';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.roundRect(bx - 1, by - 1, bw + 2, bh + 2, 11);
-  ctx.stroke();
-  ctx.restore();
-  ctx.save();
-  ctx.globalAlpha = glowPulse;
-  ctx.strokeStyle = '#3344aa';
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.roundRect(bx, by, bw, bh, 10);
-  ctx.stroke();
-  ctx.restore();
-
-  // Corner brackets
-  ctx.strokeStyle = '#4a6aff';
-  ctx.globalAlpha = 0.5;
-  ctx.lineWidth = 2;
-  const cLen = 14;
+  // Corner brackets — chunky
+  ctx.strokeStyle = '#ffea00';
+  ctx.globalAlpha = 0.8;
+  ctx.lineWidth = 3;
+  const cLen = 18;
   ctx.beginPath(); ctx.moveTo(bx + cLen, by); ctx.lineTo(bx, by); ctx.lineTo(bx, by + cLen); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(bx + bw - cLen, by); ctx.lineTo(bx + bw, by); ctx.lineTo(bx + bw, by + cLen); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(bx + cLen, by + bh); ctx.lineTo(bx, by + bh); ctx.lineTo(bx, by + bh - cLen); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(bx + bw - cLen, by + bh); ctx.lineTo(bx + bw, by + bh); ctx.lineTo(bx + bw, by + bh - cLen); ctx.stroke();
   ctx.globalAlpha = 1;
 
-  // Vertical divider
-  const vGlow = ctx.createLinearGradient(divX - 6, by, divX + 6, by);
-  vGlow.addColorStop(0, 'rgba(255,255,255,0)');
-  vGlow.addColorStop(0.5, 'rgba(200,210,255,0.08)');
-  vGlow.addColorStop(1, 'rgba(255,255,255,0)');
-  ctx.fillStyle = vGlow;
-  ctx.fillRect(divX - 6, by + 6, 12, bh - 12);
-  const vLine = ctx.createLinearGradient(divX, by, divX, by + bh);
-  vLine.addColorStop(0, 'rgba(255,255,255,0)');
-  vLine.addColorStop(0.06, 'rgba(255,255,255,0.25)');
-  vLine.addColorStop(0.5, 'rgba(255,255,255,0.35)');
-  vLine.addColorStop(0.94, 'rgba(255,255,255,0.25)');
-  vLine.addColorStop(1, 'rgba(255,255,255,0)');
-  ctx.fillStyle = vLine;
-  ctx.fillRect(divX - 0.5, by + 6, 1.5, bh - 12);
+  // Vertical divider — solid thick
+  ctx.strokeStyle = '#4fc3f7';
+  ctx.lineWidth = 2;
+  ctx.globalAlpha = 0.5;
+  ctx.setLineDash([6, 4]);
+  ctx.beginPath();
+  ctx.moveTo(divX, by + 6);
+  ctx.lineTo(divX, by + bh - 6);
+  ctx.stroke();
 
-  // Horizontal divider
-  const hGlow = ctx.createLinearGradient(bx, divY - 6, bx, divY + 6);
-  hGlow.addColorStop(0, 'rgba(255,255,255,0)');
-  hGlow.addColorStop(0.5, 'rgba(200,210,255,0.08)');
-  hGlow.addColorStop(1, 'rgba(255,255,255,0)');
-  ctx.fillStyle = hGlow;
-  ctx.fillRect(bx + 6, divY - 6, bw - 12, 12);
-  const hLine = ctx.createLinearGradient(bx, divY, bx + bw, divY);
-  hLine.addColorStop(0, 'rgba(255,255,255,0)');
-  hLine.addColorStop(0.06, 'rgba(255,255,255,0.25)');
-  hLine.addColorStop(0.5, 'rgba(255,255,255,0.35)');
-  hLine.addColorStop(0.94, 'rgba(255,255,255,0.25)');
-  hLine.addColorStop(1, 'rgba(255,255,255,0)');
-  ctx.fillStyle = hLine;
-  ctx.fillRect(bx + 6, divY - 0.5, bw - 12, 1.5);
+  // Horizontal divider — solid thick
+  ctx.beginPath();
+  ctx.moveTo(bx + 6, divY);
+  ctx.lineTo(bx + bw - 6, divY);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.globalAlpha = 1;
 
-  // Echo's Den
+  // Echo's Den — neo-brutal box
   const denX = ECHO_DEN.x * cw, denY2 = ECHO_DEN.y * ch;
   const denW = ECHO_DEN.w * cw, denH = ECHO_DEN.h * ch;
-  ctx.fillStyle = 'rgba(74, 144, 217, 0.06)';
-  ctx.beginPath();
-  ctx.roundRect(denX, denY2, denW, denH, 4);
-  ctx.fill();
-  const denGlow = 0.3 + Math.sin(frame * 0.025) * 0.12;
-  ctx.strokeStyle = '#4A90D9';
-  ctx.globalAlpha = denGlow;
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.roundRect(denX, denY2, denW, denH, 4);
-  ctx.stroke();
+  ctx.fillStyle = 'rgba(74, 144, 217, 0.08)';
+  ctx.fillRect(denX, denY2, denW, denH);
+  ctx.strokeStyle = '#4fc3f7';
+  ctx.lineWidth = 2;
+  ctx.globalAlpha = 0.7;
+  ctx.strokeRect(denX, denY2, denW, denH);
   ctx.globalAlpha = 1;
   ctx.font = '9px sans-serif';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
   ctx.fillText('🧠', denX + 4, denY2 + 3);
-  ctx.font = 'bold 6px monospace';
-  ctx.fillStyle = '#4A90D9';
-  ctx.globalAlpha = 0.55;
+  ctx.font = 'bold 7px monospace';
+  ctx.fillStyle = '#4fc3f7';
+  ctx.globalAlpha = 0.8;
   ctx.fillText("ECHO'S DEN", denX + 16, denY2 + 5);
   ctx.globalAlpha = 1;
 
@@ -899,37 +834,39 @@ function drawRooms(ctx, cw, ch, frame) {
   ctx.fillStyle = '#2a2a48';
   ctx.fillRect(mdx - 1, mdy + 2, 2, 3);
 
-  // Room labels
+  // Room labels — bold neo-brutal
   const labels = [
-    { icon: '💻', text: 'DEV FLOOR',   color: '#4a6aff', lx: bx + 8,   ly: by + 10 },
-    { icon: '🎯', text: 'WAR ROOM',    color: '#d4915a', lx: divX + 8, ly: by + 10 },
-    { icon: '🧪', text: 'CODE LAB',    color: '#2ecc71', lx: bx + 8,   ly: divY + 8 },
-    { icon: '🔥', text: 'DEPLOY BAY',  color: '#E67E22', lx: divX + 8, ly: divY + 8 },
+    { icon: '💻', text: 'DEV FLOOR',   color: '#4fc3f7', lx: bx + 8,   ly: by + 10 },
+    { icon: '🎯', text: 'WAR ROOM',    color: '#ff9100', lx: divX + 8, ly: by + 10 },
+    { icon: '🧪', text: 'CODE LAB',    color: '#00e676', lx: bx + 8,   ly: divY + 8 },
+    { icon: '🔥', text: 'DEPLOY BAY',  color: '#ff9100', lx: divX + 8, ly: divY + 8 },
   ];
   labels.forEach(l => {
     ctx.font = '11px sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
     ctx.fillText(l.icon, l.lx, l.ly);
+    // Label background
     ctx.font = 'bold 8px monospace';
+    const tw = ctx.measureText(l.text).width;
     ctx.fillStyle = l.color;
-    ctx.globalAlpha = 0.6;
-    ctx.fillText(l.text, l.lx + 16, l.ly + 2);
+    ctx.globalAlpha = 0.12;
+    ctx.fillRect(l.lx + 15, l.ly, tw + 6, 12);
+    ctx.globalAlpha = 0.9;
+    ctx.fillStyle = l.color;
+    ctx.fillText(l.text, l.lx + 18, l.ly + 2);
     ctx.globalAlpha = 1;
   });
 
-  // Scan line
-  const scanLine = by + ((frame * 0.3) % bh);
-  ctx.fillStyle = 'rgba(74,106,255,0.02)';
-  ctx.fillRect(bx + 4, scanLine, bw - 8, 1);
-
-  // Bottom status bar
-  const barW = bw - 20, barX = bx + 10, barY = by + bh - 6;
-  ctx.fillStyle = 'rgba(255,255,255,0.04)';
-  ctx.beginPath(); ctx.roundRect(barX, barY, barW, 2, 1); ctx.fill();
+  // Bottom status bar — chunky
+  const barW = bw - 20, barX = bx + 10, barY = by + bh - 8;
+  ctx.fillStyle = 'rgba(255,255,255,0.08)';
+  ctx.fillRect(barX, barY, barW, 3);
   const fillW = barW * (0.3 + Math.sin(frame * 0.01) * 0.2);
-  ctx.fillStyle = 'rgba(74,106,255,0.2)';
-  ctx.beginPath(); ctx.roundRect(barX, barY, fillW, 2, 1); ctx.fill();
+  ctx.fillStyle = '#4fc3f7';
+  ctx.globalAlpha = 0.4;
+  ctx.fillRect(barX, barY, fillW, 3);
+  ctx.globalAlpha = 1;
 
   // Room interiors
   Object.entries(ROOMS).forEach(([key, room]) => {
@@ -1092,86 +1029,66 @@ function drawFurniture(ctx, cw, ch, frame) {
     const config = AGENTS[name];
     if (!config) return;
 
-    // Desk
+    // Desk — flat neo-brutal
     const dw = 24 * S, dh = 6 * S;
-    const deskGrad = ctx.createLinearGradient(dx - dw, dy + dh, dx + dw, dy + dh);
-    deskGrad.addColorStop(0, '#2a2a48');
-    deskGrad.addColorStop(0.5, '#323252');
-    deskGrad.addColorStop(1, '#2a2a48');
-    ctx.fillStyle = deskGrad;
-    ctx.beginPath();
-    ctx.roundRect(dx - dw, dy + dh, dw * 2, 12 * S, 3 * S);
-    ctx.fill();
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fillRect(dx - dw, dy + dh, dw * 2, 12 * S);
+    ctx.strokeStyle = '#2a2a2a';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(dx - dw, dy + dh, dw * 2, 12 * S);
 
     // Desk legs
-    ctx.fillStyle = '#1e1e38';
+    ctx.fillStyle = '#111';
     ctx.fillRect(dx - 20 * S, dy + 18 * S, 3 * S, 6 * S);
     ctx.fillRect(dx + 17 * S, dy + 18 * S, 3 * S, 6 * S);
 
-    // Monitor
+    // Monitor — square, thick border
     const mw = 16 * S, mh = 24 * S;
-    ctx.fillStyle = '#111128';
-    ctx.beginPath();
-    ctx.roundRect(dx - mw, dy - mh, mw * 2, mh, 4 * S);
-    ctx.fill();
+    ctx.fillStyle = '#0d0d0d';
+    ctx.fillRect(dx - mw, dy - mh, mw * 2, mh);
+    ctx.strokeStyle = config.color;
+    ctx.globalAlpha = 0.5;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(dx - mw, dy - mh, mw * 2, mh);
+    ctx.globalAlpha = 1;
 
     const sx = dx - 13 * S, sy = dy - 21 * S, sw = 26 * S, sh = 17 * S;
-    const screenGrad = ctx.createLinearGradient(sx, sy, sx, sy + sh);
-    screenGrad.addColorStop(0, darken(config.color, 80));
-    screenGrad.addColorStop(1, 'rgba(0,0,0,0.9)');
-    ctx.fillStyle = screenGrad;
+    ctx.fillStyle = '#050505';
     ctx.fillRect(sx, sy, sw, sh);
 
-    ctx.globalAlpha = 0.3;
+    ctx.globalAlpha = 0.4;
     ctx.fillStyle = config.color;
     for (let li = 0; li < 4; li++) {
       const lw = (8 + (((name.charCodeAt(0) * 7 + li * 13) % 12))) * S;
-      ctx.fillRect(dx - 10 * S, dy - 19 * S + li * 4 * S, lw, 1.5 * S);
+      ctx.fillRect(dx - 10 * S, dy - 19 * S + li * 4 * S, lw, 2 * S);
     }
     ctx.globalAlpha = 1;
 
-    const scanY = sy + ((frame * 0.5 + Object.keys(AGENTS).indexOf(name) * 30) % (sh));
-    ctx.fillStyle = 'rgba(255,255,255,0.04)';
-    ctx.fillRect(sx, scanY, sw, 2 * S);
-
-    ctx.strokeStyle = config.color;
-    ctx.globalAlpha = 0.2;
-    ctx.lineWidth = 1 * S;
-    ctx.beginPath();
-    ctx.roundRect(dx - mw, dy - mh, mw * 2, mh, 4 * S);
-    ctx.stroke();
-    ctx.globalAlpha = 1;
-
     // Stand
-    ctx.fillStyle = '#2a2a48';
+    ctx.fillStyle = '#1a1a1a';
     ctx.fillRect(dx - 2 * S, dy, 4 * S, 6 * S);
     ctx.fillRect(dx - 5 * S, dy + 4 * S, 10 * S, 2 * S);
 
-    // Power LED
+    // Power LED — square
     ctx.fillStyle = config.color;
-    ctx.globalAlpha = 0.6 + Math.sin(frame * 0.04) * 0.3;
-    ctx.beginPath();
-    ctx.arc(dx + 13 * S, dy - 3 * S, 1.5 * S, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.globalAlpha = 0.7;
+    ctx.fillRect(dx + 12 * S, dy - 4 * S, 3 * S, 3 * S);
     ctx.globalAlpha = 1;
 
-    // Chair
-    ctx.fillStyle = '#1a1a30';
-    ctx.beginPath();
-    ctx.ellipse(dx, dy + 28 * S, 10 * S, 6 * S, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#222240';
-    ctx.beginPath();
-    ctx.roundRect(dx - 8 * S, dy + 18 * S, 16 * S, 8 * S, 3 * S);
-    ctx.fill();
+    // Chair — simple square
+    ctx.fillStyle = '#111';
+    ctx.fillRect(dx - 9 * S, dy + 20 * S, 18 * S, 10 * S);
+    ctx.strokeStyle = '#222';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(dx - 9 * S, dy + 20 * S, 18 * S, 10 * S);
 
     // Name under desk
     const deskLblFs = Math.max(5, Math.round(7 * S));
-    ctx.font = `bold ${deskLblFs}px monospace`;
+    ctx.font = `900 ${deskLblFs}px monospace`;
     ctx.fillStyle = config.color;
-    ctx.globalAlpha = 0.25;
+    ctx.globalAlpha = 0.4;
     ctx.textAlign = 'center';
-    ctx.fillText(config.label, dx, dy + 40 * S);
+    ctx.fillText(config.label, dx, dy + 38 * S);
     ctx.globalAlpha = 1;
   });
 
@@ -1181,23 +1098,18 @@ function drawFurniture(ctx, cw, ch, frame) {
 }
 
 function drawPlant(ctx, x, y) {
+  // Pot — square
   ctx.fillStyle = '#6b4226';
-  ctx.beginPath();
-  ctx.roundRect(x - 5, y, 10, 9, 2);
-  ctx.fill();
-  ctx.fillStyle = '#3a2a1a';
-  ctx.fillRect(x - 4, y, 8, 3);
-  ctx.fillStyle = '#27ae60';
+  ctx.fillRect(x - 5, y, 10, 9);
+  ctx.strokeStyle = '#8a5a3a';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x - 5, y, 10, 9);
+  // Leaves — blocky
+  ctx.fillStyle = '#00e676';
   ctx.globalAlpha = 0.6;
-  ctx.beginPath();
-  ctx.ellipse(x, y - 4, 6, 4, -0.3, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(x + 2, y - 7, 5, 3, 0.4, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(x - 3, y - 6, 4, 3, -0.5, 0, Math.PI * 2);
-  ctx.fill();
+  ctx.fillRect(x - 6, y - 7, 5, 5);
+  ctx.fillRect(x + 1, y - 9, 5, 5);
+  ctx.fillRect(x - 3, y - 4, 6, 4);
   ctx.globalAlpha = 1;
 }
 
@@ -1220,24 +1132,22 @@ function drawParticles(ctx, cw, ch, frame) {
     if (p.y < -0.02) { p.y = 1.02; p.x = Math.random(); }
     if (p.x < 0) p.x = 1;
     if (p.x > 1) p.x = 0;
-    ctx.fillStyle = '#00bcd4';
-    ctx.globalAlpha = p.alpha * (0.5 + Math.sin(frame * 0.03 + p.x * 20) * 0.5);
-    ctx.beginPath();
-    ctx.arc(p.x * cw, p.y * ch, p.size, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.fillStyle = '#4fc3f7';
+    ctx.globalAlpha = p.alpha * 0.6;
+    ctx.fillRect(p.x * cw - p.size / 2, p.y * ch - p.size / 2, p.size, p.size);
   });
   ctx.globalAlpha = 1;
 }
 
 function drawWatermark(ctx, cw, ch) {
   ctx.save();
-  ctx.font = 'bold 56px monospace';
+  ctx.font = '900 56px monospace';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillStyle = 'rgba(255,255,255,0.008)';
-  ctx.fillText('OPS HQ', cw / 2, ch / 2);
-  ctx.font = '14px monospace';
   ctx.fillStyle = 'rgba(255,255,255,0.015)';
+  ctx.fillText('OPS HQ', cw / 2, ch / 2);
+  ctx.font = '700 14px monospace';
+  ctx.fillStyle = 'rgba(255,255,255,0.02)';
   ctx.fillText('V2 — 6 AGENT DEV TEAM', cw / 2, ch / 2 + 28);
   ctx.restore();
 }
@@ -1282,81 +1192,69 @@ function drawNodeIndicator(ctx, cw, ch, frame, connected) {
     }
   }
 
-  // Laptop glow
-  const glowColor = connected ? 'rgba(230,126,34,0.15)' : 'rgba(255,80,80,0.1)';
-  const glowPulse = 0.8 + Math.sin(frame * 0.05) * 0.2;
-  ctx.save();
-  ctx.shadowColor = connected ? '#E67E22' : '#ff5050';
-  ctx.shadowBlur = connected ? 14 * glowPulse : 6;
-  ctx.fillStyle = glowColor;
-  ctx.beginPath();
-  ctx.ellipse(nx, ny, 30, 18, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
+  // Laptop — flat neo-brutal
+  ctx.fillStyle = connected ? 'rgba(230,126,34,0.1)' : 'rgba(255,80,80,0.06)';
+  ctx.fillRect(nx - 30, ny - 18, 60, 36);
 
   // Laptop base
-  ctx.fillStyle = '#2a2a3e';
-  ctx.beginPath();
-  ctx.roundRect(nx - 22, ny - 2, 44, 6, 2);
-  ctx.fill();
+  ctx.fillStyle = '#1a1a1a';
+  ctx.fillRect(nx - 22, ny - 2, 44, 6);
+  ctx.strokeStyle = connected ? '#E67E22' : '#ff5050';
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(nx - 22, ny - 2, 44, 6);
 
   // Screen
-  ctx.fillStyle = '#1a1a2e';
-  ctx.beginPath();
-  ctx.roundRect(nx - 18, ny - 26, 36, 24, 3);
-  ctx.fill();
+  ctx.fillStyle = '#0d0d0d';
+  ctx.fillRect(nx - 18, ny - 26, 36, 24);
+  ctx.strokeStyle = connected ? '#E67E22' : '#ff5050';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(nx - 18, ny - 26, 36, 24);
 
   if (connected) {
-    const screenGrad = ctx.createLinearGradient(nx - 15, ny - 23, nx - 15, ny - 5);
-    screenGrad.addColorStop(0, '#0a120a');
-    screenGrad.addColorStop(1, '#0a0f0a');
-    ctx.fillStyle = screenGrad;
+    ctx.fillStyle = '#0a0f0a';
     ctx.fillRect(nx - 15, ny - 23, 30, 18);
 
     ctx.fillStyle = '#E67E22';
-    ctx.globalAlpha = 0.6;
+    ctx.globalAlpha = 0.7;
     for (let li = 0; li < 4; li++) {
       const lw = 8 + ((li * 7 + 3) % 10);
-      ctx.fillRect(nx - 12, ny - 21 + li * 4, lw, 1.5);
+      ctx.fillRect(nx - 12, ny - 21 + li * 4, lw, 2);
     }
     if (Math.sin(frame * 0.1) > 0) {
       ctx.fillRect(nx - 12 + 14, ny - 21 + 12, 3, 2);
     }
     ctx.globalAlpha = 1;
   } else {
-    ctx.fillStyle = '#0a0a14';
+    ctx.fillStyle = '#0a0a0a';
     ctx.fillRect(nx - 15, ny - 23, 30, 18);
     ctx.strokeStyle = '#ff5050';
-    ctx.globalAlpha = 0.4;
-    ctx.lineWidth = 1.5;
+    ctx.globalAlpha = 0.6;
+    ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(nx - 5, ny - 18); ctx.lineTo(nx + 5, ny - 10); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(nx + 5, ny - 18); ctx.lineTo(nx - 5, ny - 10); ctx.stroke();
     ctx.globalAlpha = 1;
   }
 
-  ctx.strokeStyle = connected ? '#E67E22' : '#ff5050';
-  ctx.globalAlpha = connected ? 0.3 : 0.15;
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.roundRect(nx - 18, ny - 26, 36, 24, 3);
-  ctx.stroke();
-  ctx.globalAlpha = 1;
-
-  // Label
+  // Label — neo-brutal square
   const lbl = connected ? 'NODE' : 'OFFLINE';
-  ctx.font = 'bold 8px monospace';
+  ctx.font = '900 8px monospace';
   const labelW = ctx.measureText(lbl).width;
-  const pW = labelW + 10;
-  const pH = 13;
+  const pW = labelW + 12;
+  const pH = 14;
   const pX = nx - pW / 2;
   const pY = ny + 8;
+  // Hard shadow
   ctx.fillStyle = connected ? '#E67E22' : '#ff5050';
-  ctx.globalAlpha = 0.8;
-  ctx.beginPath();
-  ctx.roundRect(pX, pY, pW, pH, 3);
-  ctx.fill();
+  ctx.globalAlpha = 0.3;
+  ctx.fillRect(pX + 2, pY + 2, pW, pH);
   ctx.globalAlpha = 1;
-  ctx.fillStyle = '#000';
+  // Label bg
+  ctx.fillStyle = '#0a0a0a';
+  ctx.fillRect(pX, pY, pW, pH);
+  ctx.strokeStyle = connected ? '#E67E22' : '#ff5050';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(pX, pY, pW, pH);
+  ctx.fillStyle = connected ? '#E67E22' : '#ff5050';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(lbl, nx, pY + pH / 2);
@@ -1404,27 +1302,15 @@ export default function OfficeCanvas({ agents, nodeConnected, events }) {
     const currentAgents = agentsRef.current;
     const currentNodeConnected = nodeConnectedRef.current;
 
-    // Background
-    const bgGrad = ctx.createRadialGradient(cw / 2, ch / 2, 80, cw / 2, ch / 2, cw * 0.75);
-    bgGrad.addColorStop(0, '#0e1025');
-    bgGrad.addColorStop(0.7, '#090a18');
-    bgGrad.addColorStop(1, '#050510');
-    ctx.fillStyle = bgGrad;
+    // Background — flat neo-brutalism
+    ctx.fillStyle = '#0a0a0a';
     ctx.fillRect(0, 0, cw, ch);
 
-    // Grid
-    ctx.strokeStyle = 'rgba(255,255,255,0.018)';
-    ctx.lineWidth = 0.5;
-    for (let gx = 0; gx < cw; gx += 30) {
-      ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, ch); ctx.stroke();
-    }
-    for (let gy = 0; gy < ch; gy += 30) {
-      ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(cw, gy); ctx.stroke();
-    }
-    ctx.fillStyle = 'rgba(255,255,255,0.04)';
-    for (let gx = 0; gx < cw; gx += 30) {
-      for (let gy = 0; gy < ch; gy += 30) {
-        ctx.beginPath(); ctx.arc(gx, gy, 0.8, 0, Math.PI * 2); ctx.fill();
+    // Grid — visible dot grid
+    ctx.fillStyle = 'rgba(255,255,255,0.06)';
+    for (let gx = 0; gx < cw; gx += 24) {
+      for (let gy = 0; gy < ch; gy += 24) {
+        ctx.fillRect(gx, gy, 1, 1);
       }
     }
 
@@ -1506,35 +1392,35 @@ export default function OfficeCanvas({ agents, nodeConnected, events }) {
         style={{
           width: '100%',
           height: 'auto',
-          borderRadius: '8px 8px 0 0',
-          border: '1px solid #1a1a2e',
-          borderBottom: 'none',
+          border: '2px solid #2a2a2a',
           display: 'block',
+          boxShadow: '4px 4px 0px #2a2a2a',
         }}
       />
       <div style={{
-        background: 'linear-gradient(90deg, #0a0a18, #111128, #0a0a18)',
-        borderRadius: '0 0 8px 8px',
-        border: '1px solid #1a1a2e',
-        borderTop: '1px solid #222244',
-        padding: '6px 14px',
+        background: '#0a0a0a',
+        border: '2px solid #2a2a2a',
+        borderTop: '2px solid #4fc3f7',
+        padding: '8px 14px',
         display: 'flex',
         alignItems: 'center',
-        gap: 8,
-        minHeight: 28,
+        gap: 10,
+        minHeight: 30,
         overflow: 'hidden',
+        boxShadow: '4px 4px 0px #2a2a2a',
+        marginTop: '-2px',
       }}>
-        <span style={{ color: '#4a6aff', fontSize: 9, fontFamily: 'monospace', fontWeight: 'bold', letterSpacing: 1, flexShrink: 0, opacity: 0.7 }}>LIVE</span>
-        <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#2ecc71', flexShrink: 0, animation: 'pulse 2s infinite' }} />
+        <span style={{ color: '#ffea00', fontSize: 9, fontFamily: 'monospace', fontWeight: 900, letterSpacing: 2, flexShrink: 0 }}>LIVE</span>
+        <span style={{ width: 7, height: 7, background: '#00e676', flexShrink: 0 }} />
         <div style={{ flex: 1, overflow: 'hidden', display: 'flex', gap: 16 }}>
           {latestEvents.length === 0 ? (
-            <span style={{ color: '#444', fontSize: 11, fontFamily: 'monospace', fontStyle: 'italic' }}>Waiting for agent activity...</span>
+            <span style={{ color: '#555', fontSize: 11, fontFamily: 'monospace', fontWeight: 700 }}>Waiting for agent activity...</span>
           ) : (
             latestEvents.map((evt, i) => {
               const cfg = AGENTS[evt.agent] || {};
               return (
-                <span key={evt.id || i} style={{ color: cfg.color || '#888', fontSize: 11, fontFamily: 'monospace', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {cfg.icon || '?'} <span style={{ fontWeight: 600 }}>{cfg.label || evt.agent}</span>: {(evt.title || evt.detail || '').slice(0, 60)}
+                <span key={evt.id || i} style={{ color: cfg.color || '#888', fontSize: 11, fontFamily: 'monospace', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: 700 }}>
+                  {cfg.icon || '?'} <span style={{ fontWeight: 900 }}>{cfg.label || evt.agent}</span>: {(evt.title || evt.detail || '').slice(0, 60)}
                 </span>
               );
             })
