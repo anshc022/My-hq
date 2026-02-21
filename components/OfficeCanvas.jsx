@@ -732,7 +732,7 @@ function drawConnections(ctx, agents, cw, ch, frame) {
     ctx.stroke();
 
     // Traveling dot — bigger and brighter
-    const t = (frame * 0.008) % 1;
+    const t = (frame * 0.002) % 1;
     const dotX = hubPos.x + (op.x - hubPos.x) * t;
     const dotY = hubPos.y + (op.y - hubPos.y) * t;
     ctx.setLineDash([]);
@@ -1247,7 +1247,7 @@ function drawNodeIndicator(ctx, cw, ch, frame, connected) {
       ctx.stroke();
 
       // Traveling dot — bigger & glowing
-      const t = ((frame * 0.008) % 1);
+      const t = ((frame * 0.002) % 1);
       const dotX = (1 - t) * (1 - t) * nx + 2 * (1 - t) * t * cpx + t * t * (ax + 14);
       const dotY = (1 - t) * (1 - t) * (ny - 10) + 2 * (1 - t) * t * cpy + t * t * (ay2 + 8);
       ctx.setLineDash([]);
