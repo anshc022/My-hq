@@ -568,48 +568,59 @@ function drawAgent(ctx, x, y, name, agentData, frame) {
     ctx.restore();
   }
 
-  // Idle activity bubble
+  // Idle activity bubble — big and visible
   if (!isAgentBusy(agentData) && status !== 'sleeping') {
     const act = agentIdleActivity[name];
     if (act) {
-      const bubbleY = ay - SPRITE_H / 2 - 10 * S;
+      const bubbleY = ay - SPRITE_H / 2 - 14 * S;
       const bubbleX = x;
-      const floatOff = Math.sin(frame * 0.04 + x * 0.1) * 2 * S;
-      const emojiSize = Math.round(11 * S);
+      const floatOff = Math.sin(frame * 0.04 + x * 0.1) * 3 * S;
+      const emojiSize = Math.round(16 * S);
       ctx.save();
-      const lblFs = Math.max(5, Math.round(7 * S));
-      ctx.font = `${lblFs}px monospace`;
+      const lblFs = Math.max(7, Math.round(10 * S));
+      ctx.font = `bold ${lblFs}px monospace`;
       const labelW = ctx.measureText(act.label).width;
-      const bgW = Math.max(labelW + 8 * S, emojiSize + 10 * S);
-      const bgH = Math.round(22 * S);
+      const bgW = Math.max(labelW + 12 * S, emojiSize + 14 * S);
+      const bgH = Math.round(30 * S);
       const bgX = bubbleX - bgW / 2;
       const bgY = bubbleY - bgH + floatOff;
 
-      ctx.fillStyle = '#0a0a0a';
-      ctx.globalAlpha = 0.9;
+      // Bubble background
+      ctx.fillStyle = '#111118';
+      ctx.globalAlpha = 0.95;
       ctx.fillRect(bgX, bgY, bgW, bgH);
-      ctx.strokeStyle = 'rgba(255,255,255,0.15)';
-      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = config.color;
+      ctx.lineWidth = 2;
       ctx.strokeRect(bgX, bgY, bgW, bgH);
       ctx.globalAlpha = 1;
 
-      ctx.fillStyle = '#0a0a0a';
+      // Shadow
+      ctx.fillStyle = config.color;
+      ctx.globalAlpha = 0.2;
+      ctx.fillRect(bgX + 2, bgY + 2, bgW, bgH);
+      ctx.globalAlpha = 1;
+
+      // Pointer triangle
+      ctx.fillStyle = '#111118';
       ctx.beginPath();
-      ctx.moveTo(bubbleX - 2 * S, bgY + bgH);
-      ctx.lineTo(bubbleX + 2 * S, bgY + bgH);
-      ctx.lineTo(bubbleX, bgY + bgH + 3 * S);
+      ctx.moveTo(bubbleX - 3 * S, bgY + bgH);
+      ctx.lineTo(bubbleX + 3 * S, bgY + bgH);
+      ctx.lineTo(bubbleX, bgY + bgH + 5 * S);
       ctx.fill();
+      ctx.strokeStyle = config.color;
+      ctx.lineWidth = 2;
+      ctx.stroke();
 
       const emojiPulse = 1 + Math.sin(frame * 0.06) * 0.08;
       ctx.font = `${Math.round(emojiSize * emojiPulse)}px sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(act.emoji, bubbleX, bgY + 8 * S + floatOff * 0.2);
+      ctx.fillText(act.emoji, bubbleX, bgY + 10 * S + floatOff * 0.2);
 
-      ctx.font = `${lblFs}px monospace`;
-      ctx.fillStyle = 'rgba(200, 200, 220, 0.7)';
+      ctx.font = `bold ${lblFs}px monospace`;
+      ctx.fillStyle = '#e0e0f0';
       ctx.textAlign = 'center';
-      ctx.fillText(act.label, bubbleX, bgY + 17 * S + floatOff * 0.2);
+      ctx.fillText(act.label, bubbleX, bgY + 22 * S + floatOff * 0.2);
       ctx.restore();
     }
   }
@@ -639,7 +650,7 @@ function drawBubble(ctx, x, y, text, borderColor, S) {
   }
   if (lines.length === 0) return;
 
-  const fs = Math.max(6, Math.round(9 * S));
+  const fs = Math.max(8, Math.round(11 * S));
   ctx.font = `bold ${fs}px monospace`;
 
   let maxW = 0;
@@ -682,7 +693,7 @@ function drawBubble(ctx, x, y, text, borderColor, S) {
   ctx.fillStyle = '#0a0a0a';
   ctx.fillRect(x - 4 * S, by + bh - 1, 8 * S, 2);
 
-  ctx.fillStyle = '#e8e8f0';
+  ctx.fillStyle = '#f0f0ff';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   for (let i = 0; i < lines.length; i++) {
