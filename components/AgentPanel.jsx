@@ -4,14 +4,23 @@ import { AGENTS } from '@/lib/agents';
 
 const STATUS_DOT = {
   idle:        'bg-zinc-600',
-  working:     'bg-emerald-400 shadow-[0_0_8px] shadow-emerald-400/50',
-  thinking:    'bg-amber-400 shadow-[0_0_8px] shadow-amber-400/40',
-  talking:     'bg-sky-400 shadow-[0_0_8px] shadow-sky-400/40',
+  working:     'bg-emerald-400 shadow-[0_0_10px] shadow-emerald-400/60',
+  thinking:    'bg-amber-400 shadow-[0_0_10px] shadow-amber-400/50',
+  talking:     'bg-sky-400 shadow-[0_0_10px] shadow-sky-400/50',
   sleeping:    'bg-zinc-700',
-  error:       'bg-red-400 shadow-[0_0_8px] shadow-red-400/50',
-  researching: 'bg-violet-400 shadow-[0_0_8px] shadow-violet-400/40',
-  posting:     'bg-blue-400 shadow-[0_0_8px] shadow-blue-400/40',
-  monitoring:  'bg-emerald-400 shadow-[0_0_8px] shadow-emerald-400/40',
+  error:       'bg-red-400 shadow-[0_0_10px] shadow-red-400/60',
+  researching: 'bg-violet-400 shadow-[0_0_10px] shadow-violet-400/50',
+  posting:     'bg-blue-400 shadow-[0_0_10px] shadow-blue-400/50',
+  monitoring:  'bg-emerald-400 shadow-[0_0_10px] shadow-emerald-400/50',
+};
+
+const STATUS_BG = {
+  working:     'from-emerald-500/[0.06] to-transparent',
+  thinking:    'from-amber-500/[0.06] to-transparent',
+  talking:     'from-sky-500/[0.06] to-transparent',
+  researching: 'from-violet-500/[0.06] to-transparent',
+  posting:     'from-blue-500/[0.06] to-transparent',
+  error:       'from-red-500/[0.06] to-transparent',
 };
 
 export default function AgentPanel({ agents }) {
@@ -56,41 +65,59 @@ export default function AgentPanel({ agents }) {
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-      {agents.map(a => {
+      {agents.map((a, idx) => {
         const cfg = AGENTS[a.name] || {};
         const status = a.status || 'idle';
         const dotClass = STATUS_DOT[status] || STATUS_DOT.idle;
         const animated = isActive(status);
+        const bgGrad = STATUS_BG[status] || '';
 
         return (
           <div
             key={a.name}
-            className="group relative bg-card border border-white/[0.05] rounded-xl p-3.5 overflow-hidden transition-all duration-200 hover:border-white/[0.1] hover:shadow-lg hover:shadow-black/30 hover:-translate-y-0.5"
+            className="group relative glass-card rounded-xl p-3.5 overflow-hidden"
+            style={{ animationDelay: `${idx * 80}ms` }}
           >
-            {/* Top accent */}
-            <div className="absolute top-0 inset-x-0 h-[2px] opacity-50" style={{ background: `linear-gradient(90deg, transparent, ${cfg.color || '#5b7bff'}, transparent)` }} />
+            {/* Top accent bar */}
+            <div className="absolute top-0 inset-x-0 h-[2px]" style={{ background: `linear-gradient(90deg, transparent 10%, ${cfg.color || '#5b7bff'}80, transparent 90%)` }} />
 
-            {/* Glow overlay */}
-            <div className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: `radial-gradient(circle at 50% 0%, ${cfg.color || '#5b7bff'}08, transparent 70%)` }} />
+            {/* Active status background glow */}
+            {animated && bgGrad && (
+              <div className={`absolute inset-0 bg-gradient-to-b ${bgGrad} pointer-events-none transition-opacity duration-700`} />
+            )}
+
+            {/* Hover glow */}
+            <div className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ background: `radial-gradient(circle at 50% 0%, ${cfg.color || '#5b7bff'}10, transparent 70%)` }} />
 
             {/* Header */}
-            <div className="relative flex items-center gap-2 mb-2">
-              <span className="text-lg w-8 h-8 flex items-center justify-center rounded-lg bg-white/[0.03] shrink-0">{cfg.icon || '?'}</span>
+            <div className="relative flex items-center gap-2.5 mb-2.5">
+              <div className="relative">
+                <span className="text-lg w-9 h-9 flex items-center justify-center rounded-xl bg-white/[0.04] border border-white/[0.06] shrink-0 group-hover:bg-white/[0.06] transition-colors">{cfg.icon || '?'}</span>
+                {/* Status dot on avatar */}
+                <span className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-card ${dotClass}`} style={animated ? { animation: 'pulse-slow 1.5s ease-in-out infinite' } : {}} />
+              </div>
               <div className="min-w-0">
-                <div className="text-[12px] font-bold tracking-wide truncate" style={{ color: cfg.color || '#fff' }}>{cfg.label || a.name}</div>
-                <div className="text-[8px] text-white/25 tracking-widest uppercase truncate">{cfg.role || ''}</div>
+                <div className="text-[12px] font-extrabold tracking-wide truncate transition-colors duration-300" style={{ color: cfg.color || '#fff' }}>{cfg.label || a.name}</div>
+                <div className="text-[7px] text-white/20 tracking-[0.2em] uppercase truncate font-medium">{cfg.role || ''}</div>
               </div>
             </div>
 
-            {/* Status */}
-            <div className="relative flex items-center gap-1.5 mt-1.5">
-              <span className={`w-[6px] h-[6px] rounded-full shrink-0 ${dotClass}`} style={animated ? { animation: 'pulse-slow 1.5s ease-in-out infinite' } : {}} />
-              <span className="text-[9px] text-white/40 font-medium tracking-[0.12em] uppercase">{status}</span>
+            {/* Status pill */}
+            <div className="relative flex items-center gap-1.5 mt-1">
+              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[8px] font-bold tracking-[0.12em] uppercase border ${
+                animated
+                  ? 'bg-white/[0.04] border-white/[0.08] text-white/50'
+                  : 'bg-white/[0.02] border-white/[0.04] text-white/25'
+              }`}>
+                <span className={`w-[5px] h-[5px] rounded-full ${dotClass}`} />
+                {status}
+              </span>
             </div>
 
             {/* Task */}
             {a.current_task && (
-              <div className="relative mt-2 text-[9px] text-white/20 font-mono truncate px-2 py-1 bg-white/[0.02] rounded border border-white/[0.03]" title={a.current_task}>
+              <div className="relative mt-2.5 text-[9px] text-white/25 font-mono truncate px-2.5 py-1.5 bg-white/[0.02] rounded-lg border border-white/[0.04]" title={a.current_task}>
+                <span className="text-accent/40 mr-1">→</span>
                 {a.current_task}
               </div>
             )}

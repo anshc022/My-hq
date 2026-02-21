@@ -124,63 +124,77 @@ export default function Home() {
     <div className="min-h-screen flex flex-col">
       <StatsBar agents={agents} nodeConnected={nodeConnected} />
 
-      <main className="flex-1 max-w-[1440px] mx-auto w-full px-4 md:px-5 py-4 space-y-5">
+      <main className="flex-1 max-w-[1440px] mx-auto w-full px-4 md:px-6 py-5 space-y-6">
         {/* Canvas */}
-        <div className="mt-1">
+        <div className="mt-1 animate-fade-in">
           <OfficeCanvas agents={agents} nodeConnected={nodeConnected} events={events} />
         </div>
 
         {/* Agent Cards */}
-        <section>
-          <SectionTitle icon="👥" label="AGENTS" />
+        <section className="animate-slide-up" style={{ animationDelay: '100ms' }}>
+          <SectionTitle icon="👥" label="AGENTS" count={agents?.length} />
           <AgentPanel agents={agents} />
         </section>
 
         {/* Grid: Events + Mission Control */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <section>
-            <SectionTitle icon="📡" label="EVENT FEED" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <section className="animate-slide-up" style={{ animationDelay: '200ms' }}>
+            <SectionTitle icon="📡" label="EVENT FEED" count={events?.length} />
             <EventFeed events={events} />
           </section>
 
-          <section>
+          <section className="animate-slide-up" style={{ animationDelay: '300ms' }}>
             <SectionTitle icon="📊" label="MISSION CONTROL" />
             <MissionBoard agents={agents} nodeConnected={nodeConnected} />
           </section>
         </div>
 
         {/* Gateway Log */}
-        <section>
-          <SectionTitle icon="💬" label="GATEWAY LOG" />
+        <section className="animate-slide-up" style={{ animationDelay: '400ms' }}>
+          <SectionTitle icon="💬" label="GATEWAY LOG" count={messages?.length} />
           <ChatLog messages={messages} />
         </section>
       </main>
 
       {/* Footer */}
-      <footer className="text-center py-5 px-5 border-t border-white/[0.03] mt-6 font-mono">
-        <div className="text-[10px] text-muted tracking-[0.15em] flex items-center justify-center gap-3">
-          <span className="text-accent font-semibold">OPS</span>
-          <span className="text-white/[0.06]">•</span>
-          <span>HQ DASHBOARD</span>
-          <span className="text-white/[0.06]">•</span>
-          <span className="text-purple-400/60">OpenClaw</span>
-          <span className="text-white/[0.06]">+</span>
-          <span className="text-cyan-400/60">K2</span>
-          <span className="text-white/[0.06]">•</span>
-          <span>{agents?.length || 6} AGENTS</span>
+      <footer className="relative mt-8 font-mono overflow-hidden">
+        {/* Top border gradient */}
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-accent/20 to-transparent" />
+
+        <div className="relative text-center py-6 px-5">
+          {/* Main footer content */}
+          <div className="flex items-center justify-center gap-4 mb-2">
+            <div className="flex items-center gap-2">
+              <div className="w-5 h-5 rounded-md bg-gradient-to-br from-accent/30 to-purple-700/30 flex items-center justify-center text-[10px]">⚡</div>
+              <span className="text-[11px] font-bold gradient-text tracking-wider">OPS HQ</span>
+            </div>
+            <span className="w-px h-3 bg-white/[0.06]" />
+            <div className="flex items-center gap-1.5">
+              <span className="text-[9px] text-purple-400/50 font-semibold tracking-wider">OpenClaw</span>
+              <span className="text-white/[0.08] text-[7px]">+</span>
+              <span className="text-[9px] text-cyan-400/50 font-semibold tracking-wider">K2</span>
+            </div>
+            <span className="w-px h-3 bg-white/[0.06]" />
+            <span className="text-[9px] text-muted tracking-wider">{agents?.length || 6} AGENTS</span>
+          </div>
+          <div className="text-[8px] text-white/[0.06] tracking-[0.3em] font-medium">REAL-TIME AGENT OPERATIONS DASHBOARD</div>
         </div>
-        <div className="text-[9px] text-white/[0.08] mt-1.5 tracking-widest">POWERED BY OPENCLAW + K2</div>
       </footer>
     </div>
   );
 }
 
-function SectionTitle({ icon, label }) {
+function SectionTitle({ icon, label, count }) {
   return (
-    <div className="flex items-center gap-2 mb-2.5 font-mono text-[11px] font-semibold text-subtle tracking-[0.15em] uppercase">
-      <span className="text-[13px] saturate-[0.7]">{icon}</span>
-      {label}
-      <span className="flex-1 h-px bg-gradient-to-r from-white/[0.06] to-transparent" />
+    <div className="flex items-center gap-2.5 mb-3 font-mono">
+      <div className="flex items-center gap-2">
+        <span className="text-[14px] saturate-[0.7]">{icon}</span>
+        <span className="text-[11px] font-bold text-subtle tracking-[0.18em] uppercase">{label}</span>
+      </div>
+      {count != null && (
+        <span className="text-[9px] text-muted bg-white/[0.03] border border-white/[0.05] px-2 py-0.5 rounded-full font-medium tabular">{count}</span>
+      )}
+      <span className="flex-1 h-px bg-gradient-to-r from-white/[0.06] via-white/[0.03] to-transparent" />
     </div>
   );
 }
