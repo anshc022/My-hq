@@ -694,7 +694,8 @@ function drawBubble(ctx, x, y, text, borderColor, S) {
 function drawConnections(ctx, agents, cw, ch, frame) {
   if (!agents || agents.length < 2) return;
   const active = agents.filter(a =>
-    a.status === 'talking' || a.status === 'working' || a.status === 'researching' || a.status === 'thinking'
+    (a.status === 'talking' || a.status === 'working' || a.status === 'researching' || a.status === 'thinking')
+    && a.name !== 'forge'
   );
   if (active.length < 2) return;
 
