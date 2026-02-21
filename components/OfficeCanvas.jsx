@@ -698,11 +698,11 @@ function drawConnections(ctx, agents, cw, ch, frame) {
   if (active.length < 2) return;
 
   ctx.save();
-  ctx.strokeStyle = '#4fc3f7';
-  ctx.lineWidth = 2;
-  ctx.setLineDash([6, 4]);
-  ctx.lineDashOffset = -frame * 0.8;
-  ctx.globalAlpha = 0.6;
+  ctx.strokeStyle = 'rgba(140, 120, 200, 0.4)';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([4, 6]);
+  ctx.lineDashOffset = -frame * 0.6;
+  ctx.globalAlpha = 0.5;
 
   const hub = active[0];
   const hubPos = getSmoothedPos(hub.name, hub, cw, ch);
@@ -711,24 +711,25 @@ function drawConnections(ctx, agents, cw, ch, frame) {
     const other = active[i];
     const op = getSmoothedPos(other.name, other, cw, ch);
 
-    // Straight lines instead of curves for neo-brutal
     ctx.beginPath();
     ctx.moveTo(hubPos.x, hubPos.y);
     ctx.lineTo(op.x, op.y);
     ctx.stroke();
 
-    // Square dot traveling along
+    // Traveling dot
     const t = (frame * 0.008) % 1;
     const dotX = hubPos.x + (op.x - hubPos.x) * t;
     const dotY = hubPos.y + (op.y - hubPos.y) * t;
-    ctx.fillStyle = '#ffea00';
-    ctx.globalAlpha = 0.8;
-    ctx.fillRect(dotX - 3, dotY - 3, 6, 6);
-    ctx.globalAlpha = 0.6;
+    ctx.fillStyle = '#7c4dff';
+    ctx.globalAlpha = 0.7;
+    ctx.beginPath();
+    ctx.arc(dotX, dotY, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 0.5;
   }
 
   if (active.length >= 3) {
-    ctx.globalAlpha = 0.2;
+    ctx.globalAlpha = 0.15;
     for (let i = 1; i < active.length; i++) {
       for (let j = i + 1; j < active.length; j++) {
         const a = getSmoothedPos(active[i].name, active[i], cw, ch);
@@ -751,122 +752,139 @@ function drawRooms(ctx, cw, ch, frame) {
   const divX = UNIFIED_BOX.dividerX * cw;
   const divY = UNIFIED_BOX.dividerY * ch;
 
-  // Background — flat neo-brutal
-  ctx.fillStyle = '#0d0d0d';
+  // Background — dark with subtle purple tint
+  ctx.fillStyle = '#0c0c14';
   ctx.fillRect(bx, by, bw, bh);
 
-  // Floor grid — subtle dots
-  ctx.fillStyle = 'rgba(255,255,255,0.04)';
-  for (let gx = bx; gx < bx + bw; gx += 20) {
-    for (let gy = by; gy < by + bh; gy += 20) {
-      ctx.fillRect(gx, gy, 1, 1);
+  // Floor grid — visible cross-hatch pattern (like reference)
+  ctx.strokeStyle = 'rgba(100, 80, 160, 0.06)';
+  ctx.lineWidth = 0.5;
+  for (let gx = bx; gx < bx + bw; gx += 28) {
+    ctx.beginPath();
+    ctx.moveTo(gx, by);
+    ctx.lineTo(gx, by + bh);
+    ctx.stroke();
+  }
+  for (let gy = by; gy < by + bh; gy += 28) {
+    ctx.beginPath();
+    ctx.moveTo(bx, gy);
+    ctx.lineTo(bx + bw, gy);
+    ctx.stroke();
+  }
+  // Subtle dot overlay on grid intersections
+  ctx.fillStyle = 'rgba(140, 120, 200, 0.08)';
+  for (let gx = bx; gx < bx + bw; gx += 28) {
+    for (let gy = by; gy < by + bh; gy += 28) {
+      ctx.fillRect(gx - 0.5, gy - 0.5, 1.5, 1.5);
     }
   }
 
-  // Outer border — thick solid neo-brutal
-  ctx.strokeStyle = '#4fc3f7';
-  ctx.lineWidth = 3;
-  ctx.globalAlpha = 0.8;
-  ctx.strokeRect(bx, by, bw, bh);
-  // Hard offset shadow
-  ctx.fillStyle = '#4fc3f7';
-  ctx.globalAlpha = 0.15;
-  ctx.fillRect(bx + 4, by + 4, bw, bh);
-  ctx.globalAlpha = 1;
+  // Room background fills — subtle color tinting per room
+  const roomBgColors = {
+    workspace: 'rgba(74, 106, 255, 0.03)',
+    warroom:   'rgba(255, 145, 0, 0.03)',
+    lab:       'rgba(0, 230, 118, 0.03)',
+    forge:     'rgba(230, 126, 34, 0.03)',
+  };
+  // Top-left
+  ctx.fillStyle = roomBgColors.workspace;
+  ctx.fillRect(bx, by, divX - bx, divY - by);
+  // Top-right
+  ctx.fillStyle = roomBgColors.warroom;
+  ctx.fillRect(divX, by, bx + bw - divX, divY - by);
+  // Bottom-left
+  ctx.fillStyle = roomBgColors.lab;
+  ctx.fillRect(bx, divY, divX - bx, by + bh - divY);
+  // Bottom-right
+  ctx.fillStyle = roomBgColors.forge;
+  ctx.fillRect(divX, divY, bx + bw - divX, by + bh - divY);
 
-  // Corner brackets — chunky
-  ctx.strokeStyle = '#ffea00';
-  ctx.globalAlpha = 0.8;
-  ctx.lineWidth = 3;
-  const cLen = 18;
+  // Outer border — clean solid
+  ctx.strokeStyle = 'rgba(140, 120, 200, 0.35)';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(bx, by, bw, bh);
+
+  // Vertical divider — solid clean line
+  ctx.strokeStyle = 'rgba(140, 120, 200, 0.2)';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([]);
+  ctx.beginPath();
+  ctx.moveTo(divX, by + 1);
+  ctx.lineTo(divX, by + bh - 1);
+  ctx.stroke();
+
+  // Horizontal divider — solid clean line
+  ctx.beginPath();
+  ctx.moveTo(bx + 1, divY);
+  ctx.lineTo(bx + bw - 1, divY);
+  ctx.stroke();
+
+  // Corner accents — small bright corners
+  ctx.strokeStyle = '#4fc3f7';
+  ctx.lineWidth = 2;
+  ctx.globalAlpha = 0.6;
+  const cLen = 12;
   ctx.beginPath(); ctx.moveTo(bx + cLen, by); ctx.lineTo(bx, by); ctx.lineTo(bx, by + cLen); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(bx + bw - cLen, by); ctx.lineTo(bx + bw, by); ctx.lineTo(bx + bw, by + cLen); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(bx + cLen, by + bh); ctx.lineTo(bx, by + bh); ctx.lineTo(bx, by + bh - cLen); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(bx + bw - cLen, by + bh); ctx.lineTo(bx + bw, by + bh); ctx.lineTo(bx + bw, by + bh - cLen); ctx.stroke();
   ctx.globalAlpha = 1;
 
-  // Vertical divider — solid thick
-  ctx.strokeStyle = '#4fc3f7';
-  ctx.lineWidth = 2;
-  ctx.globalAlpha = 0.5;
-  ctx.setLineDash([6, 4]);
-  ctx.beginPath();
-  ctx.moveTo(divX, by + 6);
-  ctx.lineTo(divX, by + bh - 6);
-  ctx.stroke();
-
-  // Horizontal divider — solid thick
-  ctx.beginPath();
-  ctx.moveTo(bx + 6, divY);
-  ctx.lineTo(bx + bw - 6, divY);
-  ctx.stroke();
-  ctx.setLineDash([]);
-  ctx.globalAlpha = 1;
-
-  // Echo's Den — neo-brutal box
+  // Echo's Den — clean box
   const denX = ECHO_DEN.x * cw, denY2 = ECHO_DEN.y * ch;
   const denW = ECHO_DEN.w * cw, denH = ECHO_DEN.h * ch;
-  ctx.fillStyle = 'rgba(74, 144, 217, 0.08)';
+  ctx.fillStyle = 'rgba(74, 144, 217, 0.05)';
   ctx.fillRect(denX, denY2, denW, denH);
-  ctx.strokeStyle = '#4fc3f7';
-  ctx.lineWidth = 2;
-  ctx.globalAlpha = 0.7;
+  ctx.strokeStyle = 'rgba(74, 144, 217, 0.3)';
+  ctx.lineWidth = 1;
   ctx.strokeRect(denX, denY2, denW, denH);
-  ctx.globalAlpha = 1;
   ctx.font = '9px sans-serif';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
   ctx.fillText('🧠', denX + 4, denY2 + 3);
   ctx.font = 'bold 7px monospace';
-  ctx.fillStyle = '#4fc3f7';
-  ctx.globalAlpha = 0.8;
+  ctx.fillStyle = '#4A90D9';
+  ctx.globalAlpha = 0.7;
   ctx.fillText("ECHO'S DEN", denX + 16, denY2 + 5);
   ctx.globalAlpha = 1;
 
   // Monitor in den
   const mdx = ECHO_DEN.cx * cw + 8, mdy = ECHO_DEN.cy * ch - 8;
-  ctx.fillStyle = '#111128';
-  ctx.beginPath();
-  ctx.roundRect(mdx - 6, mdy - 8, 12, 10, 2);
-  ctx.fill();
-  ctx.fillStyle = 'rgba(74, 144, 217, 0.3)';
+  ctx.fillStyle = '#0d0d18';
+  ctx.fillRect(mdx - 6, mdy - 8, 12, 10);
+  ctx.strokeStyle = 'rgba(74, 144, 217, 0.3)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(mdx - 6, mdy - 8, 12, 10);
+  ctx.fillStyle = 'rgba(74, 144, 217, 0.2)';
   ctx.fillRect(mdx - 4, mdy - 6, 8, 6);
-  ctx.fillStyle = '#2a2a48';
+  ctx.fillStyle = '#1a1a28';
   ctx.fillRect(mdx - 1, mdy + 2, 2, 3);
 
-  // Room labels — bold neo-brutal
+  // Room labels — clean badge style
   const labels = [
-    { icon: '💻', text: 'DEV FLOOR',   color: '#4fc3f7', lx: bx + 8,   ly: by + 10 },
-    { icon: '🎯', text: 'WAR ROOM',    color: '#ff9100', lx: divX + 8, ly: by + 10 },
-    { icon: '🧪', text: 'CODE LAB',    color: '#00e676', lx: bx + 8,   ly: divY + 8 },
-    { icon: '🔥', text: 'DEPLOY BAY',  color: '#ff9100', lx: divX + 8, ly: divY + 8 },
+    { icon: '💻', text: 'DEV FLOOR',   color: '#4fc3f7', lx: bx + 8,   ly: by + 8 },
+    { icon: '🎯', text: 'WAR ROOM',    color: '#ff9100', lx: divX + 8, ly: by + 8 },
+    { icon: '🧪', text: 'CODE LAB',    color: '#00e676', lx: bx + 8,   ly: divY + 6 },
+    { icon: '🔥', text: 'DEPLOY BAY',  color: '#ff9100', lx: divX + 8, ly: divY + 6 },
   ];
   labels.forEach(l => {
-    ctx.font = '11px sans-serif';
+    ctx.font = '10px sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
     ctx.fillText(l.icon, l.lx, l.ly);
-    // Label background
+    // Clean label
     ctx.font = 'bold 8px monospace';
     const tw = ctx.measureText(l.text).width;
+    // Background pill
     ctx.fillStyle = l.color;
-    ctx.globalAlpha = 0.12;
-    ctx.fillRect(l.lx + 15, l.ly, tw + 6, 12);
-    ctx.globalAlpha = 0.9;
+    ctx.globalAlpha = 0.08;
+    ctx.fillRect(l.lx + 14, l.ly - 1, tw + 8, 14);
+    ctx.globalAlpha = 1;
     ctx.fillStyle = l.color;
+    ctx.globalAlpha = 0.8;
     ctx.fillText(l.text, l.lx + 18, l.ly + 2);
     ctx.globalAlpha = 1;
   });
-
-  // Bottom status bar — chunky
-  const barW = bw - 20, barX = bx + 10, barY = by + bh - 8;
-  ctx.fillStyle = 'rgba(255,255,255,0.08)';
-  ctx.fillRect(barX, barY, barW, 3);
-  const fillW = barW * (0.3 + Math.sin(frame * 0.01) * 0.2);
-  ctx.fillStyle = '#4fc3f7';
-  ctx.globalAlpha = 0.4;
-  ctx.fillRect(barX, barY, fillW, 3);
-  ctx.globalAlpha = 1;
 
   // Room interiors
   Object.entries(ROOMS).forEach(([key, room]) => {
@@ -883,93 +901,100 @@ function drawRoomInterior(ctx, roomKey, rx, ry, rw, rh, cw, ch, frame) {
   ctx.clip();
 
   if (roomKey === 'workspace') {
-    // Ceiling lights
+    // Ambient ceiling lights — subtle glows
     for (let i = 0; i < 3; i++) {
       const lx = rx + rw * (0.18 + i * 0.30);
-      const ly = ry + 4;
-      ctx.fillStyle = `rgba(74, 106, 255, ${0.06 + Math.sin(frame * 0.015 + i) * 0.03})`;
-      ctx.beginPath();
-      ctx.roundRect(lx - 30, ly, 60, 3, 1);
-      ctx.fill();
+      const ly = ry + 2;
+      ctx.fillStyle = `rgba(74, 106, 255, ${0.04 + Math.sin(frame * 0.015 + i) * 0.02})`;
+      ctx.fillRect(lx - 24, ly, 48, 2);
     }
 
-    // Whiteboard
-    const wbx = rx + 8, wby = ry + rh * 0.35;
-    ctx.fillStyle = 'rgba(240,240,235,0.06)';
-    ctx.beginPath();
-    ctx.roundRect(wbx, wby, 6, rh * 0.35, 2);
-    ctx.fill();
+    // Whiteboard on wall
+    const wbx = rx + 6, wby = ry + rh * 0.30;
+    ctx.fillStyle = 'rgba(200, 200, 220, 0.04)';
+    ctx.fillRect(wbx, wby, 6, rh * 0.35);
+    ctx.strokeStyle = 'rgba(140, 120, 200, 0.08)';
+    ctx.lineWidth = 0.5;
+    ctx.strokeRect(wbx, wby, 6, rh * 0.35);
+    // Sticky notes
     const stickyCs = ['#4a6aff', '#FF6B9D', '#F7DC6F', '#2ECC71'];
     for (let i = 0; i < 4; i++) {
       ctx.fillStyle = stickyCs[i];
-      ctx.globalAlpha = 0.12;
-      ctx.fillRect(wbx + 1, wby + 4 + i * (rh * 0.08), 4, rh * 0.06);
+      ctx.globalAlpha = 0.1;
+      ctx.fillRect(wbx + 1, wby + 3 + i * (rh * 0.08), 4, rh * 0.06);
     }
     ctx.globalAlpha = 1;
   }
 
   if (roomKey === 'warroom') {
-    // Fireplace
-    const fx = rx + rw * 0.5, fy = ry + rh * 0.75;
-    ctx.fillStyle = 'rgba(60,30,15,0.4)';
-    ctx.beginPath(); ctx.roundRect(fx - 18, fy - 6, 36, 16, 3); ctx.fill();
-    ctx.fillStyle = 'rgba(40,20,10,0.5)';
-    ctx.beginPath(); ctx.roundRect(fx - 14, fy - 2, 28, 10, 2); ctx.fill();
+    // Strategy table — clean
+    const ccx = rx + rw * 0.5, ccy = ry + rh * 0.4;
+    ctx.fillStyle = 'rgba(60, 40, 25, 0.25)';
+    ctx.fillRect(ccx - 24, ccy, 48, 12);
+    ctx.strokeStyle = 'rgba(200, 150, 80, 0.1)';
+    ctx.lineWidth = 0.5;
+    ctx.strokeRect(ccx - 24, ccy, 48, 12);
 
-    for (let i = 0; i < 5; i++) {
-      const flicker = Math.sin(frame * 0.12 + i * 1.7) * 3;
-      const fh = 5 + Math.sin(frame * 0.08 + i * 2.3) * 2.5;
-      const fireColors = ['#ff6b35', '#ff9500', '#ffcc00', '#ff4500', '#ff8c00'];
+    // Fireplace — subtle warm glow
+    const fx = rx + rw * 0.5, fy = ry + rh * 0.78;
+    ctx.fillStyle = 'rgba(50, 25, 12, 0.3)';
+    ctx.fillRect(fx - 16, fy - 4, 32, 12);
+    for (let i = 0; i < 4; i++) {
+      const fh = 4 + Math.sin(frame * 0.08 + i * 2.3) * 2;
+      const fireColors = ['#ff6b35', '#ff9500', '#ffcc00', '#ff4500'];
       ctx.fillStyle = fireColors[i];
-      ctx.globalAlpha = 0.25 + Math.sin(frame * 0.1 + i) * 0.1;
+      ctx.globalAlpha = 0.15 + Math.sin(frame * 0.1 + i) * 0.05;
       ctx.beginPath();
-      ctx.ellipse(fx - 7 + i * 3.5 + flicker * 0.3, fy - fh * 0.5, 2.5, fh * 0.4, 0, 0, Math.PI * 2);
+      ctx.ellipse(fx - 5 + i * 3.5, fy - fh * 0.4, 2, fh * 0.3, 0, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.globalAlpha = 1;
 
-    const fireGlow = ctx.createRadialGradient(fx, fy, 0, fx, fy, 50);
-    fireGlow.addColorStop(0, `rgba(255,150,50,${0.04 + Math.sin(frame * 0.03) * 0.02})`);
+    // Warm ambient glow
+    const fireGlow = ctx.createRadialGradient(fx, fy, 0, fx, fy, 40);
+    fireGlow.addColorStop(0, `rgba(255,130,40,${0.03 + Math.sin(frame * 0.03) * 0.01})`);
     fireGlow.addColorStop(1, 'rgba(255,100,30,0)');
     ctx.fillStyle = fireGlow;
     ctx.fillRect(rx, ry, rw, rh);
-
-    // Strategy table
-    const ccx = rx + rw * 0.5, ccy = ry + rh * 0.4;
-    ctx.fillStyle = 'rgba(80,45,25,0.35)';
-    ctx.beginPath(); ctx.roundRect(ccx - 24, ccy, 48, 14, 4); ctx.fill();
   }
 
   if (roomKey === 'lab') {
-    // Terminal screens
+    // Terminal screens — green themed
     for (let i = 0; i < 2; i++) {
-      const tx = rx + 10, ty = ry + 10 + i * (rh * 0.38);
-      ctx.fillStyle = 'rgba(5,15,10,0.5)';
-      ctx.beginPath(); ctx.roundRect(tx, ty, 24, rh * 0.28, 3); ctx.fill();
-      for (let ln = 0; ln < 5; ln++) {
-        const lw = 8 + Math.random() * 12;
+      const tx = rx + 8, ty = ry + 8 + i * (rh * 0.38);
+      ctx.fillStyle = 'rgba(5, 12, 8, 0.4)';
+      ctx.fillRect(tx, ty, 20, rh * 0.26);
+      ctx.strokeStyle = 'rgba(46, 204, 113, 0.1)';
+      ctx.lineWidth = 0.5;
+      ctx.strokeRect(tx, ty, 20, rh * 0.26);
+      for (let ln = 0; ln < 4; ln++) {
+        const lw = 6 + Math.random() * 10;
         ctx.fillStyle = '#2ecc71';
-        ctx.globalAlpha = 0.15 + Math.sin(frame * 0.02 + ln + i * 3) * 0.05;
-        ctx.fillRect(tx + 3, ty + 4 + ln * (rh * 0.05), lw, 2);
+        ctx.globalAlpha = 0.12 + Math.sin(frame * 0.02 + ln + i * 3) * 0.04;
+        ctx.fillRect(tx + 2, ty + 3 + ln * (rh * 0.055), lw, 1.5);
       }
       ctx.globalAlpha = 1;
+      // Cursor blink
       if (Math.floor(frame * 0.03) % 2 === i) {
         ctx.fillStyle = '#2ecc71';
-        ctx.globalAlpha = 0.4;
-        ctx.fillRect(tx + 3, ty + 4 + 5 * (rh * 0.05), 4, 2);
+        ctx.globalAlpha = 0.35;
+        ctx.fillRect(tx + 2, ty + 3 + 4 * (rh * 0.055), 3, 1.5);
         ctx.globalAlpha = 1;
       }
     }
 
     // Server rack
-    const srx = rx + rw - 20, sry = ry + 8;
-    ctx.fillStyle = 'rgba(20,30,25,0.4)';
-    ctx.beginPath(); ctx.roundRect(srx, sry, 14, rh * 0.7, 2); ctx.fill();
-    for (let si = 0; si < 6; si++) {
+    const srx = rx + rw - 16, sry = ry + 6;
+    ctx.fillStyle = 'rgba(15, 25, 20, 0.3)';
+    ctx.fillRect(srx, sry, 12, rh * 0.65);
+    ctx.strokeStyle = 'rgba(46, 204, 113, 0.08)';
+    ctx.lineWidth = 0.5;
+    ctx.strokeRect(srx, sry, 12, rh * 0.65);
+    for (let si = 0; si < 5; si++) {
       const ledOn = Math.sin(frame * 0.05 + si * 1.2) > 0;
-      ctx.fillStyle = ledOn ? '#2ecc71' : '#333';
-      ctx.globalAlpha = ledOn ? 0.5 : 0.15;
-      ctx.beginPath(); ctx.arc(srx + 5, sry + 8 + si * (rh * 0.10), 2, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = ledOn ? '#2ecc71' : '#222';
+      ctx.globalAlpha = ledOn ? 0.4 : 0.1;
+      ctx.beginPath(); ctx.arc(srx + 4, sry + 6 + si * (rh * 0.11), 1.5, 0, Math.PI * 2); ctx.fill();
     }
     ctx.globalAlpha = 1;
   }
@@ -977,32 +1002,28 @@ function drawRoomInterior(ctx, roomKey, rx, ry, rw, rh, cw, ch, frame) {
   if (roomKey === 'forge') {
     // Deploy bay with pipeline monitor
     const mox = rx + rw * 0.5, moy = ry + rh * 0.35;
-    ctx.fillStyle = 'rgba(15,10,5,0.5)';
-    ctx.beginPath(); ctx.roundRect(mox - 28, moy - 14, 56, 28, 4); ctx.fill();
-    ctx.strokeStyle = 'rgba(230,126,34,0.2)';
-    ctx.lineWidth = 0.8;
-    ctx.beginPath(); ctx.roundRect(mox - 28, moy - 14, 56, 28, 4); ctx.stroke();
+    ctx.fillStyle = 'rgba(12, 8, 4, 0.4)';
+    ctx.fillRect(mox - 26, moy - 12, 52, 24);
+    ctx.strokeStyle = 'rgba(230, 126, 34, 0.12)';
+    ctx.lineWidth = 0.5;
+    ctx.strokeRect(mox - 26, moy - 12, 52, 24);
 
-    // Pipeline progress
-    ctx.strokeStyle = '#E67E22';
-    ctx.lineWidth = 1.5;
-    ctx.globalAlpha = 0.5;
-    ctx.beginPath();
+    // Pipeline stages
     const stages = ['BUILD', 'TEST', 'DEPLOY'];
     for (let si = 0; si < 3; si++) {
-      const sx = mox - 20 + si * 16;
+      const sx = mox - 18 + si * 16;
       const active = ((frame * 0.02) % 3) > si;
-      ctx.fillStyle = active ? '#E67E22' : '#333';
-      ctx.globalAlpha = active ? 0.4 : 0.15;
+      ctx.fillStyle = active ? '#E67E22' : '#222';
+      ctx.globalAlpha = active ? 0.4 : 0.1;
       ctx.beginPath();
-      ctx.arc(sx, moy, 3, 0, Math.PI * 2);
+      ctx.arc(sx, moy, 2.5, 0, Math.PI * 2);
       ctx.fill();
       if (si < 2) {
-        ctx.strokeStyle = active ? '#E67E22' : '#333';
-        ctx.globalAlpha = active ? 0.3 : 0.1;
+        ctx.strokeStyle = active ? '#E67E22' : '#222';
+        ctx.globalAlpha = active ? 0.25 : 0.08;
         ctx.beginPath();
-        ctx.moveTo(sx + 4, moy);
-        ctx.lineTo(sx + 12, moy);
+        ctx.moveTo(sx + 3, moy);
+        ctx.lineTo(sx + 13, moy);
         ctx.stroke();
       }
     }
@@ -1011,9 +1032,9 @@ function drawRoomInterior(ctx, roomKey, rx, ry, rw, rh, cw, ch, frame) {
     // Deploy bay label
     ctx.font = 'bold 6px monospace';
     ctx.fillStyle = '#E67E22';
-    ctx.globalAlpha = 0.4;
+    ctx.globalAlpha = 0.3;
     ctx.textAlign = 'center';
-    ctx.fillText('CI/CD PIPELINE', mox, moy + 18);
+    ctx.fillText('CI/CD PIPELINE', mox, moy + 16);
     ctx.globalAlpha = 1;
   }
 
@@ -1024,92 +1045,106 @@ function drawRoomInterior(ctx, roomKey, rx, ry, rw, rh, cw, ch, frame) {
 function drawFurniture(ctx, cw, ch, frame) {
   const S = P / 3;
   Object.entries(DESK_POSITIONS).forEach(([name, dp]) => {
-    if (name === 'forge') return; // forge uses deploy bay area
+    if (name === 'forge') return;
     const dx = dp.x * cw, dy = dp.y * ch;
     const config = AGENTS[name];
     if (!config) return;
 
-    // Desk — flat neo-brutal
+    // Desk — clean flat with subtle color
     const dw = 24 * S, dh = 6 * S;
-    ctx.fillStyle = '#1a1a1a';
+    ctx.fillStyle = '#141420';
     ctx.fillRect(dx - dw, dy + dh, dw * 2, 12 * S);
-    ctx.strokeStyle = '#2a2a2a';
+    ctx.strokeStyle = 'rgba(140, 120, 200, 0.15)';
     ctx.lineWidth = 1;
     ctx.strokeRect(dx - dw, dy + dh, dw * 2, 12 * S);
 
-    // Desk legs
-    ctx.fillStyle = '#111';
+    // Desk legs — subtle
+    ctx.fillStyle = '#0f0f18';
     ctx.fillRect(dx - 20 * S, dy + 18 * S, 3 * S, 6 * S);
     ctx.fillRect(dx + 17 * S, dy + 18 * S, 3 * S, 6 * S);
 
-    // Monitor — square, thick border
+    // Monitor — cleaner with rounded feel
     const mw = 16 * S, mh = 24 * S;
-    ctx.fillStyle = '#0d0d0d';
+    ctx.fillStyle = '#0a0a14';
     ctx.fillRect(dx - mw, dy - mh, mw * 2, mh);
     ctx.strokeStyle = config.color;
-    ctx.globalAlpha = 0.5;
-    ctx.lineWidth = 2;
+    ctx.globalAlpha = 0.35;
+    ctx.lineWidth = 1.5;
     ctx.strokeRect(dx - mw, dy - mh, mw * 2, mh);
     ctx.globalAlpha = 1;
 
+    // Screen content area
     const sx = dx - 13 * S, sy = dy - 21 * S, sw = 26 * S, sh = 17 * S;
-    ctx.fillStyle = '#050505';
+    ctx.fillStyle = '#06060e';
     ctx.fillRect(sx, sy, sw, sh);
 
-    ctx.globalAlpha = 0.4;
-    ctx.fillStyle = config.color;
-    for (let li = 0; li < 4; li++) {
-      const lw = (8 + (((name.charCodeAt(0) * 7 + li * 13) % 12))) * S;
-      ctx.fillRect(dx - 10 * S, dy - 19 * S + li * 4 * S, lw, 2 * S);
+    // Code lines on screen — colored per agent
+    const codeColors = [config.color, '#4fc3f7', '#00e676', '#ff9100', '#7c4dff'];
+    for (let li = 0; li < 5; li++) {
+      const lw = (6 + (((name.charCodeAt(0) * 7 + li * 13) % 14))) * S;
+      const indent = (li === 2 || li === 4) ? 4 * S : 0;
+      ctx.fillStyle = codeColors[li % codeColors.length];
+      ctx.globalAlpha = 0.3 + Math.sin(frame * 0.02 + li * 0.8) * 0.1;
+      ctx.fillRect(sx + 3 * S + indent, sy + 2 * S + li * 3 * S, lw, 1.5 * S);
     }
     ctx.globalAlpha = 1;
 
-    // Stand
-    ctx.fillStyle = '#1a1a1a';
+    // Cursor blink
+    if (Math.sin(frame * 0.08) > 0) {
+      ctx.fillStyle = config.color;
+      ctx.globalAlpha = 0.6;
+      ctx.fillRect(sx + 3 * S + 16 * S, sy + 2 * S + 15 * S, 3 * S, 1.5 * S);
+      ctx.globalAlpha = 1;
+    }
+
+    // Stand — cleaner
+    ctx.fillStyle = '#141420';
     ctx.fillRect(dx - 2 * S, dy, 4 * S, 6 * S);
     ctx.fillRect(dx - 5 * S, dy + 4 * S, 10 * S, 2 * S);
 
-    // Power LED — square
+    // Power LED
     ctx.fillStyle = config.color;
-    ctx.globalAlpha = 0.7;
-    ctx.fillRect(dx + 12 * S, dy - 4 * S, 3 * S, 3 * S);
+    ctx.globalAlpha = 0.5 + Math.sin(frame * 0.04) * 0.2;
+    ctx.beginPath();
+    ctx.arc(dx + 12 * S, dy - 2 * S, 1.5 * S, 0, Math.PI * 2);
+    ctx.fill();
     ctx.globalAlpha = 1;
 
-    // Chair — simple square
-    ctx.fillStyle = '#111';
-    ctx.fillRect(dx - 9 * S, dy + 20 * S, 18 * S, 10 * S);
-    ctx.strokeStyle = '#222';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(dx - 9 * S, dy + 20 * S, 18 * S, 10 * S);
+    // Chair — cleaner
+    ctx.fillStyle = '#0f0f18';
+    ctx.fillRect(dx - 8 * S, dy + 22 * S, 16 * S, 8 * S);
+    ctx.strokeStyle = 'rgba(140, 120, 200, 0.1)';
+    ctx.lineWidth = 0.5;
+    ctx.strokeRect(dx - 8 * S, dy + 22 * S, 16 * S, 8 * S);
 
     // Name under desk
     const deskLblFs = Math.max(5, Math.round(7 * S));
-    ctx.font = `900 ${deskLblFs}px monospace`;
+    ctx.font = `bold ${deskLblFs}px monospace`;
     ctx.fillStyle = config.color;
-    ctx.globalAlpha = 0.4;
+    ctx.globalAlpha = 0.3;
     ctx.textAlign = 'center';
     ctx.fillText(config.label, dx, dy + 38 * S);
     ctx.globalAlpha = 1;
   });
 
-  // Plants
+  // Plants — cleaner
   drawPlant(ctx, 0.60 * cw, 0.15 * ch);
   drawPlant(ctx, 0.60 * cw, 0.88 * ch);
 }
 
 function drawPlant(ctx, x, y) {
-  // Pot — square
-  ctx.fillStyle = '#6b4226';
-  ctx.fillRect(x - 5, y, 10, 9);
-  ctx.strokeStyle = '#8a5a3a';
-  ctx.lineWidth = 1;
-  ctx.strokeRect(x - 5, y, 10, 9);
-  // Leaves — blocky
+  // Pot — subtle
+  ctx.fillStyle = '#3a2a1a';
+  ctx.fillRect(x - 5, y, 10, 8);
+  ctx.strokeStyle = 'rgba(140, 120, 200, 0.1)';
+  ctx.lineWidth = 0.5;
+  ctx.strokeRect(x - 5, y, 10, 8);
+  // Leaves — organic circles
   ctx.fillStyle = '#00e676';
-  ctx.globalAlpha = 0.6;
-  ctx.fillRect(x - 6, y - 7, 5, 5);
-  ctx.fillRect(x + 1, y - 9, 5, 5);
-  ctx.fillRect(x - 3, y - 4, 6, 4);
+  ctx.globalAlpha = 0.35;
+  ctx.beginPath(); ctx.arc(x - 3, y - 4, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + 3, y - 6, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x, y - 2, 3, 0, Math.PI * 2); ctx.fill();
   ctx.globalAlpha = 1;
 }
 
@@ -1132,23 +1167,25 @@ function drawParticles(ctx, cw, ch, frame) {
     if (p.y < -0.02) { p.y = 1.02; p.x = Math.random(); }
     if (p.x < 0) p.x = 1;
     if (p.x > 1) p.x = 0;
-    ctx.fillStyle = '#4fc3f7';
-    ctx.globalAlpha = p.alpha * 0.6;
-    ctx.fillRect(p.x * cw - p.size / 2, p.y * ch - p.size / 2, p.size, p.size);
+    ctx.fillStyle = 'rgba(140, 120, 200, 0.12)';
+    ctx.globalAlpha = p.alpha * 0.4;
+    ctx.beginPath();
+    ctx.arc(p.x * cw, p.y * ch, p.size * 0.8, 0, Math.PI * 2);
+    ctx.fill();
   });
   ctx.globalAlpha = 1;
 }
 
 function drawWatermark(ctx, cw, ch) {
   ctx.save();
-  ctx.font = '900 56px monospace';
+  ctx.font = '900 48px monospace';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillStyle = 'rgba(255,255,255,0.015)';
+  ctx.fillStyle = 'rgba(140, 120, 200, 0.02)';
   ctx.fillText('OPS HQ', cw / 2, ch / 2);
-  ctx.font = '700 14px monospace';
-  ctx.fillStyle = 'rgba(255,255,255,0.02)';
-  ctx.fillText('V2 — 6 AGENT DEV TEAM', cw / 2, ch / 2 + 28);
+  ctx.font = '700 12px monospace';
+  ctx.fillStyle = 'rgba(140, 120, 200, 0.025)';
+  ctx.fillText('V2 — 6 AGENT DEV TEAM', cw / 2, ch / 2 + 24);
   ctx.restore();
 }
 
@@ -1192,12 +1229,12 @@ function drawNodeIndicator(ctx, cw, ch, frame, connected) {
     }
   }
 
-  // Laptop — flat neo-brutal
-  ctx.fillStyle = connected ? 'rgba(230,126,34,0.1)' : 'rgba(255,80,80,0.06)';
-  ctx.fillRect(nx - 30, ny - 18, 60, 36);
+  // Laptop — clean style
+  ctx.fillStyle = connected ? 'rgba(230,126,34,0.06)' : 'rgba(255,80,80,0.04)';
+  ctx.fillRect(nx - 28, ny - 16, 56, 32);
 
   // Laptop base
-  ctx.fillStyle = '#1a1a1a';
+  ctx.fillStyle = '#141420';
   ctx.fillRect(nx - 22, ny - 2, 44, 6);
   ctx.strokeStyle = connected ? '#E67E22' : '#ff5050';
   ctx.lineWidth = 1.5;
@@ -1235,25 +1272,22 @@ function drawNodeIndicator(ctx, cw, ch, frame, connected) {
     ctx.globalAlpha = 1;
   }
 
-  // Label — neo-brutal square
+  // Label — clean badge
   const lbl = connected ? 'NODE' : 'OFFLINE';
-  ctx.font = '900 8px monospace';
+  ctx.font = 'bold 8px monospace';
   const labelW = ctx.measureText(lbl).width;
   const pW = labelW + 12;
-  const pH = 14;
+  const pH = 13;
   const pX = nx - pW / 2;
   const pY = ny + 8;
-  // Hard shadow
-  ctx.fillStyle = connected ? '#E67E22' : '#ff5050';
-  ctx.globalAlpha = 0.3;
-  ctx.fillRect(pX + 2, pY + 2, pW, pH);
-  ctx.globalAlpha = 1;
   // Label bg
-  ctx.fillStyle = '#0a0a0a';
+  ctx.fillStyle = '#0a0a12';
   ctx.fillRect(pX, pY, pW, pH);
   ctx.strokeStyle = connected ? '#E67E22' : '#ff5050';
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 1;
+  ctx.globalAlpha = 0.6;
   ctx.strokeRect(pX, pY, pW, pH);
+  ctx.globalAlpha = 1;
   ctx.fillStyle = connected ? '#E67E22' : '#ff5050';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
@@ -1302,16 +1336,18 @@ export default function OfficeCanvas({ agents, nodeConnected, events }) {
     const currentAgents = agentsRef.current;
     const currentNodeConnected = nodeConnectedRef.current;
 
-    // Background — flat neo-brutalism
-    ctx.fillStyle = '#0a0a0a';
+    // Background — dark with purple undertone
+    ctx.fillStyle = '#08080e';
     ctx.fillRect(0, 0, cw, ch);
 
-    // Grid — visible dot grid
-    ctx.fillStyle = 'rgba(255,255,255,0.06)';
-    for (let gx = 0; gx < cw; gx += 24) {
-      for (let gy = 0; gy < ch; gy += 24) {
-        ctx.fillRect(gx, gy, 1, 1);
-      }
+    // Grid — subtle line grid
+    ctx.strokeStyle = 'rgba(100, 80, 160, 0.04)';
+    ctx.lineWidth = 0.5;
+    for (let gx = 0; gx < cw; gx += 30) {
+      ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, ch); ctx.stroke();
+    }
+    for (let gy = 0; gy < ch; gy += 30) {
+      ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(cw, gy); ctx.stroke();
     }
 
     drawWatermark(ctx, cw, ch);
@@ -1384,6 +1420,20 @@ export default function OfficeCanvas({ agents, nodeConnected, events }) {
   }, [draw]);
 
   const latestEvents = (events || []).slice(-3);
+  const activeAgents = (agents || []).filter(a => {
+    const s = (a.status || '').toLowerCase();
+    return s === 'working' || s === 'thinking' || s === 'talking' || s === 'posting' || s === 'researching';
+  });
+  const latestMission = latestEvents.length > 0 ? latestEvents[latestEvents.length - 1] : null;
+  const missionAgent = latestMission ? (AGENTS[latestMission.agent] || {}) : {};
+  const missionTime = latestMission?.created_at
+    ? (() => {
+        const diff = Math.floor((Date.now() - new Date(latestMission.created_at).getTime()) / 60000);
+        if (diff < 1) return 'just now';
+        if (diff < 60) return `${diff}m ago`;
+        return `${Math.floor(diff / 60)}h ago`;
+      })()
+    : '';
 
   return (
     <div style={{ position: 'relative' }}>
@@ -1392,40 +1442,84 @@ export default function OfficeCanvas({ agents, nodeConnected, events }) {
         style={{
           width: '100%',
           height: 'auto',
-          border: '2px solid #2a2a2a',
+          border: '1px solid rgba(140, 120, 200, 0.2)',
           display: 'block',
-          boxShadow: '4px 4px 0px #2a2a2a',
         }}
       />
+      {/* Mission Bar */}
       <div style={{
-        background: '#0a0a0a',
-        border: '2px solid #2a2a2a',
-        borderTop: '2px solid #4fc3f7',
+        background: '#0a0a12',
+        border: '1px solid rgba(140, 120, 200, 0.2)',
+        borderTop: '2px solid rgba(140, 120, 200, 0.3)',
         padding: '8px 14px',
         display: 'flex',
         alignItems: 'center',
-        gap: 10,
-        minHeight: 30,
+        gap: 12,
+        minHeight: 36,
         overflow: 'hidden',
-        boxShadow: '4px 4px 0px #2a2a2a',
-        marginTop: '-2px',
+        marginTop: '-1px',
       }}>
-        <span style={{ color: '#ffea00', fontSize: 9, fontFamily: 'monospace', fontWeight: 900, letterSpacing: 2, flexShrink: 0 }}>LIVE</span>
-        <span style={{ width: 7, height: 7, background: '#00e676', flexShrink: 0 }} />
-        <div style={{ flex: 1, overflow: 'hidden', display: 'flex', gap: 16 }}>
-          {latestEvents.length === 0 ? (
-            <span style={{ color: '#555', fontSize: 11, fontFamily: 'monospace', fontWeight: 700 }}>Waiting for agent activity...</span>
+        {/* Agent avatar circles */}
+        <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+          {Object.entries(AGENTS).map(([name, cfg]) => {
+            const agentData = (agents || []).find(a => a.name === name);
+            const isBusy = agentData && ['working', 'thinking', 'talking', 'posting', 'researching'].includes((agentData.status || '').toLowerCase());
+            return (
+              <div key={name} style={{
+                width: 22,
+                height: 22,
+                borderRadius: '50%',
+                border: `2px solid ${isBusy ? cfg.color : 'rgba(140,120,200,0.15)'}`,
+                background: isBusy ? cfg.color + '20' : 'rgba(20,20,30,0.5)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 10,
+                opacity: isBusy ? 1 : 0.5,
+                transition: 'all 0.3s',
+              }}>
+                {cfg.icon}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Divider */}
+        <span style={{ width: 1, height: 18, background: 'rgba(140,120,200,0.15)', flexShrink: 0 }} />
+
+        {/* Mission status */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+          <span style={{ width: 6, height: 6, borderRadius: '50%', background: activeAgents.length > 0 ? '#00e676' : '#666', boxShadow: activeAgents.length > 0 ? '0 0 6px #00e67660' : 'none' }} />
+          <span style={{ color: activeAgents.length > 0 ? '#00e676' : '#666', fontSize: 10, fontFamily: 'monospace', fontWeight: 900, letterSpacing: 1 }}>
+            ACTIVE {activeAgents.length}/{Object.keys(AGENTS).length}
+          </span>
+        </div>
+
+        {/* Divider */}
+        <span style={{ width: 1, height: 18, background: 'rgba(140,120,200,0.15)', flexShrink: 0 }} />
+
+        {/* Latest mission text */}
+        <div style={{ flex: 1, overflow: 'hidden', display: 'flex', alignItems: 'center', gap: 8 }}>
+          {latestMission ? (
+            <>
+              <span style={{ color: missionAgent.color || '#888', fontSize: 11, fontFamily: 'monospace', whiteSpace: 'nowrap', fontWeight: 800 }}>
+                {missionAgent.icon || '?'} {missionAgent.label || latestMission.agent}
+              </span>
+              <span style={{ color: 'rgba(200,200,220,0.6)', fontSize: 11, fontFamily: 'monospace', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {(latestMission.title || latestMission.detail || '').slice(0, 60)}
+              </span>
+            </>
           ) : (
-            latestEvents.map((evt, i) => {
-              const cfg = AGENTS[evt.agent] || {};
-              return (
-                <span key={evt.id || i} style={{ color: cfg.color || '#888', fontSize: 11, fontFamily: 'monospace', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: 700 }}>
-                  {cfg.icon || '?'} <span style={{ fontWeight: 900 }}>{cfg.label || evt.agent}</span>: {(evt.title || evt.detail || '').slice(0, 60)}
-                </span>
-              );
-            })
+            <span style={{ color: '#444', fontSize: 11, fontFamily: 'monospace' }}>Waiting for agent activity...</span>
           )}
         </div>
+
+        {/* Timestamp */}
+        {missionTime && (
+          <span style={{ color: 'rgba(140,120,200,0.4)', fontSize: 9, fontFamily: 'monospace', flexShrink: 0, fontWeight: 700 }}>
+            {missionTime}
+          </span>
+        )}
       </div>
     </div>
   );

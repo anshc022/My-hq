@@ -3,6 +3,7 @@ import { useEffect, useState, useRef } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import OfficeCanvas from '@/components/OfficeCanvas';
 import AgentPanel from '@/components/AgentPanel';
+import AgentsWorking from '@/components/AgentsWorking';
 import ChatLog from '@/components/ChatLog';
 import EventFeed from '@/components/EventFeed';
 import MissionBoard from '@/components/MissionBoard';
@@ -125,6 +126,11 @@ export default function Home() {
       <StatsBar agents={agents} nodeConnected={nodeConnected} />
 
       <main className="flex-1 max-w-[1440px] mx-auto w-full px-4 md:px-6 py-5 space-y-6">
+        {/* Agents Working Right Now */}
+        <div className="animate-fade-in">
+          <AgentsWorking agents={agents} events={events} />
+        </div>
+
         {/* Canvas */}
         <div className="mt-1 animate-fade-in">
           <OfficeCanvas agents={agents} nodeConnected={nodeConnected} events={events} />
