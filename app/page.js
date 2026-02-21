@@ -124,14 +124,14 @@ export default function Home() {
     <div className="min-h-screen flex flex-col">
       <StatsBar agents={agents} nodeConnected={nodeConnected} />
 
-      <main className="flex-1 max-w-[1440px] mx-auto w-full px-4 md:px-6 py-5 space-y-6">
+      <main className="flex-1 w-full px-3 md:px-4 py-4 space-y-4">
         {/* Agents Working Right Now */}
         <div className="animate-fade-in">
           <AgentsWorking agents={agents} events={events} />
         </div>
 
         {/* Canvas + Mission Control side by side */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-5 mt-1 animate-fade-in">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-4 animate-fade-in">
           <div>
             <OfficeCanvas agents={agents} nodeConnected={nodeConnected} events={events} />
           </div>
@@ -142,7 +142,7 @@ export default function Home() {
         </div>
 
         {/* Event Feed + Gateway Log */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <section className="animate-slide-up" style={{ animationDelay: '200ms' }}>
             <SectionTitle icon="📡" label="EVENT FEED" count={events?.length} />
             <EventFeed events={events} />
