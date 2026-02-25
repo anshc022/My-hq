@@ -1,4 +1,4 @@
-# ⚡ OpenClaw + K2 — 6 AI Agents Walk Into an Office...
+# ⚡ OpenClaw HQ — 6 AI Agents Walk Into an Office...
 
 > *"What if your AI dev team had a mission control... but make it pixel art and slightly unhinged?"*
 
@@ -9,8 +9,8 @@
 </p>
 
 ![6 Agents • 1 Dashboard](https://img.shields.io/badge/Agents-6-blue?style=for-the-badge)
-![K2 Model](https://img.shields.io/badge/Model-K2--Think--V2-purple?style=for-the-badge)
-![K2 API](https://img.shields.io/badge/API-build--api.k2think.ai-yellow?style=for-the-badge)
+![Claude Opus 4.6](https://img.shields.io/badge/Model-Claude%20Opus%204.6-purple?style=for-the-badge)
+![AWS EC2 t3.large](https://img.shields.io/badge/EC2-t3.large-orange?style=for-the-badge)
 ![Built in 23hrs](https://img.shields.io/badge/Built%20In-23%20Hours-green?style=for-the-badge)
 ![Sleep](https://img.shields.io/badge/Sleep-0%20Hours-red?style=for-the-badge)
 
@@ -68,7 +68,7 @@ When the Tech Lead delegates work, you literally watch agents wake up, walk to t
 | 🛡️ **Vigil** | QA | *"it works on your machine? cool. it doesn't work on mine"* | Breaks things professionally |
 | 🔥 **Forge** | DevOps | *"deployed to prod on a Friday"* | CI/CD, containers, and questionable deployment schedules |
 
-All 6 run on **[K2-Think-V2](https://huggingface.co/LLM360/K2-Think-V2)** via K2's dedicated inference API (`build-api.k2think.ai`). Open-source reasoning model powering every agent.
+All 6 run on **Claude Opus 4.6** (100k context) via GitHub Copilot, orchestrated by **OpenClaw v2026.2** on an **AWS EC2 `t3.large`** instance (2 vCPU, 8GB RAM).
 
 <p align="center">
   <img src="https://media.giphy.com/media/3o7btNhMBytxAM6YBa/giphy.gif" width="250" />
@@ -139,9 +139,10 @@ Ed25519 challenge-response authentication. Not just a `Bearer token` — actual 
       ▼
 ┌──────────────┐     WebSocket      ┌──────────────┐
 │   Gateway    │◄──────────────────►│    Bridge     │
-│   (EC2)      │   Protocol v3      │   (EC2)      │
-│  6 K2 Agents │   Ed25519 Auth     │  Node.js     │
-│   Agents     │                    │              │
+│   (EC2       │   Protocol v3      │   (EC2       │
+│   t3.large)  │   Ed25519 Auth     │   t3.large)  │
+│  Claude Opus │                    │  Node.js     │
+│   × 6 agents │                    │              │
 └──────────────┘                    └──────┬───────┘
                                           │ HTTPS POST
                                           ▼
@@ -175,7 +176,8 @@ Ed25519 challenge-response authentication. Not just a `Bearer token` — actual 
 | Backend | Next.js API Routes (Vercel) | serverless = no servers to break |
 | Database | Supabase Realtime | instant updates, zero polling |
 | Bridge | Node.js WebSocket (EC2) | catches every agent heartbeat |
-| AI Model | [K2-Think-V2](https://huggingface.co/LLM360/K2-Think-V2) × 6 | open-source reasoning via K2 API |
+| AI Model | Claude Opus 4.6 × 6 | 100k context via GitHub Copilot |
+| Compute | AWS EC2 `t3.large` | 2 vCPU, 8GB RAM, Intel Xeon Platinum |
 | Auth | Ed25519 Protocol v3 | because security is not optional |
 | Canvas | HTML5 Canvas, 1500 LOC | hand-crafted pixel art engine |
 | Hosting | Vercel + AWS EC2 | the classic combo |
@@ -212,25 +214,25 @@ GATEWAY_TOKEN=your_gateway_token
 
 ---
 
-## 🤖 K2-Think-V2 + EC2 Setup
+## 🤖 Claude Opus 4.6 + AWS EC2 Setup
 
-OpenClaw + K2 runs on **[LLM360/K2-Think-V2](https://huggingface.co/LLM360/K2-Think-V2)** — an open-source reasoning model with its own dedicated inference API.
+OPS HQ runs on **Claude Opus 4.6** (100k context) via **GitHub Copilot**, orchestrated by **OpenClaw v2026.2** on an **AWS EC2 `t3.large`** instance.
 
-> **Important:** K2-Think-V2 uses its own API endpoint, NOT HuggingFace Inference.
+> **Instance Specs:**
 >
-> ```
-> BASE_URL = https://build-api.k2think.ai/v1
-> MODEL   = LLM360/K2-Think-V2
-> ```
+> | Spec | Detail |
+> |------|--------|
+> | **Type** | `t3.large` |
+> | **CPU** | 2 vCPU — Intel Xeon Platinum 8175M @ 2.50GHz |
+> | **RAM** | 8 GB |
+> | **Disk** | 48 GB SSD |
+> | **OS** | Ubuntu Linux 6.17.0-1007-aws (x64) |
+> | **Runtime** | Node.js v22.22.0 |
 
-### 1. Get Your K2 API Key
-
-Contact [LLM360](https://huggingface.co/LLM360) or visit [k2think.ai](https://build-api.k2think.ai) to get your API key.
-
-### 2. EC2 Instance Setup
+### 1. EC2 Instance Setup
 
 ```bash
-# SSH into your EC2 instance
+# SSH into your EC2 instance (t3.large recommended)
 ssh -i your-key.pem ubuntu@your-ec2-ip
 
 # Install OpenClaw CLI
@@ -240,7 +242,7 @@ curl -fsSL https://docs.openclaw.ai/install.sh | bash
 openclaw onboard --non-interactive --mode local
 ```
 
-### 3. Set the K2 Model in Config
+### 2. Configure the Model
 
 Edit `~/.openclaw/config.json` on your EC2. The key parts:
 
@@ -248,49 +250,31 @@ Edit `~/.openclaw/config.json` on your EC2. The key parts:
 {
   "auth": {
     "profiles": {
-      "k2-think-v2:api-key": {
-        "provider": "k2-think-v2",
-        "mode": "api-key"
-      }
-    }
-  },
-  "models": {
-    "mode": "merge",
-    "providers": {
-      "k2-think-v2": {
-        "baseUrl": "https://build-api.k2think.ai/v1",
-        "apiKey": "YOUR_K2_API_KEY",
-        "api": "openai-completions",
-        "models": [
-          {
-            "id": "LLM360/K2-Think-V2",
-            "alias": "K2"
-          }
-        ]
+      "github-copilot:github": {
+        "provider": "github-copilot",
+        "mode": "token"
       }
     }
   },
   "agents": {
     "defaults": {
       "model": {
-        "primary": "k2-think-v2/LLM360/K2-Think-V2"
+        "primary": "github-copilot/claude-opus-4.6"
       },
       "models": {
-        "k2-think-v2/LLM360/K2-Think-V2": { "alias": "K2" }
+        "github-copilot/claude-opus-4.6": {}
+      },
+      "contextTokens": 100000,
+      "maxConcurrent": 4,
+      "subagents": {
+        "maxConcurrent": 8
       }
     }
   }
 }
 ```
 
-### 4. Environment Variables (EC2)
-
-```bash
-# Add your K2 API key to ~/.openclaw/.env
-echo 'K2_API_KEY=your_api_key_here' >> ~/.openclaw/.env
-```
-
-### 5. Start the Gateway
+### 3. Start the Gateway
 
 ```bash
 # Start OpenClaw Gateway (runs all 6 agents)
@@ -300,24 +284,24 @@ openclaw gateway start
 openclaw status
 ```
 
-### 6. Connect the Bridge
+### 4. Connect the Bridge
 
 ```bash
 # Start the WebSocket bridge (connects Gateway → Vercel dashboard)
 node gateway-bridge.mjs
 ```
 
-The bridge connects to the Gateway via WebSocket (Protocol v3, Ed25519 auth), catches every agent event, and forwards it to your Vercel-hosted dashboard via HTTPS POST.
+The bridge connects to the Gateway via WebSocket (Protocol v3, Ed25519 auth), catches every agent event, and forwards it to your Vercel-hosted dashboard via HTTPS POST. The gateway runs as a **systemd service** — auto-starts on boot, always running.
 
-### Why K2-Think-V2?
+### Why Claude Opus 4.6?
 
 | Feature | Detail |
 |---------|--------|
-| **Model** | [LLM360/K2-Think-V2](https://huggingface.co/LLM360/K2-Think-V2) |
-| **Type** | Open-source reasoning model |
-| **API** | OpenAI-compatible (`https://build-api.k2think.ai/v1`) |
-| **Auth** | Single API key for all 6 agents |
-| **Docs** | [OpenClaw × HuggingFace setup](https://docs.openclaw.ai/providers/huggingface) |
+| **Model** | Claude Opus 4.6 |
+| **Context** | 100,000 tokens per agent |
+| **Provider** | GitHub Copilot (token auth) |
+| **Agents** | 6 concurrent, up to 8 sub-agents |
+| **Docs** | [OpenClaw setup](https://docs.openclaw.ai) |
 
 ---
 
@@ -377,7 +361,7 @@ The whole loop takes seconds. It's like watching ants building a colony, except 
 - When ALL agents are idle, they literally wander around the office like NPCs waiting for a quest.
 - The duplicate-suppression protocol is called `ANNOUNCE_SKIP`. When a sub-agent has already posted, it yells "ANNOUNCE_SKIP" to avoid saying the same thing twice. It works perfectly. Every time.
 - This entire dashboard was built with AI assistance. The AI built its own surveillance system. *What could go wrong?*
-- The model powering all agents is **K2-Think-V2** from LLM360 — open-source reasoning, served via K2's own API at `build-api.k2think.ai`.
+- All 6 agents run **Claude Opus 4.6** with 100k context each — that's 600k tokens of combined brainpower on a single EC2 `t3.large`.
 
 ---
 
@@ -390,7 +374,7 @@ MIT — do whatever you want with it. Fork it. Clone it. Give your agents better
 <p align="center">
   <img src="https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif" width="250" />
   <br/>
-  <b>OpenClaw + K2</b> — because even AI agents deserve a cool office 🏢
+  <b>OpenClaw HQ</b> — because even AI agents deserve a cool office 🏢
   <br/>
   <i>now stop reading and go watch the demo</i>
 </p>
